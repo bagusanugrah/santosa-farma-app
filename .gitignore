@@ -1,0 +1,66 @@
+# Dependencies
+node_modules/
+vendor/
+.pnp
+.pnp.js
+
+# Environment Files (Do not commit secrets!)
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+*.env
+!*.env.example
+
+# Next.js Build Outputs
+.next/
+out/
+build/
+dist/
+
+# Android / Expo
+.expo/
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+*.orig.*
+
+# Laravel Storage & Database
+backend/storage/*.key
+backend/storage/app/public/*
+!backend/storage/app/public/.gitignore
+backend/storage/framework/cache/*
+!backend/storage/framework/cache/.gitignore
+backend/storage/framework/sessions/*
+!backend/storage/framework/sessions/.gitignore
+backend/storage/framework/views/*
+!backend/storage/framework/views/.gitignore
+backend/storage/logs/*
+!backend/storage/logs/.gitignore
+backend/public/storage
+backend/database/database.sqlite
+*.sqlite
+*.sqlite-journal
+
+# Logs & Cache
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.phpunit.result.cache
+.phpunit.cache
+
+# Local tools & extension dirs
+.php_ext/
+bin/
+
+# System and IDE
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo

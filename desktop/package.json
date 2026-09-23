@@ -1,0 +1,39 @@
+{
+  "name": "apotek-santosa-farma-desktop",
+  "version": "1.0.0",
+  "main": "electron/main.js",
+  "private": true,
+  "scripts": {
+    "dev:next": "next dev -p 3001",
+    "build": "next build",
+    "start": "next start -p 3001",
+    "dev:electron": "electron .",
+    "dev": "concurrently \"npm run dev:next\" \"wait-on http://localhost:3001 && npm run dev:electron\"",
+    "electron:start": "electron ."
+  },
+  "dependencies": {
+    "@ngrok/ngrok": "^1.4.1",
+    "clsx": "^2.1.1",
+    "lucide-react": "^0.400.0",
+    "next": "^14.2.5",
+    "qrcode.react": "^3.1.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "recharts": "^2.12.7",
+    "tailwind-merge": "^2.4.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.10",
+    "@types/react": "^18.3.3",
+    "@types/react-dom": "^18.3.0",
+    "autoprefixer": "^10.4.19",
+    "concurrently": "^8.2.2",
+    "cross-env": "^7.0.3",
+    "electron": "^31.2.0",
+    "postcss": "^8.4.39",
+    "tailwindcss": "^3.4.6",
+    "typescript": "^5.5.3",
+    "wait-on": "^7.2.0"
+  }
+}
+

@@ -1,0 +1,35 @@
+{
+  "expo": {
+    "name": "Santosa Kasir",
+    "slug": "santosa-kasir-android",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "resizeMode": "contain",
+      "backgroundColor": "#16a34a"
+    },
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#16a34a"
+      },
+      "permissions": [
+        "android.permission.CAMERA"
+      ],
+      "package": "com.santosafarma.kasir"
+    },
+    "plugins": [
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Aplikasi membutuhkan akses kamera untuk memindai kode QR pengambilan obat."
+        }
+      ]
+    ]
+  }
+}
+

@@ -1,0 +1,38 @@
+#!/usr/bin/env php
+<?php
+
+// Automatically ensure SQLite extension is loaded if running on system without php-sqlite3
+if (!extension_loaded('pdo_sqlite')) {
+    $iniDir = dirname(__DIR__) . '/.php_ext/ini';
+    if (is_dir($iniDir)) {
+        putenv("PHP_INI_SCAN_DIR=:{$iniDir}");
+        $_ENV['PHP_INI_SCAN_DIR'] = ":{$iniDir}";
+
+        $phpBinary = PHP_BINARY;
+        $args = array_slice($argv, 1);
+        $escapedArgs = array_map('escapeshellarg', $args);
+        $cmd = 'PHP_INI_SCAN_DIR=' . escapeshellarg(":{$iniDir}") . ' ' .
+            escapeshellarg($phpBinary) . ' ' .
+            escapeshellarg(__FILE__) .
+            (count($escapedArgs) > 0 ? ' ' . implode(' ', $escapedArgs) : '');
+
+        passthru($cmd, $exitCode);
+        exit($exitCode);
+    }
+}
+
+use Illuminate\Foundation\Application;
+use Symfony\Component\Console\Input\ArgvInput;
+
+define('LARAVEL_START', microtime(true));
+
+// Register the Composer autoloader...
+require __DIR__.'/vendor/autoload.php';
+
+// Bootstrap Laravel and handle the command...
+/** @var Application $app */
+$app = require_once __DIR__.'/bootstrap/app.php';
+
+$status = $app->handleCommand(new ArgvInput);
+
+exit($status);
