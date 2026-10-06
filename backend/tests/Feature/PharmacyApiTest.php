@@ -308,4 +308,49 @@ class PharmacyApiTest extends TestCase
         $customer->refresh();
         $this->assertTrue(\Illuminate\Support\Facades\Hash::check('newpassword123', $customer->password));
     }
+
+    /**
+     * Test cashier can delete pending transaction
+     */
+    public function test_cashier_can_delete_pending_transaction(): void
+    {
+        $cashier = User::where('role', 'admin_kasir')->first();
+        \Laravel\Sanctum\Sanctum::actingAs($cashier, ['role:admin_kasir']);
+
+        $trx = Transaction::create([
+            'invoice_no' => 'INV-TEST-DELETE-PENDING',
+            'channel' => 'toko',
+            'cashier_id' => $cashier->id,
+            'payment_method' => 'qris',
+            'status' => 'pending',
+            'total' => 50000,
+        ]);
+
+        $trx->items()->create([
+            'product_id' => Product::first()->id,
+            'product_name' => 'Obat Test',
+            'qty' => 1,
+            'price' => 50000,
+            'subtotal' => 50000,
+        ]);
+
+        $res = $this->deleteJson("/api/transactions/{$trx->id}");
+        $res->assertStatus(200)
+            ->assertJsonPath('status', 'success');
+
+        $this->assertNull(Transaction::find($trx->id));
+
+        // Cannot delete completed transaction
+        $completedTrx = Transaction::create([
+            'invoice_no' => 'INV-TEST-DELETE-COMPLETED',
+            'channel' => 'toko',
+            'cashier_id' => $cashier->id,
+            'payment_method' => 'tunai',
+            'status' => 'selesai',
+            'total' => 10000,
+        ]);
+
+        $res2 = $this->deleteJson("/api/transactions/{$completedTrx->id}");
+        $res2->assertStatus(400);
+    }
 }

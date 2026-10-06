@@ -203,6 +203,36 @@ export default function PosPage() {
     }
   };
 
+  const handleCancelQris = async () => {
+    if (!activeQrisTrx) return;
+    if (token) {
+      try {
+        let res = await fetch(`${API_BASE_URL}/transactions/${activeQrisTrx.id}`, {
+          method: 'DELETE',
+          headers: {
+            Authorization: `Bearer ${token}`,
+            Accept: 'application/json',
+          },
+        });
+
+        if (res.status === 404) {
+          await fetch(`${API_BASE_URL}/transactions/pos`, {
+            method: 'POST',
+            headers: {
+              Authorization: `Bearer ${token}`,
+              Accept: 'application/json',
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ action: 'cancel', transaction_id: activeQrisTrx.id }),
+          });
+        }
+      } catch (e) {
+        console.error('Error cancelling QRIS transaction', e);
+      }
+    }
+    setActiveQrisTrx(null);
+  };
+
   return (
     <div className="flex-1 flex overflow-hidden">
       {/* Left: Product Picker */}
@@ -473,13 +503,22 @@ export default function PosPage() {
               Silakan minta pelanggan scan kode QR di bawah ini (atau via aplikasi HP Kasir):
             </p>
 
-            <div className="p-4 bg-white rounded-2xl border-2 border-dashed border-slate-300 inline-block">
-              <QRCodeSVG
-                value={activeQrisTrx.midtrans_qris_url || activeQrisTrx.invoice_no}
-                size={180}
-                level="M"
-                includeMargin
-              />
+            <div className="p-4 bg-white rounded-2xl border-2 border-dashed border-slate-300 inline-block min-w-[210px] min-h-[210px] flex items-center justify-center">
+              {activeQrisTrx.midtrans_qris_url && activeQrisTrx.midtrans_qris_url.startsWith('http') ? (
+                /* eslint-disable-next-line @next/next/no-img-element */
+                <img
+                  src={activeQrisTrx.midtrans_qris_url}
+                  alt="QRIS Resmi Midtrans"
+                  className="w-48 h-48 object-contain mx-auto rounded-lg"
+                />
+              ) : (
+                <QRCodeSVG
+                  value={activeQrisTrx.midtrans_qris_url || activeQrisTrx.invoice_no}
+                  size={180}
+                  level="M"
+                  includeMargin
+                />
+              )}
             </div>
 
             <div className="text-xs bg-slate-50 p-2.5 rounded-xl text-slate-700 space-y-1">
@@ -498,12 +537,21 @@ export default function PosPage() {
               <span>Menunggu notifikasi settlement...</span>
             </div>
 
-            <button
-              onClick={() => setActiveQrisTrx(null)}
-              className="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl"
-            >
-              Tutup / Batalkan Tampilan
-            </button>
+            <div className="space-y-2 pt-1">
+              <button
+                onClick={handleCancelQris}
+                className="w-full py-2.5 bg-red-50 hover:bg-red-100 text-red-600 font-bold text-xs rounded-xl flex items-center justify-center space-x-1.5 transition active:scale-95"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>Batalkan & Hapus Transaksi Ini</span>
+              </button>
+              <button
+                onClick={() => setActiveQrisTrx(null)}
+                className="w-full py-1 text-slate-400 hover:text-slate-600 font-semibold text-xs transition"
+              >
+                Tutup Tampilan Saja
+              </button>
+            </div>
           </div>
         </div>
       )}

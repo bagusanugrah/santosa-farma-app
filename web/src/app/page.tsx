@@ -22,7 +22,7 @@ export default function CatalogPage() {
   const [perPage, setPerPage] = useState(10);
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
-  const [isStoreOpen, setIsStoreOpen] = useState(true);
+  const [isStoreOpen, setIsStoreOpen] = useState<boolean | null>(null);
 
   // Categories list
   const categories = [
@@ -103,21 +103,31 @@ export default function CatalogPage() {
         </div>
       </div>
 
+      {/* Loading State before status known */}
+      {loading && isStoreOpen === null && (
+        <div className="py-16 text-center flex flex-col items-center justify-center space-y-3">
+          <div className="w-8 h-8 border-4 border-brand-500 border-t-transparent rounded-full animate-spin"></div>
+          <p className="text-xs text-slate-500 font-medium">Memeriksa status apotek...</p>
+        </div>
+      )}
+
       {/* When Store is Closed */}
-      {!isStoreOpen && !loading && (
-        <div className="bg-amber-50 border-2 border-amber-300 rounded-3xl p-8 text-center max-w-xl mx-auto shadow-sm">
-          <div className="w-16 h-16 rounded-full bg-amber-100 text-amber-700 flex items-center justify-center mx-auto mb-4">
+      {isStoreOpen === false && (
+        <div className="bg-amber-50 border-2 border-amber-300 rounded-3xl p-8 sm:p-12 text-center max-w-xl mx-auto shadow-sm animate-fade-in space-y-4">
+          <div className="w-16 h-16 rounded-2xl bg-amber-100 text-amber-700 flex items-center justify-center mx-auto shadow-inner">
             <AlertTriangle className="w-8 h-8" />
           </div>
-          <h3 className="text-xl font-bold text-amber-900">Apotek Sedang Tutup</h3>
-          <p className="text-sm text-amber-800 mt-2">
-            Apotek Santosa Farma saat ini sedang di luar jam operasional kasir. Fitur pencarian katalog dan pemesanan online dinonaktifkan sementara dan akan dibuka kembali saat toko beroperasi.
-          </p>
+          <div>
+            <h3 className="text-xl sm:text-2xl font-extrabold text-amber-950">Apotek Sedang Tutup</h3>
+            <p className="text-xs sm:text-sm text-amber-800 mt-2 max-w-md mx-auto leading-relaxed">
+              Apotek Santosa Farma saat ini sedang di luar jam operasional kasir. Fitur pencarian katalog dan pemesanan online dinonaktifkan sementara dan akan otomatis dibuka kembali saat kasir toko beroperasi.
+            </p>
+          </div>
         </div>
       )}
 
       {/* Active Catalog View */}
-      {isStoreOpen && (
+      {isStoreOpen === true && (
         <div className="space-y-6">
           {/* Filter & Search Bar */}
           <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm flex flex-col md:flex-row items-center justify-between gap-4">

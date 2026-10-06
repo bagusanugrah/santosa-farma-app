@@ -108,6 +108,11 @@ class TransactionController extends Controller
      */
     public function posCheckout(Request $request): JsonResponse
     {
+        // Cancel / Delete pending transaction fallback
+        if ($request->input('action') === 'cancel' && $request->filled('transaction_id')) {
+            return $this->destroy($request, $request->input('transaction_id'));
+        }
+
         $validator = Validator::make($request->all(), [
             'payment_method' => 'required|in:tunai,qris',
             'items' => 'required|array|min:1',
@@ -357,25 +362,27 @@ class TransactionController extends Controller
     }
 
     /**
-     * Cashier Confirms Order Pickup (Android Kasir).
+     * Cashier Confirms Order Pickup (Scan QR Android Kasir or Direct Desktop App).
      */
     public function confirmPickup(Request $request, string $qrToken): JsonResponse
     {
-        $transaction = Transaction::with(['customer', 'items.product'])
+        $transaction = Transaction::with(['customer', 'items.product', 'cashier'])
             ->where('qr_token', $qrToken)
+            ->orWhere('id', $qrToken)
+            ->orWhere('invoice_no', $qrToken)
             ->first();
 
         if (!$transaction) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'QR Code pesanan tidak valid atau tidak ditemukan.',
+                'message' => 'Pesanan atau QR Code tidak ditemukan.',
             ], 404);
         }
 
-        if ($transaction->status === 'diambil') {
+        if ($transaction->status === 'diambil' || $transaction->status === 'selesai') {
             return response()->json([
                 'status' => 'error',
-                'message' => 'Pesanan ini sudah pernah diambil sebelumnya pada ' . $transaction->picked_up_at?->format('d/m/Y H:i') . '.',
+                'message' => 'Pesanan ini sudah pernah diambil sebelumnya pada ' . ($transaction->picked_up_at?->format('d/m/Y H:i') ?? 'sesi sebelumnya') . '.',
             ], 400);
         }
 
@@ -386,9 +393,11 @@ class TransactionController extends Controller
             ], 400);
         }
 
+        $user = $request->user();
         $transaction->update([
             'status' => 'diambil',
             'picked_up_at' => now(),
+            'cashier_id' => $user?->id ?? $transaction->cashier_id,
         ]);
 
         // Generate receipt PDF for pickup
@@ -397,7 +406,59 @@ class TransactionController extends Controller
         return response()->json([
             'status' => 'success',
             'message' => 'Pengambilan pesanan berhasil dikonfirmasi.',
-            'data' => $transaction,
+            'data' => $transaction->fresh(['customer', 'cashier', 'items.product']),
+        ]);
+    }
+
+    /**
+     * Cashier Confirms Order Pickup directly by ID / Invoice (Desktop App).
+     */
+    public function confirmPickupById(Request $request, int|string $id): JsonResponse
+    {
+        return $this->confirmPickup($request, (string) $id);
+    }
+
+    /**
+     * Delete or Cancel Pending / Expired / Failed Transaction (Staff Kasir & Super Admin).
+     */
+    public function destroy(Request $request, int|string $id): JsonResponse
+    {
+        $transaction = Transaction::where('id', $id)
+            ->orWhere('invoice_no', $id)
+            ->first();
+
+        if (!$transaction) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Transaksi tidak ditemukan.',
+            ], 404);
+        }
+
+        // Only allow deleting pending, expired, or failed transactions
+        if (!in_array($transaction->status, ['pending', 'expired', 'gagal'])) {
+            return response()->json([
+                'status' => 'error',
+                'message' => "Transaksi dengan status '{$transaction->status}' tidak dapat dihapus karena sudah dibayar/selesai.",
+            ], 400);
+        }
+
+        $invoiceNo = $transaction->invoice_no;
+
+        DB::transaction(function () use ($transaction) {
+            // Delete related items
+            $transaction->items()->delete();
+
+            // Delete receipt if any
+            if ($transaction->receipt) {
+                $transaction->receipt()->delete();
+            }
+
+            $transaction->delete();
+        });
+
+        return response()->json([
+            'status' => 'success',
+            'message' => "Transaksi {$invoiceNo} berhasil dihapus.",
         ]);
     }
 }

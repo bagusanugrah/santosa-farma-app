@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useStaffAuth } from '@/context/StaffAuthContext';
 import { API_BASE_URL, Transaction, MetaPagination } from '@/lib/api';
 import ReceiptModal from '@/components/ReceiptModal';
+import ConfirmPickupModal from '@/components/ConfirmPickupModal';
 import {
   Receipt,
   Search,
@@ -16,6 +17,9 @@ import {
   AlertTriangle,
   WifiOff,
   LogIn,
+  PackageCheck,
+  CheckCircle2,
+  Trash2,
 } from 'lucide-react';
 
 const MAX_RETRIES = 3;
@@ -51,6 +55,67 @@ export default function AdminTransactionsPage() {
 
   const [selectedTrx, setSelectedTrx] = useState<Transaction | null>(null);
   const [showReceiptModal, setShowReceiptModal] = useState(false);
+
+  const [pickupTrx, setPickupTrx] = useState<Transaction | null>(null);
+  const [showPickupModal, setShowPickupModal] = useState(false);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+
+  const handlePickupSuccess = (updatedTrx: Transaction) => {
+    setTransactions((prev) =>
+      prev.map((t) =>
+        t.id === updatedTrx.id
+          ? { ...t, status: updatedTrx.status, picked_up_at: updatedTrx.picked_up_at, cashier: updatedTrx.cashier }
+          : t
+      )
+    );
+    setSuccessMessage(`Obat untuk pesanan ${updatedTrx.invoice_no} (${updatedTrx.customer?.name || 'Customer Online'}) berhasil diserahkan!`);
+    setTimeout(() => setSuccessMessage(null), 6000);
+  };
+
+  const [deletingId, setDeletingId] = useState<number | null>(null);
+
+  const handleDeletePending = async (trx: Transaction) => {
+    if (!confirm(`Apakah Anda yakin ingin menghapus transaksi pending ${trx.invoice_no}?`)) return;
+    if (!token) return;
+
+    setDeletingId(trx.id);
+    try {
+      let res = await fetch(`${API_BASE_URL}/transactions/${trx.id}`, {
+        method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          Accept: 'application/json',
+        },
+      });
+
+      // Robust fallback if DELETE route is 404
+      if (res.status === 404) {
+        res = await fetch(`${API_BASE_URL}/transactions/pos`, {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${token}`,
+            Accept: 'application/json',
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ action: 'cancel', transaction_id: trx.id }),
+        });
+      }
+
+      const data = await res.json();
+      if (!res.ok) {
+        alert(data.message || 'Gagal menghapus transaksi.');
+        return;
+      }
+
+      setTransactions((prev) => prev.filter((t) => t.id !== trx.id));
+      setSuccessMessage(`Transaksi ${trx.invoice_no} berhasil dihapus.`);
+      setTimeout(() => setSuccessMessage(null), 5000);
+    } catch (err: any) {
+      alert('Terjadi kesalahan koneksi saat menghapus transaksi.');
+    } finally {
+      setDeletingId(null);
+    }
+  };
 
   const retryTimerRef = useRef<NodeJS.Timeout | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -202,6 +267,22 @@ export default function AdminTransactionsPage() {
         </button>
       </div>
 
+      {/* Success Notification Banner */}
+      {successMessage && (
+        <div className="p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold rounded-2xl flex items-center justify-between shadow-sm animate-fade-in">
+          <div className="flex items-center space-x-2">
+            <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+            <span>{successMessage}</span>
+          </div>
+          <button
+            onClick={() => setSuccessMessage(null)}
+            className="text-emerald-700 hover:text-emerald-900 text-xs underline font-semibold ml-2"
+          >
+            Tutup
+          </button>
+        </div>
+      )}
+
       {/* Top Banner if error happens while transactions already exist */}
       {error && transactions.length > 0 && (
         <div className="p-3 bg-red-50 border border-red-200 text-red-700 text-xs font-semibold rounded-2xl flex items-center justify-between shadow-sm animate-fade-in">
@@ -261,9 +342,9 @@ export default function AdminTransactionsPage() {
             className="bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1.5 text-slate-700 text-xs font-medium outline-none"
           >
             <option value="all">Semua Status</option>
+            <option value="paid">Paid (Siap Diambil)</option>
+            <option value="diambil">Sudah Diambil</option>
             <option value="selesai">Selesai</option>
-            <option value="paid">Paid</option>
-            <option value="diambil">Diambil</option>
             <option value="pending">Pending</option>
             <option value="expired">Expired</option>
           </select>
@@ -423,29 +504,70 @@ export default function AdminTransactionsPage() {
                     Rp {trx.total.toLocaleString('id-ID')}
                   </td>
                   <td className="py-3 px-4 text-center">
-                    <span
-                      className={`px-2.5 py-0.5 rounded-full font-bold text-[10px] uppercase ${
-                        ['selesai', 'paid', 'diambil'].includes(trx.status)
-                          ? 'bg-emerald-100 text-emerald-800'
-                          : trx.status === 'pending'
-                          ? 'bg-amber-100 text-amber-800'
-                          : 'bg-red-100 text-red-800'
-                      }`}
-                    >
-                      {trx.status}
-                    </span>
+                    {trx.channel === 'online' && trx.status === 'paid' ? (
+                      <span className="px-2.5 py-0.5 rounded-full font-bold text-[10px] uppercase bg-amber-100 text-amber-800 border border-amber-300 inline-flex items-center space-x-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>
+                        <span>Siap Diambil</span>
+                      </span>
+                    ) : trx.status === 'diambil' ? (
+                      <span className="px-2.5 py-0.5 rounded-full font-bold text-[10px] uppercase bg-blue-100 text-blue-800">
+                        Sudah Diambil
+                      </span>
+                    ) : (
+                      <span
+                        className={`px-2.5 py-0.5 rounded-full font-bold text-[10px] uppercase ${
+                          ['selesai', 'paid'].includes(trx.status)
+                            ? 'bg-emerald-100 text-emerald-800'
+                            : trx.status === 'pending'
+                            ? 'bg-amber-100 text-amber-800'
+                            : 'bg-red-100 text-red-800'
+                        }`}
+                      >
+                        {trx.status}
+                      </span>
+                    )}
                   </td>
                   <td className="py-3 px-4 text-center">
-                    <button
-                      onClick={() => {
-                        setSelectedTrx(trx);
-                        setShowReceiptModal(true);
-                      }}
-                      className="p-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg transition"
-                      title="Cetak Ulang Struk"
-                    >
-                      <Printer className="w-3.5 h-3.5" />
-                    </button>
+                    <div className="flex items-center justify-center space-x-1.5">
+                      {trx.channel === 'online' && trx.status === 'paid' && (
+                        <button
+                          onClick={() => {
+                            setPickupTrx(trx);
+                            setShowPickupModal(true);
+                          }}
+                          className="px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[11px] rounded-xl shadow-sm flex items-center space-x-1.5 transition active:scale-95"
+                          title="Serahkan Obat ke Pelanggan Langsung"
+                        >
+                          <PackageCheck className="w-3.5 h-3.5" />
+                          <span>Serahkan Obat</span>
+                        </button>
+                      )}
+
+                      {['pending', 'expired', 'gagal'].includes(trx.status) && (
+                        <button
+                          onClick={() => handleDeletePending(trx)}
+                          disabled={deletingId === trx.id}
+                          className="px-2.5 py-1.5 bg-red-50 hover:bg-red-100 disabled:opacity-50 text-red-600 font-bold text-[11px] rounded-xl shadow-sm flex items-center space-x-1 transition active:scale-95"
+                          title="Hapus / Batalkan Transaksi Ini"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                          <span>{deletingId === trx.id ? 'Menghapus...' : 'Hapus'}</span>
+                        </button>
+                      )}
+
+                      {trx.status !== 'pending' && (
+                        <button
+                          onClick={() => {
+                            setSelectedTrx(trx);
+                            setShowReceiptModal(true);
+                          }}
+                          className="p-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl transition"
+                          title="Cetak Ulang Struk"
+                        >
+                          <Printer className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))
@@ -483,6 +605,17 @@ export default function AdminTransactionsPage() {
           </div>
         )}
       </div>
+
+      <ConfirmPickupModal
+        isOpen={showPickupModal}
+        onClose={() => {
+          setShowPickupModal(false);
+          setPickupTrx(null);
+        }}
+        transaction={pickupTrx}
+        onSuccess={handlePickupSuccess}
+        token={token}
+      />
 
       <ReceiptModal
         isOpen={showReceiptModal}
