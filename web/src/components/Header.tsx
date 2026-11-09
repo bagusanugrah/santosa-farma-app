@@ -4,11 +4,13 @@ import React from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 import { useCart } from '@/context/CartContext';
-import { ShoppingBag, User, LogOut, Package, Cross } from 'lucide-react';
+import { useStoreStatus } from '@/context/StoreStatusContext';
+import { ShoppingBag, User, LogOut, Package, Store } from 'lucide-react';
 
 export default function Header() {
   const { user, logout } = useAuth();
   const { totalItems, setIsOpen } = useCart();
+  const { onlineOrdersEnabled } = useStoreStatus();
 
   return (
     <header className="bg-white border-b border-slate-200 sticky top-0 z-40 shadow-sm">
@@ -28,6 +30,13 @@ export default function Header() {
 
         {/* Right Navigation */}
         <div className="flex items-center space-x-3 sm:space-x-4">
+          {!onlineOrdersEnabled && (
+            <div className="hidden lg:flex items-center space-x-1.5 text-xs font-bold bg-amber-50 text-amber-800 px-3 py-1.5 rounded-xl border border-amber-200">
+              <Store className="w-3.5 h-3.5 text-amber-600" />
+              <span>Beli Langsung di Apotek</span>
+            </div>
+          )}
+
           <Link
             href="/"
             className="text-sm font-semibold text-slate-700 hover:text-brand-600 transition px-2 py-1"

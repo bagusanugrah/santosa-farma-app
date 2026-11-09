@@ -3,17 +3,20 @@
 import React from 'react';
 import { useCart } from '@/context/CartContext';
 import { useAuth } from '@/context/AuthContext';
+import { useStoreStatus } from '@/context/StoreStatusContext';
 import { useRouter } from 'next/navigation';
-import { X, Trash2, Plus, Minus, ShoppingBag, ArrowRight } from 'lucide-react';
+import { X, Trash2, Plus, Minus, ShoppingBag, ArrowRight, Store } from 'lucide-react';
 
 export default function CartDrawer() {
   const { items, isOpen, setIsOpen, updateQty, removeItem, totalPrice, totalItems } = useCart();
   const { user } = useAuth();
   const router = useRouter();
+  const { onlineOrdersEnabled } = useStoreStatus();
 
   if (!isOpen) return null;
 
   const handleCheckout = () => {
+    if (!onlineOrdersEnabled) return;
     setIsOpen(false);
     if (!user) {
       router.push('/login?redirect=/checkout');
@@ -114,6 +117,14 @@ export default function CartDrawer() {
           {/* Footer */}
           {items.length > 0 && (
             <div className="p-5 border-t border-slate-200 bg-slate-50 space-y-4">
+              {!onlineOrdersEnabled && (
+                <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-amber-900 text-xs flex items-center space-x-2">
+                  <Store className="w-4 h-4 text-amber-600 flex-shrink-0" />
+                  <span>
+                    Fitur pemesanan online sedang dinonaktifkan sementara oleh kasir. Silakan beli langsung di apotek.
+                  </span>
+                </div>
+              )}
               <div className="flex items-center justify-between text-sm">
                 <span className="text-slate-500 font-medium">Total Tagihan:</span>
                 <span className="text-lg font-black text-slate-900">
@@ -122,10 +133,15 @@ export default function CartDrawer() {
               </div>
               <button
                 onClick={handleCheckout}
-                className="w-full bg-brand-600 hover:bg-brand-700 text-white font-bold py-3.5 px-4 rounded-xl flex items-center justify-center space-x-2 shadow-lg shadow-brand-600/20 transition"
+                disabled={!onlineOrdersEnabled}
+                className={`w-full font-bold py-3.5 px-4 rounded-xl flex items-center justify-center space-x-2 transition ${
+                  onlineOrdersEnabled
+                    ? 'bg-brand-600 hover:bg-brand-700 text-white shadow-lg shadow-brand-600/20'
+                    : 'bg-slate-200 text-slate-500 cursor-not-allowed'
+                }`}
               >
-                <span>Lanjut ke Pembayaran</span>
-                <ArrowRight className="w-4 h-4" />
+                <span>{onlineOrdersEnabled ? 'Lanjut ke Pembayaran' : 'Pembelian di Web Dinonaktifkan'}</span>
+                {onlineOrdersEnabled && <ArrowRight className="w-4 h-4" />}
               </button>
             </div>
           )}

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Product;
+use App\Models\StoreSetting;
 use App\Models\Transaction;
 use App\Models\TransactionItem;
 use App\Services\MidtransService;
@@ -245,6 +246,13 @@ class TransactionController extends Controller
      */
     public function onlineCheckout(Request $request): JsonResponse
     {
+        if (!StoreSetting::isOnlineOrdersEnabled()) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Fitur pemesanan obat lewat web sedang dinonaktifkan oleh kasir. Saat ini apotek hanya melayani pembelian langsung di kasir toko.',
+            ], 403);
+        }
+
         $validator = Validator::make($request->all(), [
             'items' => 'required|array|min:1',
             'items.*.product_id' => 'required|exists:products,id',

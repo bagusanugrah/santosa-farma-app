@@ -57,14 +57,35 @@ export interface Transaction {
   items?: TransactionItem[];
 }
 
-export async function fetchStoreStatus(): Promise<{ is_open: boolean; store_status: string }> {
+export interface StoreStatus {
+  is_open: boolean;
+  store_status: string;
+  online_orders_enabled: boolean;
+  is_online_active: boolean;
+  last_opened_at?: string | null;
+  last_closed_at?: string | null;
+}
+
+export async function fetchStoreStatus(): Promise<StoreStatus> {
   try {
     const res = await fetch(`${API_BASE_URL}/store/status`, { cache: 'no-store' });
     if (!res.ok) throw new Error('Status fetch failed');
     const data = await res.json();
-    return data.data;
+    return {
+      is_open: Boolean(data.data?.is_open),
+      store_status: data.data?.store_status || 'tutup',
+      online_orders_enabled: Boolean(data.data?.online_orders_enabled),
+      is_online_active: Boolean(data.data?.is_online_active),
+      last_opened_at: data.data?.last_opened_at,
+      last_closed_at: data.data?.last_closed_at,
+    };
   } catch (err) {
-    return { is_open: false, store_status: 'tutup' };
+    return {
+      is_open: false,
+      store_status: 'tutup',
+      online_orders_enabled: false,
+      is_online_active: false,
+    };
   }
 }
 

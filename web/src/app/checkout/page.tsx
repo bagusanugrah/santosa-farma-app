@@ -4,9 +4,10 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { useCart } from '@/context/CartContext';
+import { useStoreStatus } from '@/context/StoreStatusContext';
 import { API_BASE_URL, fetchStoreStatus } from '@/lib/api';
 import QrPickupModal from '@/components/QrPickupModal';
-import { ShoppingBag, CreditCard, ShieldCheck, CheckCircle2, ArrowRight, AlertCircle, Sparkles } from 'lucide-react';
+import { ShoppingBag, CreditCard, ShieldCheck, CheckCircle2, ArrowRight, AlertCircle, Sparkles, Store } from 'lucide-react';
 
 declare global {
   interface Window {
@@ -18,11 +19,13 @@ export default function CheckoutPage() {
   const router = useRouter();
   const { user, token, loading: authLoading } = useAuth();
   const { items, totalPrice, clearCart } = useCart();
+  const { isOpen, onlineOrdersEnabled } = useStoreStatus();
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [createdTrx, setCreatedTrx] = useState<any>(null);
   const [showQrModal, setShowQrModal] = useState(false);
+  const onlineOrdersDisabled = !isOpen || !onlineOrdersEnabled;
 
   // Load Midtrans Snap Script
   useEffect(() => {
@@ -50,6 +53,26 @@ export default function CheckoutPage() {
 
   if (!user) return null;
 
+  if (onlineOrdersDisabled) {
+    return (
+      <div className="max-w-md mx-auto py-16 text-center animate-fade-in">
+        <div className="w-16 h-16 rounded-2xl bg-amber-100 flex items-center justify-center mx-auto mb-4 text-amber-600 shadow-inner">
+          <Store className="w-8 h-8" />
+        </div>
+        <h3 className="text-xl font-bold text-slate-800">Pemesanan Online Dinonaktifkan</h3>
+        <p className="text-xs text-slate-600 mt-2 mb-6 max-w-sm mx-auto leading-relaxed">
+          Kasir Apotek Santosa Farma sedang menonaktifkan transaksi online agar dapat fokus melayani antrean langsung di apotek. Silakan beli langsung di kasir toko.
+        </p>
+        <button
+          onClick={() => router.push('/')}
+          className="px-6 py-2.5 bg-brand-600 hover:bg-brand-700 text-white font-bold text-xs rounded-xl shadow-md transition"
+        >
+          Lihat Katalog Obat
+        </button>
+      </div>
+    );
+  }
+
   if (items.length === 0 && !createdTrx) {
     return (
       <div className="max-w-md mx-auto py-16 text-center">
@@ -69,10 +92,14 @@ export default function CheckoutPage() {
   }
 
   const handlePayNow = async () => {
-    // Check if store is open
+    // Check if store is open & online orders enabled
     const storeStatus = await fetchStoreStatus();
     if (!storeStatus.is_open) {
       setError('Mohon maaf, Apotek Santosa Farma saat ini sedang tutup. Pemesanan tidak dapat diproses.');
+      return;
+    }
+    if (!storeStatus.online_orders_enabled) {
+      setError('Mohon maaf, fitur pemesanan obat online sedang dinonaktifkan oleh kasir. Pembelian hanya dilayani langsung di apotek.');
       return;
     }
 

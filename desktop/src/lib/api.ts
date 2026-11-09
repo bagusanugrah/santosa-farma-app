@@ -58,3 +58,50 @@ export interface Transaction {
   items?: TransactionItem[];
 }
 
+export interface StoreStatus {
+  is_open: boolean;
+  store_status: string;
+  online_orders_enabled: boolean;
+  is_online_active: boolean;
+  last_opened_at: string | null;
+  last_closed_at: string | null;
+}
+
+export async function fetchStoreStatus(): Promise<StoreStatus> {
+  try {
+    const res = await fetch(`${API_BASE_URL}/store/status`, { cache: 'no-store' });
+    if (!res.ok) throw new Error('Failed to fetch store status');
+    const json = await res.json();
+    return json.data;
+  } catch (err) {
+    return {
+      is_open: false,
+      store_status: 'tutup',
+      online_orders_enabled: false,
+      is_online_active: false,
+      last_opened_at: null,
+      last_closed_at: null,
+    };
+  }
+}
+
+export async function setOnlineOrders(token: string, enabled?: boolean): Promise<{ success: boolean; data?: StoreStatus; message?: string }> {
+  try {
+    const res = await fetch(`${API_BASE_URL}/store/online-orders`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(typeof enabled === 'boolean' ? { enabled } : {}),
+    });
+    const json = await res.json();
+    if (!res.ok) throw new Error(json.message || 'Gagal mengubah status pemesanan online.');
+    return { success: true, data: json.data, message: json.message };
+  } catch (err: any) {
+    return { success: false, message: err.message };
+  }
+}
+
+

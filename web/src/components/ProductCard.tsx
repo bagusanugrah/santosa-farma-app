@@ -8,13 +8,19 @@ import { Plus, Check, AlertCircle, Pill } from 'lucide-react';
 interface ProductCardProps {
   product: Product;
   disabled?: boolean;
+  onlineOrdersEnabled?: boolean;
 }
 
-export default function ProductCard({ product, disabled = false }: ProductCardProps) {
+export default function ProductCard({
+  product,
+  disabled = false,
+  onlineOrdersEnabled = true,
+}: ProductCardProps) {
   const { addItem, items } = useCart();
   const cartItem = items.find((i) => i.product.id === product.id);
   const isInCart = Boolean(cartItem);
   const isOutOfStock = product.stock <= 0;
+  const isBuyingDisabled = disabled || isOutOfStock || !onlineOrdersEnabled;
 
   return (
     <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden hover:shadow-lg transition-all duration-200 flex flex-col group">
@@ -82,17 +88,28 @@ export default function ProductCard({ product, disabled = false }: ProductCardPr
           </div>
 
           <button
-            onClick={() => addItem(product)}
-            disabled={disabled || isOutOfStock}
+            onClick={() => !isBuyingDisabled && addItem(product)}
+            disabled={isBuyingDisabled}
+            title={
+              !onlineOrdersEnabled
+                ? 'Pembelian online dinonaktifkan oleh kasir. Silakan beli langsung di apotek.'
+                : isOutOfStock
+                ? 'Stok obat habis'
+                : 'Tambah ke Keranjang Belanja'
+            }
             className={`flex items-center space-x-1 px-3 py-2 rounded-xl text-xs font-bold transition shadow-sm ${
-              disabled || isOutOfStock
+              !onlineOrdersEnabled
+                ? 'bg-slate-100 text-slate-500 border border-slate-200 cursor-not-allowed'
+                : disabled || isOutOfStock
                 ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
                 : isInCart
                 ? 'bg-brand-50 text-brand-700 border border-brand-200 hover:bg-brand-100'
                 : 'bg-brand-600 hover:bg-brand-700 text-white'
             }`}
           >
-            {isInCart ? (
+            {!onlineOrdersEnabled ? (
+              <span>Hanya di Kasir</span>
+            ) : isInCart ? (
               <>
                 <Check className="w-3.5 h-3.5" />
                 <span>+({cartItem?.qty})</span>

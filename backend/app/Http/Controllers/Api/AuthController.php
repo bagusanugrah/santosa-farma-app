@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Customer;
 use App\Models\OtpCode;
 use App\Models\PasswordReset;
+use App\Models\StoreSetting;
 use App\Models\User;
 use App\Services\OtpService;
 use Illuminate\Http\JsonResponse;
@@ -105,6 +106,13 @@ class AuthController extends Controller
      */
     public function customerRegister(Request $request): JsonResponse
     {
+        if (!StoreSetting::isOnlineOrdersEnabled()) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Pendaftaran akun baru ditutup sementara karena kasir sedang menonaktifkan layanan online.',
+            ], 403);
+        }
+
         $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:255',
             'type' => 'required|in:phone,email',
@@ -261,6 +269,13 @@ class AuthController extends Controller
      */
     public function customerLogin(Request $request): JsonResponse
     {
+        if (!StoreSetting::isOnlineOrdersEnabled()) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Layanan login & pembelian online sedang dinonaktifkan oleh kasir. Silakan lakukan pembelian langsung di kasir Apotek Santosa Farma.',
+            ], 403);
+        }
+
         $request->validate([
             'login' => 'required|string', // phone or email
             'password' => 'required|string',

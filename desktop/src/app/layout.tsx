@@ -1,6 +1,7 @@
 import './globals.css';
 import type { Metadata } from 'next';
 import { StaffAuthProvider } from '@/context/StaffAuthContext';
+import { StoreStatusProvider } from '@/context/StoreStatusContext';
 import Sidebar from '@/components/Sidebar';
 
 export const metadata: Metadata = {
@@ -17,10 +18,12 @@ export default function RootLayout({
     <html lang="id">
       <body className="min-h-screen bg-slate-100 flex text-slate-900 overflow-hidden">
         <StaffAuthProvider>
-          <Sidebar />
-          <main className="flex-1 h-screen overflow-y-auto bg-slate-50 flex flex-col">
-            {children}
-          </main>
+          <StoreStatusProvider>
+            <Sidebar />
+            <main className="flex-1 h-screen overflow-y-auto bg-slate-50 flex flex-col">
+              {children}
+            </main>
+          </StoreStatusProvider>
         </StaffAuthProvider>
       </body>
     </html>

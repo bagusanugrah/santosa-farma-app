@@ -175,6 +175,9 @@ class PharmacyApiTest extends TestCase
      */
     public function test_online_checkout_and_webhook(): void
     {
+        // Enable online orders first
+        StoreSetting::current()->update(['online_orders_enabled' => true]);
+
         $customer = Customer::first();
         $token = $customer->createToken('cust-token', ['role:customer'])->plainTextToken;
 
@@ -352,5 +355,60 @@ class PharmacyApiTest extends TestCase
 
         $res2 = $this->deleteJson("/api/transactions/{$completedTrx->id}");
         $res2->assertStatus(400);
+    }
+
+    /**
+     * Test cashier can toggle online orders trigger and customer actions are guarded
+     */
+    public function test_cashier_can_toggle_online_orders_and_guard_customer(): void
+    {
+        $cashier = User::where('role', 'admin_kasir')->first();
+        \Laravel\Sanctum\Sanctum::actingAs($cashier, ['role:admin_kasir']);
+
+        // 1. Initial status: online_orders_enabled should be false
+        StoreSetting::current()->update(['online_orders_enabled' => false]);
+        $statusRes = $this->getJson('/api/store/status');
+        $statusRes->assertStatus(200)
+            ->assertJsonPath('data.online_orders_enabled', false);
+
+        // 2. Customer cannot register when disabled
+        $regRes = $this->postJson('/api/auth/customer/register', [
+            'name' => 'Budi Pelanggan',
+            'type' => 'email',
+            'email' => 'budi_test@example.com',
+            'password' => 'password123',
+        ]);
+        $regRes->assertStatus(403)
+            ->assertJsonPath('status', 'error');
+
+        // 3. Customer cannot login when disabled
+        $loginRes = $this->postJson('/api/auth/customer/login', [
+            'login' => 'budi_test@example.com',
+            'password' => 'password123',
+        ]);
+        $loginRes->assertStatus(403);
+
+        // 4. Products can STILL be viewed by anyone even when online orders is disabled!
+        $catalogRes = $this->getJson('/api/products');
+        $catalogRes->assertStatus(200);
+
+        // 5. Cashier turns online orders ON
+        $toggleOn = $this->postJson('/api/store/online-orders', ['enabled' => true]);
+        $toggleOn->assertStatus(200)
+            ->assertJsonPath('data.online_orders_enabled', true);
+
+        // 6. Now customer can register
+        $regRes2 = $this->postJson('/api/auth/customer/register', [
+            'name' => 'Budi Pelanggan',
+            'type' => 'email',
+            'email' => 'budi_test@example.com',
+            'password' => 'password123',
+        ]);
+        $regRes2->assertStatus(201);
+
+        // 7. Cashier turns online orders back OFF
+        $toggleOff = $this->postJson('/api/store/online-orders', ['enabled' => false]);
+        $toggleOff->assertStatus(200)
+            ->assertJsonPath('data.online_orders_enabled', false);
     }
 }

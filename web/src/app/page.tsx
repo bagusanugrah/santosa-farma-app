@@ -1,11 +1,14 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { fetchProducts, fetchStoreStatus, Product, MetaPagination } from '@/lib/api';
+import { fetchProducts, Product, MetaPagination } from '@/lib/api';
+import { useStoreStatus } from '@/context/StoreStatusContext';
 import ProductCard from '@/components/ProductCard';
-import { Search, SlidersHorizontal, ChevronLeft, ChevronRight, AlertTriangle, Sparkles } from 'lucide-react';
+import { Search, SlidersHorizontal, ChevronLeft, ChevronRight, AlertTriangle, Sparkles, Store } from 'lucide-react';
 
 export default function CatalogPage() {
+  const { isOpen: isStoreOpen, onlineOrdersEnabled } = useStoreStatus();
+
   const [products, setProducts] = useState<Product[]>([]);
   const [meta, setMeta] = useState<MetaPagination>({
     current_page: 1,
@@ -22,7 +25,6 @@ export default function CatalogPage() {
   const [perPage, setPerPage] = useState(10);
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
-  const [isStoreOpen, setIsStoreOpen] = useState<boolean | null>(null);
 
   // Categories list
   const categories = [
@@ -43,23 +45,17 @@ export default function CatalogPage() {
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
-      const storeRes = await fetchStoreStatus();
-      setIsStoreOpen(storeRes.is_open);
-
-      if (storeRes.is_open) {
-        const res = await fetchProducts({
-          search,
-          category,
-          sort,
-          per_page: perPage,
-          page,
-        });
-        setProducts(res.data);
-        setMeta(res.meta);
-      }
+      const res = await fetchProducts({
+        search,
+        category,
+        sort,
+        per_page: perPage,
+        page,
+      });
+      setProducts(res.data);
+      setMeta(res.meta);
     } catch (err) {
       console.error('Error loading catalog', err);
-      setIsStoreOpen(false);
     } finally {
       setLoading(false);
     }
@@ -129,6 +125,28 @@ export default function CatalogPage() {
       {/* Active Catalog View */}
       {isStoreOpen === true && (
         <div className="space-y-6">
+          {/* Notice when cashier only accepts offline orders */}
+          {!onlineOrdersEnabled && (
+            <div className="bg-amber-50/90 border border-amber-200 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-amber-950 shadow-xs animate-fade-in">
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 rounded-xl bg-amber-500 text-white flex items-center justify-center font-bold flex-shrink-0 shadow-xs">
+                  <Store className="w-5 h-5" />
+                </div>
+                <div>
+                  <h4 className="font-extrabold text-xs sm:text-sm text-amber-950">
+                    Mode Etalase & Info Stok (Pembelian di Kasir Apotek)
+                  </h4>
+                  <p className="text-xs text-amber-800 mt-0.5">
+                    Kasir saat ini hanya melayani pembelian langsung di apotek agar tidak kewalahan antrean. Anda tetap dapat mengecek ketersediaan obat & harga di katalog ini.
+                  </p>
+                </div>
+              </div>
+              <span className="text-[11px] font-bold bg-amber-200/80 text-amber-900 px-3 py-1.5 rounded-xl border border-amber-300 self-start sm:self-center whitespace-nowrap">
+                Hanya Beli di Apotek
+              </span>
+            </div>
+          )}
+
           {/* Filter & Search Bar */}
           <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm flex flex-col md:flex-row items-center justify-between gap-4">
             {/* Search Input */}
@@ -219,7 +237,11 @@ export default function CatalogPage() {
           ) : (
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 sm:gap-6">
               {products.map((product) => (
-                <ProductCard key={product.id} product={product} />
+                <ProductCard
+                  key={product.id}
+                  product={product}
+                  onlineOrdersEnabled={onlineOrdersEnabled}
+                />
               ))}
             </div>
           )}

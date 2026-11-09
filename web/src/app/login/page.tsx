@@ -4,15 +4,18 @@ import React, { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
+import { useStoreStatus } from '@/context/StoreStatusContext';
 import { API_BASE_URL } from '@/lib/api';
 import OtpModal from '@/components/OtpModal';
-import { LogIn, AlertCircle } from 'lucide-react';
+import { LogIn, AlertCircle, Store } from 'lucide-react';
 
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirectUrl = searchParams.get('redirect') || '/';
   const { user, token, loading: authLoading, login } = useAuth();
+  const { isOpen, onlineOrdersEnabled } = useStoreStatus();
+  const onlineOrdersDisabled = !isOpen || !onlineOrdersEnabled;
 
   const [contactInput, setContactInput] = useState('');
   const [password, setPassword] = useState('');
@@ -36,6 +39,29 @@ function LoginForm() {
       <div className="max-w-md mx-auto py-16 flex flex-col items-center justify-center space-y-3">
         <div className="w-8 h-8 border-4 border-brand-500 border-t-transparent rounded-full animate-spin"></div>
         <p className="text-xs text-slate-500 font-medium">Memeriksa sesi...</p>
+      </div>
+    );
+  }
+
+  if (onlineOrdersDisabled) {
+    return (
+      <div className="max-w-md mx-auto my-8 bg-white rounded-3xl border border-slate-200 p-8 shadow-sm text-center animate-fade-in">
+        <div className="w-16 h-16 rounded-2xl bg-amber-100 text-amber-700 flex items-center justify-center mx-auto mb-4 shadow-inner">
+          <Store className="w-8 h-8" />
+        </div>
+        <h2 className="text-xl font-extrabold text-slate-900">Layanan Akun Online Ditutup Sementara</h2>
+        <p className="text-xs sm:text-sm text-slate-600 mt-2 mb-6 leading-relaxed">
+          Kasir Apotek Santosa Farma saat ini menonaktifkan transaksi di web agar fokus melayani antrean offline di kasir apotek. Login pelanggan ditutup sementara.
+        </p>
+        <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-amber-900 text-xs mb-6 font-medium">
+          Anda tetap dapat melihat ketersediaan obat dan daftar harga lengkap di katalog.
+        </div>
+        <Link
+          href="/"
+          className="inline-block w-full py-3 px-4 bg-brand-600 hover:bg-brand-700 text-white font-bold text-xs rounded-xl shadow-md transition"
+        >
+          Lihat Katalog Obat
+        </Link>
       </div>
     );
   }

@@ -78,6 +78,7 @@ Route::middleware(['auth:sanctum', 'role:super_admin,admin_kasir'])->group(funct
     Route::get('/transactions/qr/{qrToken}', [TransactionController::class, 'getOrderByQr']);
     Route::post('/transactions/pickup/{qrToken}', [TransactionController::class, 'confirmPickup']);
     Route::delete('/transactions/{id}', [TransactionController::class, 'destroy']);
+    Route::post('/store/online-orders', [StoreStatusController::class, 'setOnlineOrders']);
 });
 
 // Customer Online Checkout
