@@ -68,7 +68,13 @@ export interface StoreStatus {
 
 export async function fetchStoreStatus(): Promise<StoreStatus> {
   try {
-    const res = await fetch(`${API_BASE_URL}/store/status`, { cache: 'no-store' });
+    const res = await fetch(`${API_BASE_URL}/store/status`, {
+      cache: 'no-store',
+      headers: {
+        Accept: 'application/json',
+        'ngrok-skip-browser-warning': 'true',
+      },
+    });
     if (!res.ok) throw new Error('Status fetch failed');
     const data = await res.json();
     return {
@@ -103,7 +109,13 @@ export async function fetchProducts(params: {
   if (params.per_page) query.append('per_page', params.per_page.toString());
   if (params.page) query.append('page', params.page.toString());
 
-  const res = await fetch(`${API_BASE_URL}/products?${query.toString()}`, { cache: 'no-store' });
+  const res = await fetch(`${API_BASE_URL}/products?${query.toString()}`, {
+    cache: 'no-store',
+    headers: {
+      Accept: 'application/json',
+      'ngrok-skip-browser-warning': 'true',
+    },
+  });
   if (!res.ok) throw new Error('Failed to fetch products');
   return res.json();
 }
