@@ -1,17 +1,38 @@
 const { app, BrowserWindow, ipcMain } = require('electron');
 const path = require('path');
+const fs = require('fs');
 const { spawn, exec } = require('child_process');
 const http = require('http');
 
 let mainWindow = null;
 let backendProcess = null;
-let ngrokProcess = null;
+let ngrokListener = null;
 
-// Read config from env
-const NGROK_AUTHTOKEN = process.env.NGROK_AUTHTOKEN || '';
-const NGROK_DOMAIN = process.env.NGROK_DOMAIN || '';
 const BACKEND_PORT = 8000;
 const NEXT_PORT = 3001;
+
+function parseEnvFile(filePath) {
+  if (!fs.existsSync(filePath)) return {};
+  try {
+    const content = fs.readFileSync(filePath, 'utf-8');
+    const result = {};
+    for (const line of content.split('\n')) {
+      const trimmed = line.trim();
+      if (!trimmed || trimmed.startsWith('#')) continue;
+      const eqIdx = trimmed.indexOf('=');
+      if (eqIdx === -1) continue;
+      const key = trimmed.slice(0, eqIdx).trim();
+      let val = trimmed.slice(eqIdx + 1).trim();
+      if ((val.startsWith('"') && val.endsWith('"')) || (val.startsWith("'") && val.endsWith("'"))) {
+        val = val.slice(1, -1);
+      }
+      result[key] = val;
+    }
+    return result;
+  } catch (e) {
+    return {};
+  }
+}
 
 function makeRequest(path, method = 'GET') {
   return new Promise((resolve, reject) => {
@@ -69,17 +90,26 @@ async function startBackendAndNgrok() {
     });
   }
 
-  // Start ngrok if token & domain configured
-  if (NGROK_AUTHTOKEN && NGROK_DOMAIN) {
-    console.log(`[Electron] Starting Ngrok with static domain: ${NGROK_DOMAIN}...`);
-    ngrokProcess = spawn(
-      'ngrok',
-      ['http', `${BACKEND_PORT}`, `--domain=${NGROK_DOMAIN}`, `--authtoken=${NGROK_AUTHTOKEN}`],
-      {
-        shell: true,
-        stdio: 'ignore',
-      }
-    );
+  // Start ngrok tunnel using embedded @ngrok/ngrok if token & domain configured
+  const rootDir = path.join(__dirname, '../..');
+  const backendEnv = parseEnvFile(path.join(rootDir, 'backend/.env'));
+  const desktopEnv = parseEnvFile(path.join(__dirname, '../.env.local'));
+  const authtoken = process.env.NGROK_AUTHTOKEN || desktopEnv.NGROK_AUTHTOKEN || backendEnv.NGROK_AUTHTOKEN;
+  const domain = process.env.NGROK_DOMAIN || desktopEnv.NGROK_DOMAIN || backendEnv.NGROK_DOMAIN;
+
+  if (authtoken && domain) {
+    try {
+      console.log(`[Electron] Starting Ngrok with static domain: ${domain}...`);
+      const ngrok = require('@ngrok/ngrok');
+      ngrokListener = await ngrok.forward({
+        addr: BACKEND_PORT,
+        authtoken: authtoken,
+        domain: domain,
+      });
+      console.log(`[Electron] Ngrok tunnel successfully established at: ${ngrokListener.url()}`);
+    } catch (err) {
+      console.error('[Electron] Failed to start Ngrok tunnel:', err);
+    }
   }
 
   // Set store open
@@ -111,13 +141,14 @@ async function stopBackendAndNgrok() {
     backendProcess = null;
   }
 
-  if (ngrokProcess) {
+  if (ngrokListener) {
     try {
-      process.kill(-ngrokProcess.pid);
+      await ngrokListener.close();
+      console.log('[Electron] Ngrok tunnel closed.');
     } catch (e) {
-      ngrokProcess.kill();
+      console.warn('[Electron] Error closing ngrok:', e.message);
     }
-    ngrokProcess = null;
+    ngrokListener = null;
   }
 }
 
