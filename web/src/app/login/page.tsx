@@ -45,11 +45,11 @@ function LoginForm() {
 
   if (onlineOrdersDisabled) {
     return (
-      <div className="max-w-md mx-auto my-8 bg-white rounded-3xl border border-slate-200 p-8 shadow-sm text-center animate-fade-in">
-        <div className="w-16 h-16 rounded-2xl bg-amber-100 text-amber-700 flex items-center justify-center mx-auto mb-4 shadow-inner">
-          <Store className="w-8 h-8" />
+      <div className="max-w-md mx-auto my-4 sm:my-8 bg-white rounded-2xl sm:rounded-3xl border border-slate-200 p-5 sm:p-8 shadow-sm text-center animate-fade-in">
+        <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-amber-100 text-amber-700 flex items-center justify-center mx-auto mb-4 shadow-inner">
+          <Store className="w-7 h-7 sm:w-8 sm:h-8" />
         </div>
-        <h2 className="text-xl font-extrabold text-slate-900">Layanan Akun Online Ditutup Sementara</h2>
+        <h2 className="text-lg sm:text-xl font-extrabold text-slate-900">Layanan Akun Online Ditutup Sementara</h2>
         <p className="text-xs sm:text-sm text-slate-600 mt-2 mb-6 leading-relaxed">
           Kasir Apotek Santosa Farma saat ini menonaktifkan transaksi di web agar fokus melayani antrean offline di kasir apotek. Login pelanggan ditutup sementara.
         </p>
@@ -111,13 +111,13 @@ function LoginForm() {
   };
 
   return (
-    <div className="max-w-md mx-auto py-8">
-      <div className="bg-white rounded-3xl border border-slate-200 p-8 shadow-xl">
-        <div className="text-center mb-8">
-          <div className="w-14 h-14 rounded-2xl bg-brand-50 text-brand-600 flex items-center justify-center mx-auto mb-3 shadow-inner">
-            <LogIn className="w-7 h-7" />
+    <div className="max-w-md mx-auto py-4 sm:py-8">
+      <div className="bg-white rounded-2xl sm:rounded-3xl border border-slate-200 p-5 sm:p-8 shadow-xl">
+        <div className="text-center mb-6 sm:mb-8">
+          <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-brand-50 text-brand-600 flex items-center justify-center mx-auto mb-3 shadow-inner">
+            <LogIn className="w-6 h-6 sm:w-7 sm:h-7" />
           </div>
-          <h2 className="text-2xl font-black text-slate-900">Masuk Akun</h2>
+          <h2 className="text-xl sm:text-2xl font-black text-slate-900">Masuk Akun</h2>
           <p className="text-xs text-slate-500 mt-1">Masuk dengan Nomor HP atau Email terdaftar</p>
         </div>
 
@@ -137,7 +137,7 @@ function LoginForm() {
               value={contactInput}
               onChange={(e) => setContactInput(e.target.value)}
               placeholder="08123456789 atau email@domain.com"
-              className="w-full px-4 py-3 text-sm bg-slate-50 border border-slate-200 focus:bg-white focus:border-brand-500 rounded-xl outline-none transition font-medium"
+              className="w-full px-4 py-3 text-base sm:text-sm bg-slate-50 border border-slate-200 focus:bg-white focus:border-brand-500 rounded-xl outline-none transition font-medium"
             />
           </div>
 
@@ -154,7 +154,7 @@ function LoginForm() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="••••••••"
-              className="w-full px-4 py-3 text-sm bg-slate-50 border border-slate-200 focus:bg-white focus:border-brand-500 rounded-xl outline-none transition font-medium"
+              className="w-full px-4 py-3 text-base sm:text-sm bg-slate-50 border border-slate-200 focus:bg-white focus:border-brand-500 rounded-xl outline-none transition font-medium"
             />
           </div>
 

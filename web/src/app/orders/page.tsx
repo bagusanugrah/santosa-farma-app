@@ -93,16 +93,16 @@ export default function MyOrdersPage() {
   };
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
+    <div className="max-w-4xl mx-auto space-y-4 sm:space-y-6">
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-2">
-          <Package className="w-6 h-6 text-brand-600" />
-          <h2 className="text-2xl font-black text-slate-900">Pesanan Saya</h2>
+          <Package className="w-5 h-5 sm:w-6 sm:h-6 text-brand-600" />
+          <h2 className="text-xl sm:text-2xl font-black text-slate-900">Pesanan Saya</h2>
         </div>
       </div>
 
       {/* Tabs */}
-      <div className="flex items-center space-x-2 border-b border-slate-200 pb-2 overflow-x-auto">
+      <div className="flex items-center space-x-2 border-b border-slate-200 pb-2 overflow-x-auto scrollbar-none -mx-3.5 px-3.5 sm:mx-0 sm:px-0">
         {[
           { id: 'all', label: 'Semua Pesanan' },
           { id: 'paid', label: 'Siap Diambil (QR)' },
@@ -112,7 +112,7 @@ export default function MyOrdersPage() {
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id as any)}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition whitespace-nowrap ${
+            className={`px-3.5 sm:px-4 py-2 rounded-xl text-xs font-bold transition whitespace-nowrap ${
               activeTab === tab.id
                 ? 'bg-brand-600 text-white shadow-sm'
                 : 'text-slate-600 hover:bg-slate-100'
@@ -127,7 +127,7 @@ export default function MyOrdersPage() {
       {loading ? (
         <div className="space-y-4">
           {[1, 2, 3].map((i) => (
-            <div key={i} className="bg-white rounded-3xl p-6 border border-slate-200 animate-pulse space-y-3">
+            <div key={i} className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-6 border border-slate-200 animate-pulse space-y-3">
               <div className="h-4 bg-slate-100 rounded w-1/4" />
               <div className="h-10 bg-slate-100 rounded" />
               <div className="h-4 bg-slate-100 rounded w-1/3" />
@@ -135,7 +135,7 @@ export default function MyOrdersPage() {
           ))}
         </div>
       ) : filteredOrders.length === 0 ? (
-        <div className="bg-white rounded-3xl border border-slate-200 p-12 text-center text-slate-400">
+        <div className="bg-white rounded-2xl sm:rounded-3xl border border-slate-200 p-8 sm:p-12 text-center text-slate-400">
           <ShoppingBag className="w-12 h-12 mx-auto mb-3 text-slate-300" />
           <h4 className="font-bold text-slate-700">Belum ada transaksi di tab ini</h4>
           <p className="text-xs text-slate-400 mt-1">Pesanan online yang Anda buat akan tercatat di sini.</p>
@@ -145,7 +145,7 @@ export default function MyOrdersPage() {
           {filteredOrders.map((order) => (
             <div
               key={order.id}
-              className="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm hover:shadow-md transition space-y-4"
+              className="bg-white rounded-2xl sm:rounded-3xl border border-slate-200 p-4 sm:p-6 shadow-sm hover:shadow-md transition space-y-4"
             >
               <div className="flex items-center justify-between flex-wrap gap-2 pb-3 border-b border-slate-100">
                 <div>
@@ -178,22 +178,22 @@ export default function MyOrdersPage() {
               </div>
 
               {/* Total & Action Buttons */}
-              <div className="pt-3 border-t border-slate-100 flex items-center justify-between flex-wrap gap-3">
-                <div>
+              <div className="pt-3 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="flex sm:flex-col justify-between sm:justify-start items-center sm:items-start">
                   <span className="text-[11px] text-slate-400 block font-medium">Total Pembayaran</span>
                   <span className="text-base font-extrabold text-slate-900">
                     Rp {order.total.toLocaleString('id-ID')}
                   </span>
                 </div>
 
-                <div className="flex items-center space-x-2">
+                <div className="flex items-center space-x-2 w-full sm:w-auto">
                   {order.status === 'paid' && (
                     <button
                       onClick={() => {
                         setSelectedTrx(order);
                         setShowQrModal(true);
                       }}
-                      className="px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white font-bold text-xs rounded-xl shadow-md flex items-center space-x-1.5 transition"
+                      className="w-full sm:w-auto justify-center px-4 py-2.5 bg-brand-600 hover:bg-brand-700 text-white font-bold text-xs rounded-xl shadow-md flex items-center space-x-1.5 transition"
                     >
                       <QrCode className="w-4 h-4" />
                       <span>Lihat QR Pengambilan</span>
@@ -203,7 +203,7 @@ export default function MyOrdersPage() {
                   {order.status === 'diambil' && (
                     <button
                       onClick={() => window.open(`${API_BASE_URL}/receipts/${order.id}/pdf`, '_blank')}
-                      className="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition"
+                      className="w-full sm:w-auto text-center px-3 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition"
                     >
                       Unduh Struk PDF
                     </button>

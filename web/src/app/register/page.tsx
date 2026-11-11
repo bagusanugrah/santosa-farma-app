@@ -42,11 +42,11 @@ export default function CustomerRegisterPage() {
 
   if (onlineOrdersDisabled) {
     return (
-      <div className="max-w-md mx-auto my-8 bg-white rounded-3xl border border-slate-200 p-8 shadow-sm text-center animate-fade-in">
-        <div className="w-16 h-16 rounded-2xl bg-amber-100 text-amber-700 flex items-center justify-center mx-auto mb-4 shadow-inner">
-          <Store className="w-8 h-8" />
+      <div className="max-w-md mx-auto my-4 sm:my-8 bg-white rounded-2xl sm:rounded-3xl border border-slate-200 p-5 sm:p-8 shadow-sm text-center animate-fade-in">
+        <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-amber-100 text-amber-700 flex items-center justify-center mx-auto mb-4 shadow-inner">
+          <Store className="w-7 h-7 sm:w-8 sm:h-8" />
         </div>
-        <h2 className="text-xl font-extrabold text-slate-900">Pendaftaran Akun Ditutup Sementara</h2>
+        <h2 className="text-lg sm:text-xl font-extrabold text-slate-900">Pendaftaran Akun Ditutup Sementara</h2>
         <p className="text-xs sm:text-sm text-slate-600 mt-2 mb-6 leading-relaxed">
           Kasir Apotek Santosa Farma saat ini menonaktifkan fitur transaksi & pendaftaran di web agar fokus melayani antrean offline di kasir apotek.
         </p>
@@ -110,13 +110,13 @@ export default function CustomerRegisterPage() {
   };
 
   return (
-    <div className="max-w-md mx-auto py-8">
-      <div className="bg-white rounded-3xl border border-slate-200 p-8 shadow-xl">
+    <div className="max-w-md mx-auto py-4 sm:py-8">
+      <div className="bg-white rounded-2xl sm:rounded-3xl border border-slate-200 p-5 sm:p-8 shadow-xl">
         <div className="text-center mb-6">
-          <div className="w-14 h-14 rounded-2xl bg-brand-50 text-brand-600 flex items-center justify-center mx-auto mb-3 shadow-inner">
-            <UserPlus className="w-7 h-7" />
+          <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-brand-50 text-brand-600 flex items-center justify-center mx-auto mb-3 shadow-inner">
+            <UserPlus className="w-6 h-6 sm:w-7 sm:h-7" />
           </div>
-          <h2 className="text-2xl font-black text-slate-900">Daftar Akun Baru</h2>
+          <h2 className="text-xl sm:text-2xl font-black text-slate-900">Daftar Akun Baru</h2>
           <p className="text-xs text-slate-500 mt-1">Buat akun untuk memesan obat online di Apotek Santosa Farma</p>
         </div>
 
@@ -172,7 +172,7 @@ export default function CustomerRegisterPage() {
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="Contoh: Siti Rahmah"
-              className="w-full px-4 py-3 text-sm bg-slate-50 border border-slate-200 focus:bg-white focus:border-brand-500 rounded-xl outline-none transition font-medium"
+              className="w-full px-4 py-3 text-base sm:text-sm bg-slate-50 border border-slate-200 focus:bg-white focus:border-brand-500 rounded-xl outline-none transition font-medium"
             />
           </div>
 
@@ -186,7 +186,7 @@ export default function CustomerRegisterPage() {
               value={target}
               onChange={(e) => setTarget(e.target.value)}
               placeholder={registerType === 'phone' ? '081234567890' : 'siti@example.com'}
-              className="w-full px-4 py-3 text-sm bg-slate-50 border border-slate-200 focus:bg-white focus:border-brand-500 rounded-xl outline-none transition font-medium"
+              className="w-full px-4 py-3 text-base sm:text-sm bg-slate-50 border border-slate-200 focus:bg-white focus:border-brand-500 rounded-xl outline-none transition font-medium"
             />
             <p className="text-[11px] text-slate-400 mt-1">
               Kode verifikasi OTP 6-digit akan dikirimkan ke {registerType === 'phone' ? 'WhatsApp' : 'Email'} ini.
@@ -202,7 +202,7 @@ export default function CustomerRegisterPage() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="Minimal 6 karakter"
-              className="w-full px-4 py-3 text-sm bg-slate-50 border border-slate-200 focus:bg-white focus:border-brand-500 rounded-xl outline-none transition font-medium"
+              className="w-full px-4 py-3 text-base sm:text-sm bg-slate-50 border border-slate-200 focus:bg-white focus:border-brand-500 rounded-xl outline-none transition font-medium"
             />
           </div>
 

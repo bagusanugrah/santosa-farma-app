@@ -167,10 +167,10 @@ export default function CheckoutPage() {
   };
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
+    <div className="max-w-4xl mx-auto space-y-4 sm:space-y-6">
       <div className="flex items-center space-x-2">
-        <CreditCard className="w-6 h-6 text-brand-600" />
-        <h2 className="text-2xl font-black text-slate-900">Konfirmasi Pemesanan & Pembayaran</h2>
+        <CreditCard className="w-5 h-5 sm:w-6 sm:h-6 text-brand-600" />
+        <h2 className="text-xl sm:text-2xl font-black text-slate-900">Konfirmasi Pemesanan & Pembayaran</h2>
       </div>
 
       {error && (
@@ -180,10 +180,10 @@ export default function CheckoutPage() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
         {/* Items Summary */}
         <div className="md:col-span-2 space-y-4">
-          <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm">
+          <div className="bg-white rounded-2xl sm:rounded-3xl border border-slate-200 p-4 sm:p-6 shadow-sm">
             <h3 className="text-sm font-bold text-slate-900 mb-4 flex items-center justify-between">
               <span>Daftar Obat yang Dipesan</span>
               <span className="text-xs text-slate-500 font-normal">{items.length} jenis obat</span>
@@ -191,8 +191,8 @@ export default function CheckoutPage() {
 
             <div className="divide-y divide-slate-100">
               {items.map(({ product, qty }) => (
-                <div key={product.id} className="py-3 flex items-center justify-between text-xs">
-                  <div className="flex items-center space-x-3">
+                <div key={product.id} className="py-3 flex items-center justify-between text-xs gap-3">
+                  <div className="flex items-center space-x-3 min-w-0">
                     <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center flex-shrink-0">
                       {product.image_url ? (
                         <img src={product.image_url} alt={product.name} className="w-full h-full object-cover rounded-xl" />
@@ -200,14 +200,14 @@ export default function CheckoutPage() {
                         <span>💊</span>
                       )}
                     </div>
-                    <div>
-                      <h4 className="font-bold text-slate-900">{product.name}</h4>
+                    <div className="min-w-0">
+                      <h4 className="font-bold text-slate-900 truncate">{product.name}</h4>
                       <p className="text-slate-500 mt-0.5">
                         {qty} x Rp {product.price.toLocaleString('id-ID')}
                       </p>
                     </div>
                   </div>
-                  <span className="font-extrabold text-slate-900">
+                  <span className="font-extrabold text-slate-900 flex-shrink-0">
                     Rp {(product.price * qty).toLocaleString('id-ID')}
                   </span>
                 </div>
@@ -216,7 +216,7 @@ export default function CheckoutPage() {
           </div>
 
           {/* Pickup Information */}
-          <div className="bg-brand-50/60 rounded-3xl border border-brand-200 p-6">
+          <div className="bg-brand-50/60 rounded-2xl sm:rounded-3xl border border-brand-200 p-4 sm:p-6">
             <div className="flex items-start space-x-3">
               <ShieldCheck className="w-6 h-6 text-brand-600 flex-shrink-0 mt-0.5" />
               <div>
@@ -231,7 +231,7 @@ export default function CheckoutPage() {
 
         {/* Customer Details & Pay Button */}
         <div className="space-y-4">
-          <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm space-y-4">
+          <div className="bg-white rounded-2xl sm:rounded-3xl border border-slate-200 p-4 sm:p-6 shadow-sm space-y-4">
             <h3 className="text-sm font-bold text-slate-900">Data Pemesan</h3>
             <div className="space-y-2 text-xs">
               <div className="flex justify-between">
@@ -268,7 +268,7 @@ export default function CheckoutPage() {
             <button
               onClick={handlePayNow}
               disabled={loading}
-              className="w-full py-3.5 bg-brand-600 hover:bg-brand-700 disabled:opacity-50 text-white font-bold rounded-2xl transition shadow-lg shadow-brand-600/20 text-xs flex items-center justify-center space-x-2"
+              className="w-full py-3.5 bg-brand-600 hover:bg-brand-700 disabled:opacity-50 text-white font-bold rounded-xl sm:rounded-2xl transition shadow-lg shadow-brand-600/20 text-xs sm:text-sm flex items-center justify-center space-x-2"
             >
               <span>{loading ? 'Menyiapkan Pembayaran...' : 'Bayar Sekarang (Midtrans)'}</span>
               <ArrowRight className="w-4 h-4" />

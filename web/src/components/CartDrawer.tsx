@@ -33,13 +33,13 @@ export default function CartDrawer() {
         onClick={() => setIsOpen(false)}
       />
 
-      <div className="fixed inset-y-0 right-0 max-w-full flex pl-10">
+      <div className="fixed inset-y-0 right-0 max-w-full flex sm:pl-10">
         <div className="w-screen max-w-md bg-white shadow-2xl flex flex-col">
           {/* Header */}
-          <div className="p-5 border-b border-slate-200 flex items-center justify-between">
+          <div className="p-4 sm:p-5 border-b border-slate-200 flex items-center justify-between">
             <div className="flex items-center space-x-2">
               <ShoppingBag className="w-5 h-5 text-brand-600" />
-              <h2 className="font-bold text-slate-900 text-lg">Keranjang Belanja</h2>
+              <h2 className="font-bold text-slate-900 text-base sm:text-lg">Keranjang Belanja</h2>
               <span className="bg-slate-100 text-slate-600 text-xs font-bold px-2 py-0.5 rounded-full">
                 {totalItems} item
               </span>
@@ -53,7 +53,7 @@ export default function CartDrawer() {
           </div>
 
           {/* Items List */}
-          <div className="flex-1 overflow-y-auto p-5 space-y-4">
+          <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-3 sm:space-y-4">
             {items.length === 0 ? (
               <div className="h-full flex flex-col items-center justify-center text-center text-slate-400">
                 <div className="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center mb-3 text-slate-300">

@@ -213,15 +213,15 @@ export default function ProfilePage() {
   };
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
+    <div className="max-w-2xl mx-auto space-y-4 sm:space-y-6">
       {/* Header Profile */}
-      <div className="bg-white rounded-3xl border border-slate-200 p-6 sm:p-8 shadow-sm">
-        <div className="flex items-center space-x-4 mb-6">
-          <div className="w-16 h-16 rounded-2xl bg-brand-600 text-white font-black text-2xl flex items-center justify-center shadow-md">
+      <div className="bg-white rounded-2xl sm:rounded-3xl border border-slate-200 p-4 sm:p-8 shadow-sm">
+        <div className="flex items-center space-x-3 sm:space-x-4 mb-5 sm:mb-6">
+          <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-brand-600 text-white font-black text-xl sm:text-2xl flex items-center justify-center shadow-md flex-shrink-0">
             {user.name.charAt(0).toUpperCase()}
           </div>
           <div>
-            <h2 className="text-xl font-bold text-slate-900">{user.name}</h2>
+            <h2 className="text-lg sm:text-xl font-bold text-slate-900">{user.name}</h2>
             <p className="text-xs text-slate-500 flex items-center space-x-1 mt-0.5">
               <ShieldCheck className="w-4 h-4 text-emerald-600" />
               <span>Akun Pelanggan Apotek Santosa Farma</span>
@@ -233,18 +233,18 @@ export default function ProfilePage() {
         <form onSubmit={handleUpdateName} className="space-y-4 pt-4 border-t border-slate-100">
           <div>
             <label className="block text-xs font-bold text-slate-700 mb-1.5">Nama Lengkap</label>
-            <div className="flex items-center space-x-3">
+            <div className="flex items-center space-x-2 sm:space-x-3">
               <input
                 type="text"
                 required
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className="flex-1 px-4 py-2.5 text-sm bg-slate-50 border border-slate-200 focus:bg-white focus:border-brand-500 rounded-xl outline-none transition font-medium"
+                className="flex-1 px-4 py-2.5 text-base sm:text-sm bg-slate-50 border border-slate-200 focus:bg-white focus:border-brand-500 rounded-xl outline-none transition font-medium"
               />
               <button
                 type="submit"
                 disabled={updatingName || name === user.name}
-                className="px-4 py-2.5 bg-slate-900 hover:bg-slate-800 disabled:opacity-40 text-white font-bold text-xs rounded-xl transition flex items-center space-x-1.5 shadow-sm"
+                className="px-4 py-2.5 bg-slate-900 hover:bg-slate-800 disabled:opacity-40 text-white font-bold text-xs rounded-xl transition flex items-center space-x-1.5 shadow-sm whitespace-nowrap"
               >
                 <Save className="w-3.5 h-3.5" />
                 <span>{updatingName ? 'Menyimpan...' : 'Simpan'}</span>
@@ -261,7 +261,7 @@ export default function ProfilePage() {
       </div>
 
       {/* Verified Contacts Management */}
-      <div className="bg-white rounded-3xl border border-slate-200 p-6 sm:p-8 shadow-sm space-y-6">
+      <div className="bg-white rounded-2xl sm:rounded-3xl border border-slate-200 p-4 sm:p-8 shadow-sm space-y-5 sm:space-y-6">
         <div>
           <h3 className="text-base font-bold text-slate-900">Kontak & Keamanan Akun</h3>
           <p className="text-xs text-slate-500 mt-1">
@@ -496,7 +496,7 @@ export default function ProfilePage() {
       </div>
 
       {/* Change Password Card */}
-      <div className="bg-white rounded-3xl border border-slate-200 p-6 sm:p-8 shadow-sm space-y-6">
+      <div className="bg-white rounded-2xl sm:rounded-3xl border border-slate-200 p-4 sm:p-8 shadow-sm space-y-5 sm:space-y-6">
         <div>
           <div className="flex items-center space-x-2.5 mb-1">
             <div className="w-8 h-8 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center">
@@ -535,7 +535,7 @@ export default function ProfilePage() {
                 value={currentPassword}
                 onChange={(e) => setCurrentPassword(e.target.value)}
                 placeholder="Masukkan password saat ini"
-                className="w-full px-4 py-2.5 text-sm bg-slate-50 border border-slate-200 focus:bg-white focus:border-brand-500 rounded-xl outline-none transition font-medium pr-10"
+                className="w-full px-4 py-2.5 text-base sm:text-sm bg-slate-50 border border-slate-200 focus:bg-white focus:border-brand-500 rounded-xl outline-none transition font-medium pr-10"
               />
               <button
                 type="button"
@@ -559,7 +559,7 @@ export default function ProfilePage() {
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
                   placeholder="Password baru"
-                  className="w-full px-4 py-2.5 text-sm bg-slate-50 border border-slate-200 focus:bg-white focus:border-brand-500 rounded-xl outline-none transition font-medium pr-10"
+                  className="w-full px-4 py-2.5 text-base sm:text-sm bg-slate-50 border border-slate-200 focus:bg-white focus:border-brand-500 rounded-xl outline-none transition font-medium pr-10"
                 />
                 <button
                   type="button"
@@ -582,7 +582,7 @@ export default function ProfilePage() {
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   placeholder="Ulangi password baru"
-                  className="w-full px-4 py-2.5 text-sm bg-slate-50 border border-slate-200 focus:bg-white focus:border-brand-500 rounded-xl outline-none transition font-medium pr-10"
+                  className="w-full px-4 py-2.5 text-base sm:text-sm bg-slate-50 border border-slate-200 focus:bg-white focus:border-brand-500 rounded-xl outline-none transition font-medium pr-10"
                 />
                 <button
                   type="button"
