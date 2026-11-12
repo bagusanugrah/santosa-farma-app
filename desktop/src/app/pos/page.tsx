@@ -3,7 +3,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useStaffAuth } from '@/context/StaffAuthContext';
-import { useStoreStatus } from '@/context/StoreStatusContext';
 import { API_BASE_URL, Product, Transaction } from '@/lib/api';
 import ReceiptModal from '@/components/ReceiptModal';
 import { QRCodeSVG } from 'qrcode.react';
@@ -19,9 +18,6 @@ import {
   AlertCircle,
   Pill,
   ShoppingBag,
-  Globe,
-  ToggleLeft,
-  ToggleRight,
 } from 'lucide-react';
 
 interface CartItem {
@@ -46,14 +42,6 @@ export default function PosPage() {
   const [activeQrisTrx, setActiveQrisTrx] = useState<Transaction | null>(null);
   const [completedTrx, setCompletedTrx] = useState<Transaction | null>(null);
   const [showReceiptModal, setShowReceiptModal] = useState(false);
-
-  // Online orders trigger state from shared StoreStatusContext
-  const {
-    onlineOrdersEnabled,
-    toggling: togglingOnline,
-    toggleOnlineOrders: handleToggleOnlineOrders,
-    statusMessage: onlineFeedbackMsg,
-  } = useStoreStatus();
 
   const categories = [
     'all',
@@ -249,73 +237,6 @@ export default function PosPage() {
     <div className="flex-1 flex overflow-hidden">
       {/* Left: Product Picker */}
       <div className="flex-1 flex flex-col p-6 overflow-hidden border-r border-slate-200">
-        {/* Cashier Control: Online Orders Trigger Banner */}
-        <div
-          className={`mb-4 px-4 py-3 rounded-2xl border transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs ${
-            onlineOrdersEnabled
-              ? 'bg-emerald-50 border-emerald-200 text-emerald-950'
-              : 'bg-amber-50 border-amber-200 text-amber-950'
-          }`}
-        >
-          <div className="flex items-center space-x-3">
-            <div
-              className={`w-9 h-9 rounded-xl flex items-center justify-center font-bold shadow-sm transition ${
-                onlineOrdersEnabled ? 'bg-emerald-600 text-white' : 'bg-amber-500 text-white'
-              }`}
-            >
-              <Globe className="w-5 h-5" />
-            </div>
-            <div>
-              <div className="flex items-center space-x-2">
-                <span className="text-xs font-black tracking-tight">
-                  Layanan Beli Obat di Web:
-                </span>
-                <span
-                  className={`text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md ${
-                    onlineOrdersEnabled
-                      ? 'bg-emerald-200/70 text-emerald-900 border border-emerald-300'
-                      : 'bg-amber-200/70 text-amber-900 border border-amber-300'
-                  }`}
-                >
-                  {onlineOrdersEnabled ? 'AKTIF (Menerima Order di Web)' : 'NONAKTIF (Katalog Saja)'}
-                </span>
-              </div>
-              <p className="text-[11px] text-slate-600 mt-0.5">
-                {onlineOrdersEnabled
-                  ? 'Pelanggan dapat login, daftar akun, dan beli obat secara online di web.'
-                  : 'Pelanggan di web HANYA bisa melihat katalog obat (tidak bisa beli / login / daftar).'}
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-center space-x-3 self-end sm:self-center">
-            {onlineFeedbackMsg && (
-              <span className="text-[11px] font-bold text-emerald-800 bg-white px-2.5 py-1 rounded-lg border border-emerald-300 shadow-xs animate-fade-in">
-                {onlineFeedbackMsg}
-              </span>
-            )}
-            <button
-              onClick={handleToggleOnlineOrders}
-              disabled={togglingOnline}
-              className={`flex items-center space-x-1.5 px-3.5 py-2 rounded-xl text-xs font-extrabold transition shadow-sm ${
-                onlineOrdersEnabled
-                  ? 'bg-rose-600 hover:bg-rose-700 text-white'
-                  : 'bg-emerald-600 hover:bg-emerald-700 text-white'
-              } disabled:opacity-50 disabled:cursor-not-allowed`}
-              title="Klik tombol ini untuk mengaktifkan / menonaktifkan fitur transaksi di web"
-            >
-              {togglingOnline ? (
-                <RefreshCw className="w-4 h-4 animate-spin" />
-              ) : onlineOrdersEnabled ? (
-                <ToggleRight className="w-4 h-4" />
-              ) : (
-                <ToggleLeft className="w-4 h-4" />
-              )}
-              <span>{onlineOrdersEnabled ? 'Matikan Beli di Web' : 'Aktifkan Beli di Web'}</span>
-            </button>
-          </div>
-        </div>
-
         {/* Top Header & Search */}
         <div className="flex items-center justify-between mb-4 gap-4">
           <div className="relative flex-1">

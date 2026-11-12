@@ -9,6 +9,7 @@ interface StoreStatusContextType {
   isOpen: boolean;
   toggling: boolean;
   toggleOnlineOrders: () => Promise<boolean>;
+  setOnlineOrdersState: (enabled: boolean) => Promise<boolean>;
   refreshStatus: () => Promise<void>;
   statusMessage: string;
 }
@@ -18,6 +19,7 @@ const StoreStatusContext = createContext<StoreStatusContextType>({
   isOpen: true,
   toggling: false,
   toggleOnlineOrders: async () => false,
+  setOnlineOrdersState: async () => false,
   refreshStatus: async () => {},
   statusMessage: '',
 });
@@ -48,17 +50,20 @@ export const StoreStatusProvider: React.FC<{ children: React.ReactNode }> = ({ c
   }, [user, token, refreshStatus]);
 
   const toggleOnlineOrders = async (): Promise<boolean> => {
+    return setOnlineOrdersState(!onlineOrdersEnabled);
+  };
+
+  const setOnlineOrdersState = async (nextVal: boolean): Promise<boolean> => {
     if (!token || toggling) return false;
     setToggling(true);
     try {
-      const nextVal = !onlineOrdersEnabled;
       const res = await setOnlineOrders(token, nextVal);
       if (res.success && res.data) {
         setOnlineOrdersEnabled(res.data.online_orders_enabled);
         setStatusMessage(
           res.data.online_orders_enabled
-            ? 'Pemesanan di Web DIAKTIFKAN!'
-            : 'Pemesanan di Web DINONAKTIFKAN (Katalog Saja).'
+            ? 'Layanan Beli Obat di Web DIAKTIFKAN!'
+            : 'Layanan Beli Obat di Web DINONAKTIFKAN (Katalog Saja).'
         );
         setTimeout(() => setStatusMessage(''), 4000);
         return true;
@@ -81,6 +86,7 @@ export const StoreStatusProvider: React.FC<{ children: React.ReactNode }> = ({ c
         isOpen,
         toggling,
         toggleOnlineOrders,
+        setOnlineOrdersState,
         refreshStatus,
         statusMessage,
       }}

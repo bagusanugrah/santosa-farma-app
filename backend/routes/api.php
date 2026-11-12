@@ -31,6 +31,7 @@ Route::prefix('auth')->group(function () {
     Route::middleware('auth:sanctum')->group(function () {
         Route::get('/staff/me', [AuthController::class, 'staffMe']);
         Route::post('/staff/logout', [AuthController::class, 'staffLogout']);
+        Route::post('/staff/change-password', [AuthController::class, 'staffChangePassword']);
     });
 
     // Customer Auth (Web Client)

@@ -52,6 +52,44 @@ class PharmacyApiTest extends TestCase
     }
 
     /**
+     * Test Staff Change Password
+     */
+    public function test_staff_change_password(): void
+    {
+        $loginRes = $this->postJson('/api/auth/staff/login', [
+            'username' => 'kasir',
+            'password' => 'password123',
+        ]);
+        $token = $loginRes->json('data.token');
+
+        // Wrong current password
+        $failRes = $this->withHeader('Authorization', 'Bearer ' . $token)
+            ->postJson('/api/auth/staff/change-password', [
+                'current_password' => 'wrongpass',
+                'new_password' => 'newpassword123',
+                'new_password_confirmation' => 'newpassword123',
+            ]);
+        $failRes->assertStatus(422);
+
+        // Success change password
+        $successRes = $this->withHeader('Authorization', 'Bearer ' . $token)
+            ->postJson('/api/auth/staff/change-password', [
+                'current_password' => 'password123',
+                'new_password' => 'newpassword123',
+                'new_password_confirmation' => 'newpassword123',
+            ]);
+        $successRes->assertStatus(200)
+            ->assertJsonPath('status', 'success');
+
+        // Login with new password
+        $newLoginRes = $this->postJson('/api/auth/staff/login', [
+            'username' => 'kasir',
+            'password' => 'newpassword123',
+        ]);
+        $newLoginRes->assertStatus(200);
+    }
+
+    /**
      * Test Store Status
      */
     public function test_store_status_open_and_close(): void

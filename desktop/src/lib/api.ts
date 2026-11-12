@@ -104,4 +104,33 @@ export async function setOnlineOrders(token: string, enabled?: boolean): Promise
   }
 }
 
+export async function changeStaffPassword(
+  token: string,
+  payload: {
+    current_password: string;
+    new_password: string;
+    new_password_confirmation: string;
+  }
+): Promise<{ success: boolean; message: string }> {
+  try {
+    const res = await fetch(`${API_BASE_URL}/auth/staff/change-password`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(payload),
+    });
+    const json = await res.json();
+    if (!res.ok) {
+      const errDetail = json.errors ? Object.values(json.errors)[0] as string : null;
+      throw new Error(errDetail || json.message || 'Gagal mengubah password.');
+    }
+    return { success: true, message: json.message || 'Password berhasil diperbarui.' };
+  } catch (err: any) {
+    return { success: false, message: err.message };
+  }
+}
+
 

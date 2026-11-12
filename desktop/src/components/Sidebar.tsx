@@ -14,8 +14,7 @@ import {
   Receipt,
   LogOut,
   Globe,
-  ToggleLeft,
-  ToggleRight,
+  Settings,
   RefreshCw,
 } from 'lucide-react';
 
@@ -23,7 +22,7 @@ export default function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const { user, logout } = useStaffAuth();
-  const { onlineOrdersEnabled, toggling, toggleOnlineOrders } = useStoreStatus();
+  const { onlineOrdersEnabled } = useStoreStatus();
 
   if (!user || pathname === '/login') return null;
 
@@ -32,6 +31,7 @@ export default function Sidebar() {
   const cashierNav = [
     { label: 'Kasir / POS', href: '/pos', icon: ShoppingCart },
     { label: 'Riwayat Transaksi', href: '/pos-history', icon: History },
+    { label: 'Pengaturan', href: '/settings', icon: Settings },
   ];
 
   const adminNav = [
@@ -40,6 +40,7 @@ export default function Sidebar() {
     { label: 'Semua Transaksi', href: '/admin/transactions', icon: Receipt },
     { label: 'Export & Laporan', href: '/admin/export', icon: FileSpreadsheet },
     { label: 'Kasir / POS', href: '/pos', icon: ShoppingCart },
+    { label: 'Pengaturan', href: '/settings', icon: Settings },
   ];
 
   const currentNav = isSuperAdmin ? adminNav : cashierNav;
@@ -92,13 +93,15 @@ export default function Sidebar() {
 
       {/* User Info & Logout */}
       <div className="pt-4 border-t border-slate-800 space-y-3">
-        {/* Quick Web Orders Trigger Widget */}
-        <div
-          className={`p-3 rounded-2xl border transition-all ${
+        {/* Web Orders Status Pill with link to /settings */}
+        <Link
+          href="/settings"
+          className={`p-3 rounded-2xl border transition-all block group ${
             onlineOrdersEnabled
-              ? 'bg-emerald-950/40 border-emerald-800/60 text-emerald-300'
-              : 'bg-amber-950/40 border-amber-800/60 text-amber-300'
+              ? 'bg-emerald-950/40 border-emerald-800/60 text-emerald-300 hover:border-emerald-600'
+              : 'bg-amber-950/40 border-amber-800/60 text-amber-300 hover:border-amber-600'
           }`}
+          title="Klik untuk membuka Halaman Pengaturan & Toggle Layanan Web"
         >
           <div className="flex items-center justify-between mb-1">
             <div className="flex items-center space-x-1.5 text-xs font-bold">
@@ -115,28 +118,10 @@ export default function Sidebar() {
               {onlineOrdersEnabled ? 'Aktif' : 'Mati'}
             </span>
           </div>
-          <p className="text-[10px] text-slate-400 leading-tight mb-2">
-            {onlineOrdersEnabled ? 'Menerima order online' : 'Katalog etalase saja'}
+          <p className="mt-1 text-[10px] text-slate-400 group-hover:text-slate-200 transition-colors">
+            {onlineOrdersEnabled ? 'Menerima order web' : 'Katalog etalase saja'}
           </p>
-          <button
-            onClick={toggleOnlineOrders}
-            disabled={toggling}
-            className={`w-full py-1.5 px-2 rounded-xl text-[11px] font-bold transition flex items-center justify-center space-x-1 shadow-xs ${
-              onlineOrdersEnabled
-                ? 'bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/30'
-                : 'bg-emerald-600 hover:bg-emerald-500 text-white'
-            } disabled:opacity-50`}
-          >
-            {toggling ? (
-              <RefreshCw className="w-3 h-3 animate-spin" />
-            ) : onlineOrdersEnabled ? (
-              <ToggleRight className="w-3.5 h-3.5" />
-            ) : (
-              <ToggleLeft className="w-3.5 h-3.5" />
-            )}
-            <span>{onlineOrdersEnabled ? 'Matikan Beli di Web' : 'Aktifkan Beli di Web'}</span>
-          </button>
-        </div>
+        </Link>
 
         <div className="flex items-center space-x-3 px-3 py-2 bg-slate-800/60 rounded-2xl">
           <div className="w-8 h-8 rounded-xl bg-brand-500/20 text-brand-400 flex items-center justify-center font-bold text-xs">
