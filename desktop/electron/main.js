@@ -90,28 +90,6 @@ async function startBackendAndNgrok() {
     });
   }
 
-  // Start ngrok tunnel using embedded @ngrok/ngrok if token & domain configured
-  const rootDir = path.join(__dirname, '../..');
-  const backendEnv = parseEnvFile(path.join(rootDir, 'backend/.env'));
-  const desktopEnv = parseEnvFile(path.join(__dirname, '../.env.local'));
-  const authtoken = process.env.NGROK_AUTHTOKEN || desktopEnv.NGROK_AUTHTOKEN || backendEnv.NGROK_AUTHTOKEN;
-  const domain = process.env.NGROK_DOMAIN || desktopEnv.NGROK_DOMAIN || backendEnv.NGROK_DOMAIN;
-
-  if (authtoken && domain) {
-    try {
-      console.log(`[Electron] Starting Ngrok with static domain: ${domain}...`);
-      const ngrok = require('@ngrok/ngrok');
-      ngrokListener = await ngrok.forward({
-        addr: BACKEND_PORT,
-        authtoken: authtoken,
-        domain: domain,
-      });
-      console.log(`[Electron] Ngrok tunnel successfully established at: ${ngrokListener.url()}`);
-    } catch (err) {
-      console.error('[Electron] Failed to start Ngrok tunnel:', err);
-    }
-  }
-
   // Set store open
   setTimeout(async () => {
     try {
@@ -120,7 +98,44 @@ async function startBackendAndNgrok() {
     } catch (e) {
       console.warn('[Electron] Could not set store open immediately, will retry:', e.message);
     }
-  }, 2000);
+  }, 1500);
+
+  // Background ngrok tunnel (non-blocking)
+  initNgrokTunnel();
+}
+
+async function initNgrokTunnel() {
+  const rootDir = path.join(__dirname, '../..');
+  const backendEnv = parseEnvFile(path.join(rootDir, 'backend/.env'));
+  const desktopEnv = parseEnvFile(path.join(__dirname, '../.env.local'));
+  const authtoken = process.env.NGROK_AUTHTOKEN || desktopEnv.NGROK_AUTHTOKEN || backendEnv.NGROK_AUTHTOKEN;
+  const domain = process.env.NGROK_DOMAIN || desktopEnv.NGROK_DOMAIN || backendEnv.NGROK_DOMAIN;
+
+  if (!authtoken || !domain) {
+    console.log('[Electron] Ngrok authtoken/domain not configured, skipping ngrok tunnel.');
+    return;
+  }
+
+  console.log(`[Electron] Starting Ngrok background tunnel: ${domain}...`);
+
+  try {
+    const ngrok = require('@ngrok/ngrok');
+
+    const connectPromise = ngrok.forward({
+      addr: BACKEND_PORT,
+      authtoken: authtoken,
+      domain: domain,
+    });
+
+    const timeoutPromise = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('Koneksi Ngrok timeout (6 detik)')), 6000)
+    );
+
+    ngrokListener = await Promise.race([connectPromise, timeoutPromise]);
+    console.log(`[Electron] Ngrok tunnel successfully established at: ${ngrokListener.url()}`);
+  } catch (err) {
+    console.warn(`[Electron] Ngrok tunnel skipped/failed: ${err.message}. Aplikasi kasir lokal tetap berjalan normal.`);
+  }
 }
 
 async function stopBackendAndNgrok() {
@@ -191,9 +206,9 @@ function createWindow() {
   });
 }
 
-app.whenReady().then(async () => {
-  await startBackendAndNgrok();
+app.whenReady().then(() => {
   createWindow();
+  startBackendAndNgrok();
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
