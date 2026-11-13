@@ -128,7 +128,7 @@ async function initNgrokTunnel() {
     });
 
     const timeoutPromise = new Promise((_, reject) =>
-      setTimeout(() => reject(new Error('Koneksi Ngrok timeout (6 detik)')), 6000)
+      setTimeout(() => reject(new Error('Koneksi Ngrok timeout (15 detik)')), 15000)
     );
 
     ngrokListener = await Promise.race([connectPromise, timeoutPromise]);
