@@ -468,56 +468,64 @@ class PharmacyApiTest extends TestCase
 
         // 2. Super admin exports database
         \Laravel\Sanctum\Sanctum::actingAs($superAdmin, ['role:super_admin']);
-        $exportRes = $this->getJson('/api/backup/export');
-        $exportRes->assertStatus(200)
-            ->assertJsonPath('app', 'apotek-santosa-farma')
-            ->assertJsonPath('version', '1.0');
+        $exportRes = $this->get('/api/backup/export');
+        $exportRes->assertStatus(200);
+        $this->assertEquals('application/zip', $exportRes->headers->get('Content-Type'));
 
-        $backupData = $exportRes->json();
-        $this->assertArrayHasKey('tables', $backupData);
-        $this->assertArrayHasKey('checksum', $backupData);
-        $this->assertNotEmpty($backupData['tables']['users']);
-        $this->assertNotEmpty($backupData['tables']['products']);
+        // Save exported zip to temp and inspect contents
+        $exportedFilePath = $exportRes->getFile()->getPathname();
+        $tempZipPath = tempnam(sys_get_temp_dir(), 'test_exp_') . '.zip';
+        copy($exportedFilePath, $tempZipPath);
+
+        $zip = new \ZipArchive();
+        $this->assertTrue($zip->open($tempZipPath) === true);
+        $this->assertNotFalse($zip->locateName('manifest.json'));
+        $this->assertNotFalse($zip->locateName('database.json'));
+
+        $manifest = json_decode($zip->getFromName('manifest.json'), true);
+        $this->assertEquals('apotek-santosa-farma', $manifest['app']);
+        $this->assertEquals('full_system_backup_zip', $manifest['package_type']);
+
+        $dbJson = json_decode($zip->getFromName('database.json'), true);
+        $this->assertEquals('apotek-santosa-farma', $dbJson['app']);
+        $this->assertNotEmpty($dbJson['tables']['users']);
+        $this->assertNotEmpty($dbJson['tables']['products']);
+        $zip->close();
 
         // 3. Import without file fails (422)
         $noFileRes = $this->postJson('/api/backup/import');
         $noFileRes->assertStatus(422)
             ->assertJsonPath('status', 'error');
 
-        // 4. Import random file (not JSON or wrong format) fails (422)
+        // 4. Import random file (not ZIP or JSON) fails (422)
         $randomFile = \Illuminate\Http\UploadedFile::fake()->create('random.txt', 10, 'text/plain');
         $randomRes = $this->postJson('/api/backup/import', ['backup_file' => $randomFile]);
         $randomRes->assertStatus(422)
             ->assertJsonPath('status', 'error');
 
-        // 5. Import fake JSON without app signature fails (422)
-        $fakeJson = \Illuminate\Http\UploadedFile::fake()->createWithContent(
-            'fake.json',
-            json_encode(['random_key' => 'random_value'])
-        );
-        $fakeRes = $this->postJson('/api/backup/import', ['backup_file' => $fakeJson]);
-        $fakeRes->assertStatus(422)
-            ->assertJsonPath('status', 'error');
+        // 5. Import fake ZIP without manifest fails (422)
+        $fakeZipPath = tempnam(sys_get_temp_dir(), 'fake_zip_') . '.zip';
+        $fakeZip = new \ZipArchive();
+        $fakeZip->open($fakeZipPath, \ZipArchive::CREATE | \ZipArchive::OVERWRITE);
+        $fakeZip->addFromString('some_random_file.txt', 'random data');
+        $fakeZip->close();
 
-        // 6. Import tampered JSON (invalid checksum) fails (422)
-        $tamperedData = $backupData;
-        $tamperedData['checksum'] = 'invalid_checksum_value_12345';
-        $tamperedFile = \Illuminate\Http\UploadedFile::fake()->createWithContent(
-            'tampered.json',
-            json_encode($tamperedData)
-        );
-        $tamperedRes = $this->postJson('/api/backup/import', ['backup_file' => $tamperedFile]);
-        $tamperedRes->assertStatus(422)
+        $fakeZipUploaded = new \Illuminate\Http\UploadedFile($fakeZipPath, 'fake.zip', 'application/zip', null, true);
+        $fakeZipRes = $this->postJson('/api/backup/import', ['backup_file' => $fakeZipUploaded]);
+        $fakeZipRes->assertStatus(422)
             ->assertJsonPath('status', 'error');
+        @unlink($fakeZipPath);
 
-        // 7. Import valid backup succeeds (200)
-        $validFile = \Illuminate\Http\UploadedFile::fake()->createWithContent(
-            'valid-backup.json',
-            json_encode($backupData)
-        );
-        $validRes = $this->postJson('/api/backup/import', ['backup_file' => $validFile]);
+        // 6. Import valid exported ZIP succeeds (200)
+        $validZipUploaded = new \Illuminate\Http\UploadedFile($tempZipPath, 'valid-backup.zip', 'application/zip', null, true);
+        $validRes = $this->postJson('/api/backup/import', ['backup_file' => $validZipUploaded]);
         $validRes->assertStatus(200)
             ->assertJsonPath('status', 'success');
+        @unlink($tempZipPath);
+
+        // Verify users and products still exist and can be queried
+        $this->assertDatabaseHas('users', ['username' => 'admin']);
+        $this->assertDatabaseHas('users', ['username' => 'kasir']);
 
         // Verify users and products still exist and can be queried
         $this->assertDatabaseHas('users', ['username' => 'admin']);

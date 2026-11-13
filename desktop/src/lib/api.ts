@@ -161,7 +161,7 @@ export async function exportDatabaseBackup(token: string): Promise<{ success: bo
     }
 
     const disposition = res.headers.get('Content-Disposition');
-    let filename = `backup-apotek-santosa-farma-${new Date().toISOString().slice(0, 10)}.json`;
+    let filename = `backup-apotek-santosa-farma-${new Date().toISOString().slice(0, 10)}.zip`;
     if (disposition && disposition.includes('filename=')) {
       const match = disposition.match(/filename="?([^"]+)"?/);
       if (match && match[1]) {
