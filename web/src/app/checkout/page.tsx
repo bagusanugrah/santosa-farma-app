@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { useCart } from '@/context/CartContext';
 import { useStoreStatus } from '@/context/StoreStatusContext';
-import { API_BASE_URL, fetchStoreStatus } from '@/lib/api';
+import { API_BASE_URL, fetchStoreStatus, getProductImageUrl } from '@/lib/api';
 import QrPickupModal from '@/components/QrPickupModal';
 import { ShoppingBag, CreditCard, ShieldCheck, CheckCircle2, ArrowRight, AlertCircle, Sparkles, Store } from 'lucide-react';
 
@@ -196,7 +196,7 @@ export default function CheckoutPage() {
                     <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center flex-shrink-0 overflow-hidden">
                       {product.image_url ? (
                         <img
-                          src={product.image_url}
+                          src={getProductImageUrl(product.image_url) || ''}
                           alt={product.name}
                           className="w-full h-full object-cover rounded-xl"
                           onError={(e) => {

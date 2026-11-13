@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Product } from '@/lib/api';
+import { Product, getProductImageUrl } from '@/lib/api';
 import { useCart } from '@/context/CartContext';
 import { Plus, Check, AlertCircle, Pill } from 'lucide-react';
 
@@ -28,7 +28,7 @@ export default function ProductCard({
       <div className="relative w-full h-36 sm:h-44 bg-slate-100 flex items-center justify-center overflow-hidden border-b border-slate-100">
         {product.image_url ? (
           <img
-            src={product.image_url}
+            src={getProductImageUrl(product.image_url) || ''}
             alt={product.name}
             className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
             onError={(e) => {

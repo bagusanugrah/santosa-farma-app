@@ -2,6 +2,11 @@ export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost
 
 export function getProductImageUrl(imageUrl: string | null | undefined): string | null {
   if (!imageUrl) return null;
+  // If the image is on an ngrok-free domain, route it through Next.js image proxy
+  // so that ngrok's interstitial warning is bypassed and the actual image is delivered.
+  if (imageUrl.includes('ngrok-free')) {
+    return `/api/image-proxy?url=${encodeURIComponent(imageUrl)}`;
+  }
   return imageUrl;
 }
 

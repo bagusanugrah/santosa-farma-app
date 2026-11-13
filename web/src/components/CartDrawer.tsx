@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { getProductImageUrl } from '@/lib/api';
 import { useCart } from '@/context/CartContext';
 import { useAuth } from '@/context/AuthContext';
 import { useStoreStatus } from '@/context/StoreStatusContext';
@@ -71,7 +72,7 @@ export default function CartDrawer() {
                   <div className="w-14 h-14 rounded-xl bg-white border border-slate-200 overflow-hidden flex-shrink-0 flex items-center justify-center">
                     {product.image_url ? (
                       <img
-                        src={product.image_url}
+                        src={getProductImageUrl(product.image_url) || ''}
                         alt={product.name}
                         className="w-full h-full object-cover"
                         onError={(e) => {
