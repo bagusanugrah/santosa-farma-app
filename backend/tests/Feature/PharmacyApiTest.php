@@ -314,7 +314,7 @@ class PharmacyApiTest extends TestCase
     public function test_customer_change_password(): void
     {
         $customer = Customer::create([
-            'name' => 'Budi Customer',
+            'name' => 'Pelanggan Uji',
             'phone' => '081234567899',
             'phone_verified_at' => now(),
             'password' => \Illuminate\Support\Facades\Hash::make('oldpassword123'),
@@ -411,9 +411,9 @@ class PharmacyApiTest extends TestCase
 
         // 2. Customer cannot register when disabled
         $regRes = $this->postJson('/api/auth/customer/register', [
-            'name' => 'Budi Pelanggan',
+            'name' => 'Pelanggan Uji',
             'type' => 'email',
-            'email' => 'budi_test@example.com',
+            'email' => 'pelanggan_test@example.com',
             'password' => 'password123',
         ]);
         $regRes->assertStatus(403)
@@ -421,7 +421,7 @@ class PharmacyApiTest extends TestCase
 
         // 3. Customer cannot login when disabled
         $loginRes = $this->postJson('/api/auth/customer/login', [
-            'login' => 'budi_test@example.com',
+            'login' => 'pelanggan_test@example.com',
             'password' => 'password123',
         ]);
         $loginRes->assertStatus(403);
@@ -437,9 +437,9 @@ class PharmacyApiTest extends TestCase
 
         // 6. Now customer can register
         $regRes2 = $this->postJson('/api/auth/customer/register', [
-            'name' => 'Budi Pelanggan',
+            'name' => 'Pelanggan Uji',
             'type' => 'email',
-            'email' => 'budi_test@example.com',
+            'email' => 'pelanggan_test@example.com',
             'password' => 'password123',
         ]);
         $regRes2->assertStatus(201);

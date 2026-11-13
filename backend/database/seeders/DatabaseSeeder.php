@@ -22,7 +22,7 @@ class DatabaseSeeder extends Seeder
         User::updateOrCreate(
             ['username' => 'admin'],
             [
-                'name' => 'Super Admin Santosa',
+                'name' => 'Super Admin',
                 'password' => Hash::make('password123'),
                 'role' => 'super_admin',
             ]
@@ -31,7 +31,7 @@ class DatabaseSeeder extends Seeder
         $cashier = User::updateOrCreate(
             ['username' => 'kasir'],
             [
-                'name' => 'Budi Santosa (Kasir)',
+                'name' => 'Kasir',
                 'password' => Hash::make('password123'),
                 'role' => 'admin_kasir',
             ]
@@ -39,9 +39,9 @@ class DatabaseSeeder extends Seeder
 
         // 2. Customer
         $customer = Customer::updateOrCreate(
-            ['email' => 'siti@example.com'],
+            ['email' => 'customer@example.com'],
             [
-                'name' => 'Siti Rahmah',
+                'name' => 'Pelanggan',
                 'phone' => '081234567890',
                 'phone_verified_at' => now(),
                 'email_verified_at' => now(),

@@ -171,7 +171,7 @@ export default function CustomerRegisterPage() {
               required
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="Contoh: Siti Rahmah"
+              placeholder="Masukkan nama lengkap"
               className="w-full px-4 py-3 text-base sm:text-sm bg-slate-50 border border-slate-200 focus:bg-white focus:border-brand-500 rounded-xl outline-none transition font-medium"
             />
           </div>
