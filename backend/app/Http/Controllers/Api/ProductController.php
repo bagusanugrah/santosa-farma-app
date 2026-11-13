@@ -101,7 +101,7 @@ class ProductController extends Controller
             'name' => 'required|string|max:255',
             'price' => 'required|numeric|min:0',
             'stock' => 'required|integer|min:0',
-            'image' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,webp,gif|max:10240',
             'category' => 'nullable|string|max:100',
             'description' => 'nullable|string',
         ]);
@@ -153,7 +153,7 @@ class ProductController extends Controller
             'name' => 'sometimes|required|string|max:255',
             'price' => 'sometimes|required|numeric|min:0',
             'stock' => 'sometimes|required|integer|min:0',
-            'image' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,webp,gif|max:10240',
             'category' => 'nullable|string|max:100',
             'description' => 'nullable|string',
         ]);
@@ -168,7 +168,13 @@ class ProductController extends Controller
 
         $data = $request->only(['name', 'price', 'stock', 'category', 'description']);
 
-        if ($request->hasFile('image')) {
+        // Explicit removal of product image if requested
+        if ($request->input('remove_image') == '1' || $request->input('remove_image') === true || $request->input('remove_image') === 'true') {
+            if ($product->image && Storage::disk('public')->exists($product->image)) {
+                Storage::disk('public')->delete($product->image);
+            }
+            $data['image'] = null;
+        } elseif ($request->hasFile('image')) {
             // Delete old image if exists
             if ($product->image && Storage::disk('public')->exists($product->image)) {
                 Storage::disk('public')->delete($product->image);

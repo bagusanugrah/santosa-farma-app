@@ -1,5 +1,17 @@
 export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
 
+export function getProductImageUrl(imageUrl: string | null | undefined): string | null {
+  if (!imageUrl) return null;
+  // If desktop is running with local backend (localhost or 127.0.0.1) but imageUrl points to an ngrok tunnel,
+  // rewrite to local backend to guarantee fast, offline, and reliable image loading.
+  const backendBase = API_BASE_URL.replace(/\/api\/?$/, '');
+  if (imageUrl.includes('ngrok-free') && (backendBase.includes('localhost') || backendBase.includes('127.0.0.1'))) {
+    const path = imageUrl.replace(/^https?:\/\/[^\/]+/, '');
+    return `${backendBase}${path}`;
+  }
+  return imageUrl;
+}
+
 export interface Product {
   id: number;
   name: string;

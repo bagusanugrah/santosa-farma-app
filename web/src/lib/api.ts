@@ -1,5 +1,10 @@
 export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
 
+export function getProductImageUrl(imageUrl: string | null | undefined): string | null {
+  if (!imageUrl) return null;
+  return imageUrl;
+}
+
 export interface Product {
   id: number;
   name: string;

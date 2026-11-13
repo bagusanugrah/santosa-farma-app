@@ -32,18 +32,18 @@ export default function ProductCard({
             alt={product.name}
             className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
             onError={(e) => {
-              // Fallback to placeholder if image fails to load
               (e.target as HTMLElement).style.display = 'none';
+              const placeholder = (e.target as HTMLElement).parentElement?.querySelector('.card-pill-fallback');
+              if (placeholder) placeholder.classList.remove('hidden');
             }}
           />
-        ) : (
-          <div className="flex flex-col items-center justify-center text-slate-400 p-4 text-center">
-            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-slate-200/80 flex items-center justify-center text-slate-500 mb-2">
-              <Pill className="w-5 h-5 sm:w-6 sm:h-6" />
-            </div>
-            <span className="text-[11px] sm:text-xs font-medium text-slate-400">Apotek Santosa</span>
+        ) : null}
+        <div className={`card-pill-fallback flex flex-col items-center justify-center text-slate-400 p-4 text-center ${product.image_url ? 'hidden' : ''}`}>
+          <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-slate-200/80 flex items-center justify-center text-slate-500 mb-2">
+            <Pill className="w-5 h-5 sm:w-6 sm:h-6" />
           </div>
-        )}
+          <span className="text-[11px] sm:text-xs font-medium text-slate-400">Apotek Santosa</span>
+        </div>
 
         {/* Category Badge */}
         {product.category && (

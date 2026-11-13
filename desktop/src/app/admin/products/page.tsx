@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useStaffAuth } from '@/context/StaffAuthContext';
-import { API_BASE_URL, Product, MetaPagination } from '@/lib/api';
+import { API_BASE_URL, Product, MetaPagination, getProductImageUrl } from '@/lib/api';
 import {
   Pill,
   Plus,
@@ -48,6 +48,7 @@ export default function AdminProductsPage() {
   const [formDesc, setFormDesc] = useState('');
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [removeImage, setRemoveImage] = useState(false);
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState('');
 
@@ -111,6 +112,7 @@ export default function AdminProductsPage() {
     setFormDesc('');
     setImageFile(null);
     setImagePreview(null);
+    setRemoveImage(false);
     setFormError('');
     setIsModalOpen(true);
   };
@@ -123,7 +125,8 @@ export default function AdminProductsPage() {
     setFormCategory(product.category || 'Analgesik');
     setFormDesc(product.description || '');
     setImageFile(null);
-    setImagePreview(product.image_url);
+    setImagePreview(getProductImageUrl(product.image_url));
+    setRemoveImage(false);
     setFormError('');
     setIsModalOpen(true);
   };
@@ -133,7 +136,16 @@ export default function AdminProductsPage() {
     if (file) {
       setImageFile(file);
       setImagePreview(URL.createObjectURL(file));
+      setRemoveImage(false);
     }
+  };
+
+  const handleRemoveImage = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setImageFile(null);
+    setImagePreview(null);
+    setRemoveImage(true);
+    if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -148,7 +160,9 @@ export default function AdminProductsPage() {
       formData.append('stock', formStock);
       formData.append('category', formCategory);
       formData.append('description', formDesc.trim());
-      if (imageFile) {
+      if (removeImage) {
+        formData.append('remove_image', '1');
+      } else if (imageFile) {
         formData.append('image', imageFile);
       }
 
@@ -287,10 +301,18 @@ export default function AdminProductsPage() {
                   <td className="py-3 px-4">
                     <div className="w-11 h-11 rounded-xl bg-slate-100 border border-slate-200 overflow-hidden flex items-center justify-center flex-shrink-0">
                       {product.image_url ? (
-                        <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
-                      ) : (
-                        <span className="text-base">💊</span>
-                      )}
+                        <img
+                          src={getProductImageUrl(product.image_url) || ''}
+                          alt={product.name}
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            e.currentTarget.style.display = 'none';
+                            const fallback = e.currentTarget.parentElement?.querySelector('.pill-fallback');
+                            if (fallback) fallback.classList.remove('hidden');
+                          }}
+                        />
+                      ) : null}
+                      <span className={`text-base pill-fallback ${product.image_url ? 'hidden' : ''}`}>💊</span>
                     </div>
                   </td>
                   <td className="py-3 px-4">
@@ -470,8 +492,16 @@ export default function AdminProductsPage() {
                   className="border-2 border-dashed border-slate-300 hover:border-brand-500 rounded-2xl p-4 text-center cursor-pointer transition bg-slate-50 flex flex-col items-center justify-center space-y-2"
                 >
                   {imagePreview ? (
-                    <div className="relative w-24 h-24 rounded-xl overflow-hidden shadow-sm border border-slate-200">
+                    <div className="relative group w-24 h-24 rounded-xl overflow-hidden shadow-sm border border-slate-200">
                       <img src={imagePreview} alt="Preview" className="w-full h-full object-cover" />
+                      <button
+                        type="button"
+                        onClick={handleRemoveImage}
+                        className="absolute top-1 right-1 bg-red-600/90 hover:bg-red-700 text-white p-1 rounded-full shadow transition"
+                        title="Hapus foto ini"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
                     </div>
                   ) : (
                     <UploadCloud className="w-8 h-8 text-slate-400" />

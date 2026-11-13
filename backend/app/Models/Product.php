@@ -36,6 +36,13 @@ class Product extends Model
             return $this->image;
         }
 
+        // Dynamically resolve based on incoming request host
+        // so desktop on localhost gets localhost:8000/storage/...
+        // and remote web on ngrok gets https://...ngrok-free.dev/storage/...
+        if (request() && request()->root()) {
+            return rtrim(request()->root(), '/') . '/storage/' . ltrim($this->image, '/');
+        }
+
         return Storage::disk('public')->url($this->image);
     }
 

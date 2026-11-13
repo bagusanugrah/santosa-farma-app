@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useStaffAuth } from '@/context/StaffAuthContext';
-import { API_BASE_URL, Product, Transaction } from '@/lib/api';
+import { API_BASE_URL, Product, Transaction, getProductImageUrl } from '@/lib/api';
 import ReceiptModal from '@/components/ReceiptModal';
 import { QRCodeSVG } from 'qrcode.react';
 import {
@@ -290,10 +290,18 @@ export default function PosPage() {
                 >
                   <div className="relative w-full h-28 bg-slate-100 rounded-xl overflow-hidden mb-2.5 flex items-center justify-center">
                     {product.image_url ? (
-                      <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
-                    ) : (
-                      <Pill className="w-8 h-8 text-slate-400" />
-                    )}
+                      <img
+                        src={getProductImageUrl(product.image_url) || ''}
+                        alt={product.name}
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          e.currentTarget.style.display = 'none';
+                          const fallback = e.currentTarget.parentElement?.querySelector('.pos-pill-fallback');
+                          if (fallback) fallback.classList.remove('hidden');
+                        }}
+                      />
+                    ) : null}
+                    <Pill className={`w-8 h-8 text-slate-400 pos-pill-fallback ${product.image_url ? 'hidden' : ''}`} />
                     <span
                       className={`absolute top-1.5 right-1.5 text-[10px] font-bold px-1.5 py-0.5 rounded-md ${
                         isOutOfStock

@@ -193,12 +193,20 @@ export default function CheckoutPage() {
               {items.map(({ product, qty }) => (
                 <div key={product.id} className="py-3 flex items-center justify-between text-xs gap-3">
                   <div className="flex items-center space-x-3 min-w-0">
-                    <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center flex-shrink-0">
+                    <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center flex-shrink-0 overflow-hidden">
                       {product.image_url ? (
-                        <img src={product.image_url} alt={product.name} className="w-full h-full object-cover rounded-xl" />
-                      ) : (
-                        <span>💊</span>
-                      )}
+                        <img
+                          src={product.image_url}
+                          alt={product.name}
+                          className="w-full h-full object-cover rounded-xl"
+                          onError={(e) => {
+                            e.currentTarget.style.display = 'none';
+                            const fallback = e.currentTarget.parentElement?.querySelector('.chk-pill-fallback');
+                            if (fallback) fallback.classList.remove('hidden');
+                          }}
+                        />
+                      ) : null}
+                      <span className={`chk-pill-fallback ${product.image_url ? 'hidden' : ''}`}>💊</span>
                     </div>
                     <div className="min-w-0">
                       <h4 className="font-bold text-slate-900 truncate">{product.name}</h4>
