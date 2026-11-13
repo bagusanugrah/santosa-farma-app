@@ -133,4 +133,77 @@ export async function changeStaffPassword(
   }
 }
 
+export async function exportDatabaseBackup(token: string): Promise<{ success: boolean; filename?: string; message?: string }> {
+  try {
+    const res = await fetch(`${API_BASE_URL}/backup/export`, {
+      method: 'GET',
+      headers: {
+        Accept: 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    if (!res.ok) {
+      const errJson = await res.json().catch(() => null);
+      throw new Error(errJson?.message || 'Gagal mengekspor database.');
+    }
+
+    const disposition = res.headers.get('Content-Disposition');
+    let filename = `backup-apotek-santosa-farma-${new Date().toISOString().slice(0, 10)}.json`;
+    if (disposition && disposition.includes('filename=')) {
+      const match = disposition.match(/filename="?([^"]+)"?/);
+      if (match && match[1]) {
+        filename = match[1];
+      }
+    }
+
+    const blob = await res.blob();
+    const downloadUrl = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = downloadUrl;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.URL.revokeObjectURL(downloadUrl);
+
+    return { success: true, filename };
+  } catch (err: any) {
+    return { success: false, message: err.message || 'Gagal mengekspor file backup.' };
+  }
+}
+
+export async function importDatabaseBackup(
+  token: string,
+  file: File
+): Promise<{ success: boolean; message: string; data?: any }> {
+  try {
+    const formData = new FormData();
+    formData.append('backup_file', file);
+
+    const res = await fetch(`${API_BASE_URL}/backup/import`, {
+      method: 'POST',
+      headers: {
+        Accept: 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: formData,
+    });
+
+    const json = await res.json();
+    if (!res.ok) {
+      throw new Error(json.message || 'Gagal mengimpor file backup database.');
+    }
+
+    return {
+      success: true,
+      message: json.message || 'Database berhasil dipulihkan secara penuh.',
+      data: json.data,
+    };
+  } catch (err: any) {
+    return { success: false, message: err.message || 'Terjadi kesalahan saat memulihkan database.' };
+  }
+}
+
+
 

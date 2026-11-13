@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\BackupController;
 use App\Http\Controllers\Api\MidtransWebhookController;
 use App\Http\Controllers\Api\ProductController;
 use App\Http\Controllers\Api\ReceiptController;
@@ -101,3 +102,12 @@ Route::middleware(['auth:sanctum', 'role:super_admin'])->prefix('reports')->grou
     Route::get('/products-excel', [ReportController::class, 'productsExcel']);
     Route::get('/analytics', [ReportController::class, 'analytics']);
 });
+
+// ==========================================
+// 7. DATABASE BACKUP & RESTORE (Super Admin Only)
+// ==========================================
+Route::middleware(['auth:sanctum', 'role:super_admin'])->prefix('backup')->group(function () {
+    Route::get('/export', [BackupController::class, 'export']);
+    Route::post('/import', [BackupController::class, 'import']);
+});
+

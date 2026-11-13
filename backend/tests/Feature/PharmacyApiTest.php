@@ -449,4 +449,78 @@ class PharmacyApiTest extends TestCase
         $toggleOff->assertStatus(200)
             ->assertJsonPath('data.online_orders_enabled', false);
     }
+
+    /**
+     * Test database backup export and import validation
+     */
+    public function test_database_backup_export_and_import(): void
+    {
+        $superAdmin = User::where('role', 'super_admin')->first();
+        $cashier = User::where('role', 'admin_kasir')->first();
+
+        // 1. Cashier cannot access export or import (403 Forbidden)
+        \Laravel\Sanctum\Sanctum::actingAs($cashier, ['role:admin_kasir']);
+        $cashierExport = $this->getJson('/api/backup/export');
+        $cashierExport->assertStatus(403);
+
+        $cashierImport = $this->postJson('/api/backup/import');
+        $cashierImport->assertStatus(403);
+
+        // 2. Super admin exports database
+        \Laravel\Sanctum\Sanctum::actingAs($superAdmin, ['role:super_admin']);
+        $exportRes = $this->getJson('/api/backup/export');
+        $exportRes->assertStatus(200)
+            ->assertJsonPath('app', 'apotek-santosa-farma')
+            ->assertJsonPath('version', '1.0');
+
+        $backupData = $exportRes->json();
+        $this->assertArrayHasKey('tables', $backupData);
+        $this->assertArrayHasKey('checksum', $backupData);
+        $this->assertNotEmpty($backupData['tables']['users']);
+        $this->assertNotEmpty($backupData['tables']['products']);
+
+        // 3. Import without file fails (422)
+        $noFileRes = $this->postJson('/api/backup/import');
+        $noFileRes->assertStatus(422)
+            ->assertJsonPath('status', 'error');
+
+        // 4. Import random file (not JSON or wrong format) fails (422)
+        $randomFile = \Illuminate\Http\UploadedFile::fake()->create('random.txt', 10, 'text/plain');
+        $randomRes = $this->postJson('/api/backup/import', ['backup_file' => $randomFile]);
+        $randomRes->assertStatus(422)
+            ->assertJsonPath('status', 'error');
+
+        // 5. Import fake JSON without app signature fails (422)
+        $fakeJson = \Illuminate\Http\UploadedFile::fake()->createWithContent(
+            'fake.json',
+            json_encode(['random_key' => 'random_value'])
+        );
+        $fakeRes = $this->postJson('/api/backup/import', ['backup_file' => $fakeJson]);
+        $fakeRes->assertStatus(422)
+            ->assertJsonPath('status', 'error');
+
+        // 6. Import tampered JSON (invalid checksum) fails (422)
+        $tamperedData = $backupData;
+        $tamperedData['checksum'] = 'invalid_checksum_value_12345';
+        $tamperedFile = \Illuminate\Http\UploadedFile::fake()->createWithContent(
+            'tampered.json',
+            json_encode($tamperedData)
+        );
+        $tamperedRes = $this->postJson('/api/backup/import', ['backup_file' => $tamperedFile]);
+        $tamperedRes->assertStatus(422)
+            ->assertJsonPath('status', 'error');
+
+        // 7. Import valid backup succeeds (200)
+        $validFile = \Illuminate\Http\UploadedFile::fake()->createWithContent(
+            'valid-backup.json',
+            json_encode($backupData)
+        );
+        $validRes = $this->postJson('/api/backup/import', ['backup_file' => $validFile]);
+        $validRes->assertStatus(200)
+            ->assertJsonPath('status', 'success');
+
+        // Verify users and products still exist and can be queried
+        $this->assertDatabaseHas('users', ['username' => 'admin']);
+        $this->assertDatabaseHas('users', ['username' => 'kasir']);
+    }
 }

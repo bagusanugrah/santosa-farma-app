@@ -1,10 +1,14 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useStaffAuth } from '@/context/StaffAuthContext';
 import { useStoreStatus } from '@/context/StoreStatusContext';
-import { changeStaffPassword } from '@/lib/api';
+import {
+  changeStaffPassword,
+  exportDatabaseBackup,
+  importDatabaseBackup,
+} from '@/lib/api';
 import {
   Settings,
   Globe,
@@ -20,6 +24,14 @@ import {
   RefreshCw,
   X,
   Check,
+  Database,
+  Download,
+  Upload,
+  FileJson,
+  RotateCcw,
+  ShieldCheck,
+  Info,
+  Trash2,
 } from 'lucide-react';
 
 export default function SettingsPage() {
@@ -46,6 +58,18 @@ export default function SettingsPage() {
   // Confirmation modal state for activating online orders
   const [showConfirmModal, setShowConfirmModal] = useState(false);
 
+  // Database Backup & Restore state (Super Admin only)
+  const [exportLoading, setExportLoading] = useState(false);
+  const [exportSuccess, setExportSuccess] = useState('');
+  const [exportError, setExportError] = useState('');
+
+  const [importFile, setImportFile] = useState<File | null>(null);
+  const [importLoading, setImportLoading] = useState(false);
+  const [importSuccess, setImportSuccess] = useState('');
+  const [importError, setImportError] = useState('');
+  const [showImportConfirmModal, setShowImportConfirmModal] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
   useEffect(() => {
     if (authLoading) return;
     if (!user || !token) {
@@ -62,7 +86,7 @@ export default function SettingsPage() {
     );
   }
 
-  // Handle toggle click
+  // Handle toggle click for web orders
   const handleToggleClick = () => {
     if (toggling) return;
 
@@ -70,7 +94,7 @@ export default function SettingsPage() {
       // Trying to activate -> Show confirmation modal first!
       setShowConfirmModal(true);
     } else {
-      // Deactivating -> can be done directly or confirmed
+      // Deactivating -> can be done directly
       setOnlineOrdersState(false);
     }
   };
@@ -120,8 +144,96 @@ export default function SettingsPage() {
     }
   };
 
+  // Handle Export Database Backup
+  const handleExportDatabase = async () => {
+    setExportError('');
+    setExportSuccess('');
+    setExportLoading(true);
+
+    try {
+      const res = await exportDatabaseBackup(token);
+      if (!res.success) {
+        throw new Error(res.message || 'Gagal mengekspor file cadangan.');
+      }
+      setExportSuccess(`File backup database berhasil diunduh: ${res.filename}`);
+      setTimeout(() => setExportSuccess(''), 8000);
+    } catch (err: any) {
+      setExportError(err.message || 'Terjadi kesalahan saat mengekspor database.');
+    } finally {
+      setExportLoading(false);
+    }
+  };
+
+  // Handle File Selection for Import
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setImportError('');
+    setImportSuccess('');
+
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.name.toLowerCase().endsWith('.json')) {
+      setImportError('Format file tidak didukung! Harap pilih file cadangan resmi yang berformat .json');
+      setImportFile(null);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      return;
+    }
+
+    setImportFile(file);
+  };
+
+  const handleResetImportFile = () => {
+    setImportFile(null);
+    setImportError('');
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  // Handle Opening Confirmation Modal for Import
+  const handleInitiateImport = () => {
+    if (!importFile) {
+      setImportError('Silakan pilih file cadangan (.json) terlebih dahulu.');
+      return;
+    }
+    setImportError('');
+    setImportSuccess('');
+    setShowImportConfirmModal(true);
+  };
+
+  // Execute Database Restore after Confirmation
+  const handleExecuteRestore = async () => {
+    setShowImportConfirmModal(false);
+    if (!importFile) return;
+
+    setImportLoading(true);
+    setImportError('');
+    setImportSuccess('');
+
+    try {
+      const res = await importDatabaseBackup(token, importFile);
+      if (!res.success) {
+        throw new Error(res.message || 'Gagal memulihkan database.');
+      }
+
+      const counts = res.data?.counts || {};
+      const summaryText = Object.entries(counts)
+        .map(([tbl, count]) => `${count} ${tbl}`)
+        .join(', ');
+
+      setImportSuccess(
+        `Database berhasil dipulihkan secara penuh! Data yang dipulihkan: ${summaryText || 'seluruh data'}.`
+      );
+      handleResetImportFile();
+    } catch (err: any) {
+      setImportError(err.message || 'Gagal memulihkan database. File tidak sesuai format atau korup.');
+    } finally {
+      setImportLoading(false);
+    }
+  };
+
+  const isSuperAdmin = user.role === 'super_admin';
+
   return (
-    <div className="flex-1 p-8 space-y-8 max-w-5xl mx-auto w-full animate-fade-in">
+    <div className="flex-1 p-8 space-y-8 max-w-5xl mx-auto w-full animate-fade-in pb-16">
       {/* Header */}
       <div className="flex items-center justify-between border-b border-slate-200 pb-5">
         <div className="flex items-center space-x-3">
@@ -131,7 +243,7 @@ export default function SettingsPage() {
           <div>
             <h1 className="text-2xl font-black text-slate-900 tracking-tight">Pengaturan Sistem</h1>
             <p className="text-xs text-slate-500 font-medium mt-0.5">
-              Kelola keamanan akun kasir/admin serta kontrol status pemesanan obat online.
+              Kelola keamanan akun kasir/admin, kontrol toko online, dan sistem backup database.
             </p>
           </div>
         </div>
@@ -144,7 +256,7 @@ export default function SettingsPage() {
           <div>
             <span className="text-xs font-bold text-slate-800 block leading-tight">{user.name}</span>
             <span className="text-[10px] font-semibold text-slate-400 capitalize">
-              {user.role === 'super_admin' ? 'Super Admin' : 'Admin Kasir'} • @{user.username}
+              {isSuperAdmin ? 'Super Admin' : 'Admin Kasir'} • @{user.username}
             </span>
           </div>
         </div>
@@ -157,6 +269,7 @@ export default function SettingsPage() {
         </div>
       )}
 
+      {/* Grid 2 Kolom Bagian Atas */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* ============================================================ */}
         {/* SECTION 1: Online Store Toggle Control */}
@@ -193,7 +306,7 @@ export default function SettingsPage() {
                   }`}
                 >
                   <strong className="text-emerald-800 block mb-0.5">● Mode AKTIF (Menerima Order Web):</strong>
-                  Pelanggan dapat membuat akun, login, memilih obat, dan melakukan pembayaran/checkout online via QRIS atau Transfer Bank.
+                  Pelanggan dapat membuat akun, login, memilih obat, dan melakukan pembayaran online via QRIS atau Transfer Bank.
                 </div>
 
                 <div
@@ -204,7 +317,7 @@ export default function SettingsPage() {
                   }`}
                 >
                   <strong className="text-amber-800 block mb-0.5">● Mode NONAKTIF (Katalog Etalase Saja):</strong>
-                  Pelanggan di web hanya bisa mengecek ketersediaan obat dan daftar harga. Fitur beli obat, login, dan pendaftaran akun ditutup sementara agar kasir fokus pada transaksi di apotek.
+                  Pelanggan di web hanya bisa mengecek ketersediaan obat dan daftar harga. Fitur beli obat dan pendaftaran akun ditutup sementara.
                 </div>
               </div>
             </div>
@@ -391,7 +504,209 @@ export default function SettingsPage() {
       </div>
 
       {/* ============================================================ */}
-      {/* CONFIRMATION POPUP MODAL (BEFORE ACTIVATING ONLINE ORDERS) */}
+      {/* SECTION 3: DATABASE BACKUP & RESTORE (SUPER ADMIN ONLY)       */}
+      {/* ============================================================ */}
+      <div className="bg-white rounded-3xl border border-slate-200 p-6 sm:p-8 shadow-sm space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-slate-100 gap-3">
+          <div className="flex items-center space-x-3">
+            <div className="w-11 h-11 rounded-2xl bg-indigo-50 text-indigo-700 flex items-center justify-center shadow-inner">
+              <Database className="w-6 h-6" />
+            </div>
+            <div>
+              <div className="flex items-center space-x-2">
+                <h3 className="font-black text-lg text-slate-900">Backup & Restore Database</h3>
+                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-indigo-100 text-indigo-800 border border-indigo-200">
+                  Super Admin
+                </span>
+              </div>
+              <p className="text-xs text-slate-500 font-medium mt-0.5">
+                Cadangkan seluruh data apotek (pengguna, password, produk, transaksi, riwayat) atau pulihkan dari file resmi.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {!isSuperAdmin ? (
+          <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 flex items-center space-x-3 text-slate-600 text-xs">
+            <ShieldAlert className="w-5 h-5 text-amber-600 flex-shrink-0" />
+            <span>
+              Fitur pencadangan dan pemulihan database dibatasi. Hanya akun dengan hak akses <strong>Super Admin</strong> yang dapat mengekspor atau mengimpor data database.
+            </span>
+          </div>
+        ) : (
+          <div className="space-y-6">
+            {/* Global Alerts for Backup/Restore */}
+            {exportSuccess && (
+              <div className="p-4 bg-emerald-50 border border-emerald-300 text-emerald-900 rounded-2xl text-xs font-bold flex items-center space-x-2 animate-fade-in shadow-xs">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+                <span>{exportSuccess}</span>
+              </div>
+            )}
+            {exportError && (
+              <div className="p-4 bg-red-50 border border-red-300 text-red-700 rounded-2xl text-xs font-semibold flex items-center space-x-2 animate-fade-in shadow-xs">
+                <AlertCircle className="w-4 h-4 text-red-600 flex-shrink-0" />
+                <span>{exportError}</span>
+              </div>
+            )}
+
+            {importSuccess && (
+              <div className="p-4 bg-emerald-50 border border-emerald-300 text-emerald-900 rounded-2xl text-xs font-bold flex items-center space-x-2 animate-fade-in shadow-xs">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+                <span>{importSuccess}</span>
+              </div>
+            )}
+            {importError && (
+              <div className="p-4 bg-red-50 border border-red-300 text-red-700 rounded-2xl text-xs font-semibold flex items-center space-x-2 animate-fade-in shadow-xs">
+                <AlertCircle className="w-4 h-4 text-red-600 flex-shrink-0" />
+                <span>{importError}</span>
+              </div>
+            )}
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Card 1: Export Database */}
+              <div className="p-5 sm:p-6 bg-slate-50/70 rounded-2xl border border-slate-200 flex flex-col justify-between space-y-5 hover:border-slate-300 transition">
+                <div className="space-y-3">
+                  <div className="flex items-center space-x-2.5">
+                    <div className="w-8 h-8 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center">
+                      <Download className="w-4 h-4" />
+                    </div>
+                    <h4 className="font-black text-sm text-slate-800">1. Ekspor Cadangan Database (.json)</h4>
+                  </div>
+                  <p className="text-xs text-slate-600 leading-relaxed">
+                    Unduh salinan lengkap 100% database apotek ke dalam satu berkas format JSON terverifikasi:
+                  </p>
+                  <ul className="text-[11px] text-slate-500 space-y-1 list-disc list-inside">
+                    <li>Akun kasir & super admin (password terenkripsi tetap utuh)</li>
+                    <li>Seluruh data produk obat, harga, kategori, dan stok</li>
+                    <li>Semua transaksi kasir (POS), transaksi web, dan item penjualan</li>
+                    <li>Pengaturan operasional toko & data pelanggan online</li>
+                  </ul>
+                  <div className="p-2.5 bg-blue-50/70 rounded-xl border border-blue-200/80 text-[11px] text-blue-900 flex items-center space-x-2">
+                    <ShieldCheck className="w-4 h-4 text-blue-600 flex-shrink-0" />
+                    <span>Dilengkapi tanda tangan checksum SHA-256 untuk menjamin integritas.</span>
+                  </div>
+                </div>
+
+                <div>
+                  <button
+                    type="button"
+                    onClick={handleExportDatabase}
+                    disabled={exportLoading}
+                    className="w-full py-3 px-4 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-extrabold text-xs rounded-xl shadow-md shadow-indigo-600/20 transition flex items-center justify-center space-x-2 cursor-pointer"
+                  >
+                    {exportLoading ? (
+                      <>
+                        <RefreshCw className="w-4 h-4 animate-spin" />
+                        <span>Mengekspor Database...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Download className="w-4 h-4" />
+                        <span>Unduh File Cadangan Database (.json)</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              {/* Card 2: Import & Restore Database */}
+              <div className="p-5 sm:p-6 bg-slate-50/70 rounded-2xl border border-slate-200 flex flex-col justify-between space-y-5 hover:border-slate-300 transition">
+                <div className="space-y-3">
+                  <div className="flex items-center space-x-2.5">
+                    <div className="w-8 h-8 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center">
+                      <Upload className="w-4 h-4" />
+                    </div>
+                    <h4 className="font-black text-sm text-slate-800">2. Impor & Pulihkan Database (.json)</h4>
+                  </div>
+                  <p className="text-xs text-slate-600 leading-relaxed">
+                    Pulihkan seluruh sistem dengan mengunggah berkas cadangan database resmi.
+                  </p>
+
+                  <div className="p-2.5 bg-amber-50/80 rounded-xl border border-amber-200/80 text-[11px] text-amber-900 flex items-start space-x-2">
+                    <AlertTriangle className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
+                    <span>
+                      <strong>Perhatian:</strong> Data yang saat ini sedang berjalan akan <strong>DITIMPA</strong> secara menyeluruh dengan data dari file backup.
+                    </span>
+                  </div>
+
+                  {/* File Selector */}
+                  <div className="space-y-2">
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept=".json,application/json"
+                      onChange={handleFileChange}
+                      className="hidden"
+                      id="db-backup-file-input"
+                    />
+
+                    {!importFile ? (
+                      <label
+                        htmlFor="db-backup-file-input"
+                        className="w-full border-2 border-dashed border-slate-300 hover:border-indigo-400 bg-white p-4 rounded-xl flex flex-col items-center justify-center cursor-pointer transition text-center group"
+                      >
+                        <FileJson className="w-6 h-6 text-slate-400 group-hover:text-indigo-600 transition mb-1" />
+                        <span className="text-xs font-bold text-slate-700 group-hover:text-indigo-600">
+                          Pilih File Backup (.json)
+                        </span>
+                        <span className="text-[10px] text-slate-400 mt-0.5">
+                          Klik untuk menelusuri file cadangan di komputer Anda
+                        </span>
+                      </label>
+                    ) : (
+                      <div className="p-3 bg-white border border-slate-200 rounded-xl flex items-center justify-between">
+                        <div className="flex items-center space-x-2.5 min-w-0">
+                          <FileJson className="w-5 h-5 text-indigo-600 flex-shrink-0" />
+                          <div className="min-w-0">
+                            <span className="text-xs font-bold text-slate-800 truncate block">
+                              {importFile.name}
+                            </span>
+                            <span className="text-[10px] text-slate-400">
+                              {(importFile.size / 1024).toFixed(1)} KB
+                            </span>
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={handleResetImportFile}
+                          className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition"
+                          title="Hapus pilihan file"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div>
+                  <button
+                    type="button"
+                    onClick={handleInitiateImport}
+                    disabled={!importFile || importLoading}
+                    className="w-full py-3 px-4 bg-amber-600 hover:bg-amber-700 disabled:opacity-40 text-white font-extrabold text-xs rounded-xl shadow-md shadow-amber-600/20 transition flex items-center justify-center space-x-2 cursor-pointer"
+                  >
+                    {importLoading ? (
+                      <>
+                        <RefreshCw className="w-4 h-4 animate-spin" />
+                        <span>Memulihkan Database...</span>
+                      </>
+                    ) : (
+                      <>
+                        <RotateCcw className="w-4 h-4" />
+                        <span>Pulihkan Database Dari File Ini</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* ============================================================ */}
+      {/* CONFIRMATION POPUP MODAL (BEFORE ACTIVATING ONLINE ORDERS)   */}
       {/* ============================================================ */}
       {showConfirmModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in">
@@ -439,6 +754,78 @@ export default function SettingsPage() {
                   <Check className="w-3.5 h-3.5" />
                 )}
                 <span>Ya, Aktifkan</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ============================================================ */}
+      {/* CONFIRMATION POPUP MODAL (BEFORE IMPORTING / OVERWRITING DB) */}
+      {/* ============================================================ */}
+      {showImportConfirmModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in">
+          <div className="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-7 shadow-2xl relative animate-scale border border-red-100">
+            <button
+              onClick={() => setShowImportConfirmModal(false)}
+              className="absolute top-5 right-5 text-slate-400 hover:text-slate-600 p-1.5 rounded-full hover:bg-slate-100 transition"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div className="w-14 h-14 rounded-2xl bg-red-100 text-red-600 flex items-center justify-center mx-auto mb-4 shadow-inner">
+              <AlertTriangle className="w-7 h-7" />
+            </div>
+
+            <h3 className="text-lg font-black text-slate-900 text-center">
+              Peringatan: Konfirmasi Timpa Database
+            </h3>
+
+            <p className="text-xs text-slate-600 mt-2 text-center leading-relaxed">
+              Anda akan memulihkan data sistem dari file backup:
+            </p>
+
+            <div className="mt-3 p-3 bg-slate-100 rounded-xl border border-slate-200 flex items-center space-x-2.5">
+              <FileJson className="w-5 h-5 text-indigo-600 flex-shrink-0" />
+              <div className="min-w-0 flex-1">
+                <span className="text-xs font-bold text-slate-800 block truncate">
+                  {importFile?.name}
+                </span>
+                <span className="text-[10px] text-slate-500">
+                  Ukuran berkas: {importFile ? (importFile.size / 1024).toFixed(1) : 0} KB
+                </span>
+              </div>
+            </div>
+
+            <div className="mt-4 p-3.5 bg-red-50/90 rounded-2xl border border-red-200 text-[11px] text-red-900 leading-relaxed space-y-1">
+              <strong className="block text-red-950 font-black">
+                ⚠️ TINDAKAN INI BERSIFAT PERMANEN & AKAN MENIMPA DATA!
+              </strong>
+              <span>
+                Seluruh data yang sedang berjalan saat ini (produk, stok, transaksi kasir & online, daftar akun, dan password) akan <strong>DIHAPUS DAN DIGANTIKAN SEPENUHNYA</strong> dengan isi dari file backup ini.
+              </span>
+            </div>
+
+            <div className="mt-6 grid grid-cols-2 gap-3">
+              <button
+                type="button"
+                onClick={() => setShowImportConfirmModal(false)}
+                className="py-3 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition cursor-pointer"
+              >
+                Batal, Jangan Timpa
+              </button>
+              <button
+                type="button"
+                onClick={handleExecuteRestore}
+                disabled={importLoading}
+                className="py-3 px-4 bg-red-600 hover:bg-red-700 text-white font-extrabold text-xs rounded-xl shadow-md shadow-red-600/20 transition flex items-center justify-center space-x-1.5 cursor-pointer"
+              >
+                {importLoading ? (
+                  <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                ) : (
+                  <RotateCcw className="w-3.5 h-3.5" />
+                )}
+                <span>Ya, Timpa Seluruh Data</span>
               </button>
             </div>
           </div>
