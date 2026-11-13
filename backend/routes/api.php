@@ -109,5 +109,6 @@ Route::middleware(['auth:sanctum', 'role:super_admin'])->prefix('reports')->grou
 Route::middleware(['auth:sanctum', 'role:super_admin'])->prefix('backup')->group(function () {
     Route::get('/export', [BackupController::class, 'export']);
     Route::post('/import', [BackupController::class, 'import']);
+    Route::post('/reset', [BackupController::class, 'reset']);
 });
 

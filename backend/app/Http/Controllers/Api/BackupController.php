@@ -3,10 +3,12 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
@@ -32,9 +34,11 @@ class BackupController extends Controller
     ];
 
     /**
-     * Export the complete database and media files as a verified ZIP backup package.
+     * Create a verified backup ZIP archive containing database.json, manifest.json, and all media files.
+     *
+     * @return array{zip_path: string, filename: string, database_checksum: string, record_counts: array, total_media_files: int}
      */
-    public function export(Request $request): BinaryFileResponse|JsonResponse
+    protected function generateBackupZip(string $creatorName = 'super_admin'): array
     {
         $tablesData = [];
         $counts = [];
@@ -56,7 +60,7 @@ class BackupController extends Controller
             'version' => '1.0',
             'backup_type' => 'full_database',
             'exported_at' => now()->toIso8601String(),
-            'exported_by' => $request->user() ? ($request->user()->name . ' (@' . $request->user()->username . ')') : 'super_admin',
+            'exported_by' => $creatorName,
             'database_driver' => DB::getDriverName(),
             'metadata' => [
                 'record_counts' => $counts,
@@ -83,7 +87,7 @@ class BackupController extends Controller
             'version' => '1.0',
             'package_type' => 'full_system_backup_zip',
             'created_at' => now()->toIso8601String(),
-            'created_by' => $request->user() ? ($request->user()->name . ' (@' . $request->user()->username . ')') : 'super_admin',
+            'created_by' => $creatorName,
             'database_checksum' => hash('sha256', $databaseJsonString),
             'record_counts' => $counts,
             'total_media_files' => count($mediaFiles),
@@ -97,10 +101,7 @@ class BackupController extends Controller
         $zip = new ZipArchive();
 
         if ($zip->open($tempZipPath, ZipArchive::CREATE | ZipArchive::OVERWRITE) !== true) {
-            return response()->json([
-                'status' => 'error',
-                'message' => 'Gagal membuat berkas arsip ZIP untuk cadangan data.',
-            ], 500);
+            throw new \RuntimeException('Gagal membuat berkas arsip ZIP untuk cadangan data.');
         }
 
         $zip->addFromString('manifest.json', $manifestJsonString);
@@ -120,10 +121,36 @@ class BackupController extends Controller
 
         $downloadFilename = 'backup-apotek-santosa-farma-' . date('Y-m-d_His') . '.zip';
 
-        return response()->download($tempZipPath, $downloadFilename, [
-            'Content-Type' => 'application/zip',
-            'Access-Control-Expose-Headers' => 'Content-Disposition',
-        ])->deleteFileAfterSend(true);
+        return [
+            'zip_path' => $tempZipPath,
+            'filename' => $downloadFilename,
+            'database_checksum' => hash('sha256', $databaseJsonString),
+            'record_counts' => $counts,
+            'total_media_files' => count($mediaFiles),
+        ];
+    }
+
+    /**
+     * Export the complete database and media files as a verified ZIP backup package.
+     */
+    public function export(Request $request): BinaryFileResponse|JsonResponse
+    {
+        try {
+            $creator = $request->user() ? ($request->user()->name . ' (@' . $request->user()->username . ')') : 'super_admin';
+            $backup = $this->generateBackupZip($creator);
+
+            return response()->download($backup['zip_path'], $backup['filename'], [
+                'Content-Type' => 'application/zip',
+                'Access-Control-Expose-Headers' => 'Content-Disposition',
+            ])->deleteFileAfterSend(true);
+        } catch (\Throwable $e) {
+            Log::error('Gagal membuat paket cadangan ZIP: ' . $e->getMessage());
+
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Gagal mengekspor berkas cadangan: ' . $e->getMessage(),
+            ], 500);
+        }
     }
 
     /**
@@ -445,6 +472,130 @@ class BackupController extends Controller
             return response()->json([
                 'status' => 'error',
                 'message' => 'Gagal memulihkan database dan berkas media: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Factory reset: Wipes all products, media files, transactions, customers, and resets staff passwords.
+     * Generates an emergency pre-reset backup snapshot automatically before proceeding.
+     */
+    public function reset(Request $request): JsonResponse
+    {
+        $creator = $request->user() ? ($request->user()->name . ' (@' . $request->user()->username . ')') : 'super_admin';
+
+        // 1. Mandatory Safeguard: Create emergency pre-reset backup snapshot on the server
+        $backupDir = storage_path('app/backups');
+        File::ensureDirectoryExists($backupDir);
+        $backup = $this->generateBackupZip($creator);
+        $emergencyBackupFilename = 'pre_reset_' . $backup['filename'];
+        $emergencyBackupPath = $backupDir . DIRECTORY_SEPARATOR . $emergencyBackupFilename;
+        File::copy($backup['zip_path'], $emergencyBackupPath);
+        @unlink($backup['zip_path']);
+
+        // 2. Wrap database reset in transaction
+        DB::beginTransaction();
+        try {
+            Schema::disableForeignKeyConstraints();
+
+            // Tables to completely empty (zero data)
+            $tablesToEmpty = [
+                'transaction_items',
+                'receipts',
+                'transactions',
+                'products',
+                'otp_codes',
+                'password_resets',
+                'customers',
+                'personal_access_tokens',
+            ];
+
+            foreach ($tablesToEmpty as $table) {
+                if (Schema::hasTable($table)) {
+                    DB::table($table)->truncate();
+                }
+            }
+
+            // Reset Users to default seeder (Super Admin & Kasir with 'password123')
+            if (Schema::hasTable('users')) {
+                DB::table('users')->truncate();
+                DB::table('users')->insert([
+                    [
+                        'id' => 1,
+                        'name' => 'Super Admin',
+                        'username' => 'admin',
+                        'password' => Hash::make('password123'),
+                        'role' => 'super_admin',
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ],
+                    [
+                        'id' => 2,
+                        'name' => 'Kasir',
+                        'username' => 'kasir',
+                        'password' => Hash::make('password123'),
+                        'role' => 'admin_kasir',
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ],
+                ]);
+            }
+
+            // Reset Store Settings to default (is_open: true)
+            if (Schema::hasTable('store_settings')) {
+                DB::table('store_settings')->truncate();
+                DB::table('store_settings')->insert([
+                    'id' => 1,
+                    'is_open' => true,
+                    'last_opened_at' => now(),
+                    'last_closed_at' => null,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+            }
+
+            Schema::enableForeignKeyConstraints();
+
+            // 3. Clear public media storage (products)
+            $productsStoragePath = storage_path('app/public/products');
+            if (File::isDirectory($productsStoragePath)) {
+                File::cleanDirectory($productsStoragePath);
+            } else {
+                File::ensureDirectoryExists($productsStoragePath);
+            }
+
+            // 4. Generate a fresh session token for admin
+            $adminUser = User::where('username', 'admin')->first();
+            $newToken = $adminUser->createToken('staff-token', ['role:' . $adminUser->role])->plainTextToken;
+
+            DB::commit();
+
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Sistem berhasil direset ke setelan awal pabrik! Seluruh transaksi, produk obat, foto produk di storage, dan data pelanggan telah dikosongkan. Password akun pegawai telah dikembalikan ke bawaan: password123.',
+                'data' => [
+                    'emergency_backup' => $emergencyBackupFilename,
+                    'token' => $newToken,
+                    'user' => [
+                        'id' => $adminUser->id,
+                        'name' => $adminUser->name,
+                        'username' => $adminUser->username,
+                        'role' => $adminUser->role,
+                    ],
+                    'default_credentials' => [
+                        'super_admin' => 'admin / password123',
+                        'kasir' => 'kasir / password123',
+                    ],
+                ],
+            ], 200);
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            Schema::enableForeignKeyConstraints();
+            Log::error('Gagal melakukan factory reset: ' . $e->getMessage(), ['trace' => $e->getTraceAsString()]);
+
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Gagal mereset data sistem: ' . $e->getMessage(),
             ], 500);
         }
     }

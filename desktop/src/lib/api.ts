@@ -217,5 +217,33 @@ export async function importDatabaseBackup(
   }
 }
 
+export async function resetDatabaseBackup(
+  token: string
+): Promise<{ success: boolean; message: string; data?: any }> {
+  try {
+    const res = await fetch(`${API_BASE_URL}/backup/reset`, {
+      method: 'POST',
+      headers: {
+        Accept: 'application/json',
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    const json = await res.json();
+    if (!res.ok) {
+      throw new Error(json.message || 'Gagal mereset data sistem.');
+    }
+
+    return {
+      success: true,
+      message: json.message || 'Sistem berhasil direset ke setelan awal pabrik.',
+      data: json.data,
+    };
+  } catch (err: any) {
+    return { success: false, message: err.message || 'Terjadi kesalahan saat memproses reset data.' };
+  }
+}
+
 
 

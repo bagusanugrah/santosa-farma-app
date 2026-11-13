@@ -526,9 +526,76 @@ class PharmacyApiTest extends TestCase
         // Verify users and products still exist and can be queried
         $this->assertDatabaseHas('users', ['username' => 'admin']);
         $this->assertDatabaseHas('users', ['username' => 'kasir']);
+    }
 
-        // Verify users and products still exist and can be queried
-        $this->assertDatabaseHas('users', ['username' => 'admin']);
-        $this->assertDatabaseHas('users', ['username' => 'kasir']);
+    /**
+     * Test database factory reset with automated emergency backup
+     */
+    public function test_database_factory_reset_and_emergency_backup(): void
+    {
+        $superAdmin = User::where('role', 'super_admin')->first();
+        $cashier = User::where('role', 'admin_kasir')->first();
+
+        // 1. Cashier forbidden
+        \Laravel\Sanctum\Sanctum::actingAs($cashier, ['role:admin_kasir']);
+        $cashierReset = $this->postJson('/api/backup/reset');
+        $cashierReset->assertStatus(403);
+
+        // 2. Super admin triggers factory reset
+        \Laravel\Sanctum\Sanctum::actingAs($superAdmin, ['role:super_admin']);
+        $resetRes = $this->postJson('/api/backup/reset');
+        $resetRes->assertStatus(200)
+            ->assertJsonPath('status', 'success')
+            ->assertJsonStructure([
+                'status',
+                'message',
+                'data' => [
+                    'emergency_backup',
+                    'token',
+                    'user' => ['id', 'name', 'username', 'role'],
+                    'default_credentials',
+                ],
+            ]);
+
+        // Emergency backup file should exist in storage/app/backups
+        $backupFilename = $resetRes->json('data.emergency_backup');
+        $backupPath = storage_path('app/backups/' . $backupFilename);
+        $this->assertFileExists($backupPath);
+        @unlink($backupPath);
+
+        // Products, customers, and transactions should all be 0
+        $this->assertEquals(0, Product::count());
+        $this->assertEquals(0, Customer::count());
+        $this->assertEquals(0, Transaction::count());
+
+        // Users should contain only default admin & cashier
+        $this->assertEquals(2, User::count());
+        $this->assertDatabaseHas('users', [
+            'username' => 'admin',
+            'role' => 'super_admin',
+        ]);
+        $this->assertDatabaseHas('users', [
+            'username' => 'kasir',
+            'role' => 'admin_kasir',
+        ]);
+
+        // Store settings should be open
+        $storeSetting = StoreSetting::find(1);
+        $this->assertNotNull($storeSetting);
+        $this->assertTrue((bool) $storeSetting->is_open);
+
+        // Verify password123 works for admin
+        $loginRes = $this->postJson('/api/auth/staff/login', [
+            'username' => 'admin',
+            'password' => 'password123',
+        ]);
+        $loginRes->assertStatus(200);
+
+        // Verify password123 works for kasir
+        $kasirLoginRes = $this->postJson('/api/auth/staff/login', [
+            'username' => 'kasir',
+            'password' => 'password123',
+        ]);
+        $kasirLoginRes->assertStatus(200);
     }
 }
