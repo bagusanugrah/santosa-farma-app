@@ -35,7 +35,6 @@ export default function PosPage() {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [paymentMethod, setPaymentMethod] = useState<'tunai' | 'qris'>('tunai');
   const [cashAmount, setCashAmount] = useState<string>('');
-  const [showAndroidQrisToggle, setShowAndroidQrisToggle] = useState(false);
 
   const [processing, setProcessing] = useState(false);
   const [error, setError] = useState('');
@@ -467,23 +466,11 @@ export default function PosPage() {
             </div>
           )}
 
-          {/* QRIS Active Modal / Info */}
+          {/* QRIS Info */}
           {paymentMethod === 'qris' && (
-            <div className="p-3 bg-white rounded-xl border border-brand-200 text-center space-y-2">
-              <div className="flex items-center justify-between text-xs">
-                <span className="text-slate-600 font-medium">Tampilkan di HP Kasir:</span>
-                <input
-                  type="checkbox"
-                  checked={showAndroidQrisToggle}
-                  onChange={(e) => setShowAndroidQrisToggle(e.target.checked)}
-                  className="rounded text-brand-600 focus:ring-brand-500 w-4 h-4"
-                />
-              </div>
-              <p className="text-[10px] text-slate-400">
-                {showAndroidQrisToggle
-                  ? 'Pelanggan dapat scan QRIS langsung dari aplikasi Android Kasir.'
-                  : 'QR Code QRIS akan ditampilkan di layar desktop ini.'}
-              </p>
+            <div className="p-3 bg-emerald-50/70 rounded-xl border border-emerald-200 text-xs text-emerald-900 flex items-center space-x-2">
+              <QrCode className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+              <span>Kode QR QRIS akan langsung ditampilkan di layar kasir untuk di-scan oleh pelanggan.</span>
             </div>
           )}
 
@@ -508,7 +495,7 @@ export default function PosPage() {
             </div>
             <h3 className="font-bold text-slate-900 text-base">Menunggu Pembayaran QRIS</h3>
             <p className="text-xs text-slate-500">
-              Silakan minta pelanggan scan kode QR di bawah ini (atau via aplikasi HP Kasir):
+              Silakan minta pelanggan scan kode QR di bawah ini:
             </p>
 
             <div className="p-4 bg-white rounded-2xl border-2 border-dashed border-slate-300 inline-block min-w-[210px] min-h-[210px] flex items-center justify-center">
