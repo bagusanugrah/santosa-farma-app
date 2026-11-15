@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
+import { sendOtpNotification } from '@/lib/notifications';
 
 export async function POST(req: Request) {
   try {
@@ -33,9 +34,12 @@ export async function POST(req: Request) {
 
     console.log(`[Resent OTP for ${target}]: ${code}`);
 
+    // Send actual WhatsApp or Email message
+    await sendOtpNotification(target, type, code);
+
     return NextResponse.json({
       status: 'success',
-      message: `Kode OTP baru telah dikirimkan ke ${target}. (Kode: ${code})`,
+      message: `Kode OTP baru telah dikirimkan ke ${type === 'phone' ? 'WhatsApp' : 'email'} ${target}.`,
       data: {
         debug_code: code,
       },

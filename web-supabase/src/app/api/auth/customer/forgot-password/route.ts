@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import crypto from 'crypto';
 import { supabaseAdmin } from '@/lib/supabase';
+import { sendPasswordResetNotification } from '@/lib/notifications';
 
 export async function POST(req: Request) {
   try {
@@ -53,12 +54,24 @@ export async function POST(req: Request) {
       expires_at: expiresAt,
     });
 
+    const relativeUrl = `/reset-password?token=${token}&target=${encodeURIComponent(trimmed)}`;
+    const origin = req.headers.get('origin') || process.env.WEB_URL || 'http://localhost:3000';
+    const fullResetUrl = `${origin}${relativeUrl}`;
+
     console.log(`[Password Reset Token for ${trimmed}]: ${token}`);
+
+    // Send actual WhatsApp or Email reset link
+    await sendPasswordResetNotification(
+      customer.name,
+      trimmed,
+      isEmail ? 'email' : 'phone',
+      fullResetUrl
+    );
 
     return NextResponse.json({
       status: 'success',
-      message: `Link reset password telah dibuat. Silakan periksa pesan Anda.`,
-      reset_url: `/reset-password?token=${token}&target=${encodeURIComponent(trimmed)}`,
+      message: `Link reset password telah dikirimkan ke ${isEmail ? 'email' : 'WhatsApp'} Anda. Silakan periksa pesan Anda.`,
+      reset_url: relativeUrl,
     });
   } catch (err: any) {
     return NextResponse.json(

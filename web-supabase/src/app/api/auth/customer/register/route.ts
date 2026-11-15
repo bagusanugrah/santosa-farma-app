@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
 import { hashPassword } from '@/lib/server-auth';
+import { sendOtpNotification } from '@/lib/notifications';
 
 export async function POST(req: Request) {
   try {
@@ -96,10 +97,13 @@ export async function POST(req: Request) {
 
     console.log(`[OTP Generated for ${target}]: ${code}`);
 
+    // Send actual WhatsApp or Email message
+    await sendOtpNotification(target, type, code);
+
     return NextResponse.json(
       {
         status: 'success',
-        message: `Registrasi berhasil. Kode OTP Anda adalah: ${code}`,
+        message: `Registrasi berhasil. Kode OTP telah dikirimkan ke ${type === 'phone' ? 'WhatsApp' : 'email'} ${target}.`,
         data: {
           customer_id: insertedCustomer.id,
           target,

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
 import { getCustomerFromAuthHeader } from '@/lib/server-auth';
+import { sendOtpNotification } from '@/lib/notifications';
 
 export async function POST(req: Request) {
   try {
@@ -51,9 +52,12 @@ export async function POST(req: Request) {
 
     console.log(`[Add Contact OTP for ${trimmedTarget}]: ${code}`);
 
+    // Send actual WhatsApp or Email message
+    await sendOtpNotification(trimmedTarget, type, code);
+
     return NextResponse.json({
       status: 'success',
-      message: `Kode OTP telah dikirimkan ke ${trimmedTarget}. (Kode: ${code})`,
+      message: `Kode OTP telah dikirimkan ke ${type === 'phone' ? 'WhatsApp' : 'email'} ${trimmedTarget}.`,
       data: {
         target: trimmedTarget,
         type,
