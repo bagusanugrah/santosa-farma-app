@@ -69,6 +69,33 @@ class StoreProvider extends ChangeNotifier {
     );
   }
 
+  Future<void> updateIntegrationSettings({
+    required String fonnteToken,
+    required String fonnteUrl,
+    required String mailHost,
+    required int mailPort,
+    required String mailUsername,
+    required String mailPassword,
+    required String mailFromName,
+    required String midtransClientKey,
+    required String midtransServerKey,
+    required bool midtransIsProduction,
+  }) async {
+    await SupabaseService.instance.updateIntegrationSettings(
+      fonnteToken: fonnteToken,
+      fonnteUrl: fonnteUrl,
+      mailHost: mailHost,
+      mailPort: mailPort,
+      mailUsername: mailUsername,
+      mailPassword: mailPassword,
+      mailFromName: mailFromName,
+      midtransClientKey: midtransClientKey,
+      midtransServerKey: midtransServerKey,
+      midtransIsProduction: midtransIsProduction,
+    );
+    await loadStatus();
+  }
+
   @override
   void dispose() {
     if (_subscription != null) {

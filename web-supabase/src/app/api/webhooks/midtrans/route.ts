@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import crypto from 'crypto';
 import { supabaseAdmin } from '@/lib/supabase';
+import { getIntegrationSettings } from '@/lib/settings';
 
 export async function POST(req: Request) {
   try {
@@ -20,7 +21,8 @@ export async function POST(req: Request) {
     }
 
     // Verify signature key if present and server key is not demo
-    const serverKey = process.env.MIDTRANS_SERVER_KEY || '';
+    const settings = await getIntegrationSettings();
+    const serverKey = settings.midtransServerKey;
     if (signatureKey && !serverKey.includes('demo')) {
       const hash = crypto
         .createHash('sha512')

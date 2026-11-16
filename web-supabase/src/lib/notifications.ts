@@ -1,4 +1,5 @@
 import nodemailer from 'nodemailer';
+import { getIntegrationSettings } from './settings';
 
 export function formatIndonesianPhone(phone: string): string {
   let clean = phone.replace(/[^0-9]/g, '');
@@ -14,8 +15,9 @@ export function formatIndonesianPhone(phone: string): string {
  * Send WhatsApp message via Fonnte Gateway
  */
 export async function sendWhatsApp(phone: string, message: string): Promise<boolean> {
-  const token = process.env.WA_GATEWAY_TOKEN;
-  const url = process.env.WA_GATEWAY_URL || 'https://api.fonnte.com/send';
+  const settings = await getIntegrationSettings();
+  const token = settings.fonnteToken;
+  const url = settings.fonnteUrl;
   const target = formatIndonesianPhone(phone);
 
   console.log(`[WhatsApp Gateway] Sending to ${target}: ${message}`);
@@ -56,8 +58,12 @@ export async function sendEmail(
   text: string,
   html?: string
 ): Promise<boolean> {
-  const user = process.env.MAIL_USERNAME;
-  const pass = process.env.MAIL_PASSWORD;
+  const settings = await getIntegrationSettings();
+  const user = settings.mailUser;
+  const pass = settings.mailPass;
+  const host = settings.mailHost;
+  const port = settings.mailPort;
+  const fromName = settings.mailFromName;
 
   console.log(`[Email Service] Sending to ${to}: ${subject}`);
 
@@ -68,8 +74,8 @@ export async function sendEmail(
 
   try {
     const transporter = nodemailer.createTransport({
-      host: process.env.MAIL_HOST || 'smtp.gmail.com',
-      port: parseInt(process.env.MAIL_PORT || '587', 10),
+      host,
+      port,
       secure: false, // TLS
       auth: {
         user,
@@ -77,8 +83,7 @@ export async function sendEmail(
       },
     });
 
-    const fromName = process.env.MAIL_FROM_NAME || 'Apotek Santosa Farma';
-    const fromAddress = process.env.MAIL_FROM_ADDRESS || user;
+    const fromAddress = user;
 
     await transporter.sendMail({
       from: `"${fromName}" <${fromAddress}>`,

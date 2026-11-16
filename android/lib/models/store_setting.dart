@@ -5,12 +5,38 @@ class StoreSetting {
   final DateTime? lastOpenedAt;
   final DateTime? lastClosedAt;
 
+  // WhatsApp Fonnte Gateway
+  final String fonnteToken;
+  final String fonnteUrl;
+
+  // Email SMTP (Gmail)
+  final String mailHost;
+  final int mailPort;
+  final String mailUsername;
+  final String mailPassword;
+  final String mailFromName;
+
+  // Midtrans Payment Gateway
+  final String midtransClientKey;
+  final String midtransServerKey;
+  final bool midtransIsProduction;
+
   StoreSetting({
     required this.id,
     required this.isOpen,
     required this.onlineOrdersEnabled,
     this.lastOpenedAt,
     this.lastClosedAt,
+    this.fonnteToken = '',
+    this.fonnteUrl = 'https://api.fonnte.com/send',
+    this.mailHost = 'smtp.gmail.com',
+    this.mailPort = 587,
+    this.mailUsername = 'kucitcloud@gmail.com',
+    this.mailPassword = '',
+    this.mailFromName = 'Apotek Santosa Farma',
+    this.midtransClientKey = '',
+    this.midtransServerKey = '',
+    this.midtransIsProduction = false,
   });
 
   bool get isOnlineActive => isOpen && onlineOrdersEnabled;
@@ -22,6 +48,16 @@ class StoreSetting {
       onlineOrdersEnabled: map['online_orders_enabled'] == true,
       lastOpenedAt: map['last_opened_at'] != null ? DateTime.tryParse(map['last_opened_at']) : null,
       lastClosedAt: map['last_closed_at'] != null ? DateTime.tryParse(map['last_closed_at']) : null,
+      fonnteToken: map['fonnte_token']?.toString() ?? '',
+      fonnteUrl: map['fonnte_url']?.toString() ?? 'https://api.fonnte.com/send',
+      mailHost: map['mail_host']?.toString() ?? 'smtp.gmail.com',
+      mailPort: map['mail_port'] is int ? map['mail_port'] : int.tryParse(map['mail_port']?.toString() ?? '') ?? 587,
+      mailUsername: map['mail_username']?.toString() ?? 'kucitcloud@gmail.com',
+      mailPassword: map['mail_password']?.toString() ?? '',
+      mailFromName: map['mail_from_name']?.toString() ?? 'Apotek Santosa Farma',
+      midtransClientKey: map['midtrans_client_key']?.toString() ?? '',
+      midtransServerKey: map['midtrans_server_key']?.toString() ?? '',
+      midtransIsProduction: map['midtrans_is_production'] == true,
     );
   }
 
@@ -31,6 +67,16 @@ class StoreSetting {
       'online_orders_enabled': onlineOrdersEnabled,
       'last_opened_at': lastOpenedAt?.toIso8601String(),
       'last_closed_at': lastClosedAt?.toIso8601String(),
+      'fonnte_token': fonnteToken,
+      'fonnte_url': fonnteUrl,
+      'mail_host': mailHost,
+      'mail_port': mailPort,
+      'mail_username': mailUsername,
+      'mail_password': mailPassword,
+      'mail_from_name': mailFromName,
+      'midtrans_client_key': midtransClientKey,
+      'midtrans_server_key': midtransServerKey,
+      'midtrans_is_production': midtransIsProduction,
     };
   }
 }
@@ -48,7 +94,7 @@ class UserModel {
     required this.role,
   });
 
-  bool get isSuperAdmin => role == 'super_admin';
+  bool get isSuperAdmin => role == 'super_admin' || role == 'admin';
 
   factory UserModel.fromMap(Map<String, dynamic> map) {
     return UserModel(

@@ -85,6 +85,36 @@ class SupabaseService {
     await client.from('store_settings').update(updateData).eq('id', 1);
   }
 
+  Future<void> updateIntegrationSettings({
+    required String fonnteToken,
+    required String fonnteUrl,
+    required String mailHost,
+    required int mailPort,
+    required String mailUsername,
+    required String mailPassword,
+    required String mailFromName,
+    required String midtransClientKey,
+    required String midtransServerKey,
+    required bool midtransIsProduction,
+  }) async {
+    final now = DateTime.now().toIso8601String();
+    final updateData = {
+      'fonnte_token': fonnteToken.trim(),
+      'fonnte_url': fonnteUrl.trim(),
+      'mail_host': mailHost.trim(),
+      'mail_port': mailPort,
+      'mail_username': mailUsername.trim(),
+      'mail_password': mailPassword.trim(),
+      'mail_from_name': mailFromName.trim(),
+      'midtrans_client_key': midtransClientKey.trim(),
+      'midtrans_server_key': midtransServerKey.trim(),
+      'midtrans_is_production': midtransIsProduction,
+      'updated_at': now,
+    };
+
+    await client.from('store_settings').update(updateData).eq('id', 1);
+  }
+
   // ==========================================
   // PRODUCTS
   // ==========================================

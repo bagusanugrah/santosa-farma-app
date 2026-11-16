@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import crypto from 'crypto';
 import { supabaseAdmin } from '@/lib/supabase';
 import { getCustomerFromAuthHeader } from '@/lib/server-auth';
+import { getIntegrationSettings } from '@/lib/settings';
 
 export async function POST(req: Request) {
   try {
@@ -135,8 +136,9 @@ export async function POST(req: Request) {
 
     // 6. Request Midtrans Snap Token
     let snapToken = null;
-    const midtransServerKey = process.env.MIDTRANS_SERVER_KEY || 'SB-Mid-server-demo';
-    const isProd = process.env.MIDTRANS_IS_PRODUCTION === 'true';
+    const settings = await getIntegrationSettings();
+    const midtransServerKey = settings.midtransServerKey;
+    const isProd = settings.midtransIsProduction;
     const snapEndpoint = isProd
       ? 'https://app.midtrans.com/snap/v1/transactions'
       : 'https://app.sandbox.midtrans.com/snap/v1/transactions';

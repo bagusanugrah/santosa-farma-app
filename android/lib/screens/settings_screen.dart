@@ -17,6 +17,104 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool _isRestoring = false;
   bool _isResetting = false;
 
+  // Integration Controllers (Super Admin)
+  late final TextEditingController _fonnteTokenCtrl;
+  late final TextEditingController _fonnteUrlCtrl;
+  late final TextEditingController _mailHostCtrl;
+  late final TextEditingController _mailPortCtrl;
+  late final TextEditingController _mailUsernameCtrl;
+  late final TextEditingController _mailPasswordCtrl;
+  late final TextEditingController _mailFromNameCtrl;
+  late final TextEditingController _midtransClientKeyCtrl;
+  late final TextEditingController _midtransServerKeyCtrl;
+  bool _midtransIsProduction = false;
+  bool _isSavingIntegrations = false;
+  bool _obscureFonnte = true;
+  bool _obscureMailPass = true;
+  bool _obscureMidtrans = true;
+  bool _initializedIntegrations = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _fonnteTokenCtrl = TextEditingController();
+    _fonnteUrlCtrl = TextEditingController();
+    _mailHostCtrl = TextEditingController();
+    _mailPortCtrl = TextEditingController();
+    _mailUsernameCtrl = TextEditingController();
+    _mailPasswordCtrl = TextEditingController();
+    _mailFromNameCtrl = TextEditingController();
+    _midtransClientKeyCtrl = TextEditingController();
+    _midtransServerKeyCtrl = TextEditingController();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_initializedIntegrations) {
+      final setting = context.read<StoreProvider>().setting;
+      _fonnteTokenCtrl.text = setting.fonnteToken;
+      _fonnteUrlCtrl.text = setting.fonnteUrl;
+      _mailHostCtrl.text = setting.mailHost;
+      _mailPortCtrl.text = setting.mailPort.toString();
+      _mailUsernameCtrl.text = setting.mailUsername;
+      _mailPasswordCtrl.text = setting.mailPassword;
+      _mailFromNameCtrl.text = setting.mailFromName;
+      _midtransClientKeyCtrl.text = setting.midtransClientKey;
+      _midtransServerKeyCtrl.text = setting.midtransServerKey;
+      _midtransIsProduction = setting.midtransIsProduction;
+      _initializedIntegrations = true;
+    }
+  }
+
+  @override
+  void dispose() {
+    _fonnteTokenCtrl.dispose();
+    _fonnteUrlCtrl.dispose();
+    _mailHostCtrl.dispose();
+    _mailPortCtrl.dispose();
+    _mailUsernameCtrl.dispose();
+    _mailPasswordCtrl.dispose();
+    _mailFromNameCtrl.dispose();
+    _midtransClientKeyCtrl.dispose();
+    _midtransServerKeyCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _handleSaveIntegrations() async {
+    setState(() => _isSavingIntegrations = true);
+    try {
+      await context.read<StoreProvider>().updateIntegrationSettings(
+            fonnteToken: _fonnteTokenCtrl.text,
+            fonnteUrl: _fonnteUrlCtrl.text,
+            mailHost: _mailHostCtrl.text,
+            mailPort: int.tryParse(_mailPortCtrl.text) ?? 587,
+            mailUsername: _mailUsernameCtrl.text,
+            mailPassword: _mailPasswordCtrl.text,
+            mailFromName: _mailFromNameCtrl.text,
+            midtransClientKey: _midtransClientKeyCtrl.text,
+            midtransServerKey: _midtransServerKeyCtrl.text,
+            midtransIsProduction: _midtransIsProduction,
+          );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Pengaturan WhatsApp, Email & Midtrans berhasil disimpan ke database!'),
+            backgroundColor: Color(0xFF059669),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Gagal menyimpan pengaturan: $e'), backgroundColor: Colors.red),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isSavingIntegrations = false);
+    }
+  }
+
   Future<void> _handleBackup() async {
     setState(() => _isBackingUp = true);
     try {
@@ -149,6 +247,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Widget build(BuildContext context) {
     final auth = context.watch<AuthProvider>();
     final store = context.watch<StoreProvider>();
+    final isSuperAdmin = auth.currentUser?.isSuperAdmin == true;
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(20),
@@ -244,6 +343,192 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
               ),
               const SizedBox(height: 16),
+
+              // Super Admin Integration Settings Card
+              if (isSuperAdmin) ...[
+                Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(20),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFECFDF5),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: const Icon(Icons.admin_panel_settings, color: Color(0xFF059669), size: 20),
+                            ),
+                            const SizedBox(width: 12),
+                            const Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Pengaturan Integrasi & Gateway',
+                                    style: TextStyle(fontWeight: FontWeight.w900, fontSize: 15),
+                                  ),
+                                  Text(
+                                    'Khusus Super Admin: Konfigurasi WhatsApp, Email, dan Midtrans tersimpan terpusat di Supabase.',
+                                    style: TextStyle(fontSize: 11, color: Color(0xFF64748B)),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                        const Divider(height: 24),
+
+                        // Section 1: WhatsApp Fonnte
+                        const Row(
+                          children: [
+                            Icon(Icons.chat_outlined, color: Color(0xFF16A34A), size: 18),
+                            SizedBox(width: 8),
+                            Text('WhatsApp Gateway (Fonnte)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                          ],
+                        ),
+                        const SizedBox(height: 10),
+                        TextField(
+                          controller: _fonnteTokenCtrl,
+                          obscureText: _obscureFonnte,
+                          decoration: InputDecoration(
+                            labelText: 'Fonnte Token API',
+                            isDense: true,
+                            suffixIcon: IconButton(
+                              icon: Icon(_obscureFonnte ? Icons.visibility_off : Icons.visibility, size: 18),
+                              onPressed: () => setState(() => _obscureFonnte = !_obscureFonnte),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        TextField(
+                          controller: _fonnteUrlCtrl,
+                          decoration: const InputDecoration(
+                            labelText: 'Fonnte Endpoint URL',
+                            hintText: 'https://api.fonnte.com/send',
+                            isDense: true,
+                          ),
+                        ),
+                        const Divider(height: 28),
+
+                        // Section 2: Email SMTP (Gmail)
+                        const Row(
+                          children: [
+                            Icon(Icons.email_outlined, color: Color(0xFFEA580C), size: 18),
+                            SizedBox(width: 8),
+                            Text('Email Gateway (Gmail SMTP)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                          ],
+                        ),
+                        const SizedBox(height: 10),
+                        Row(
+                          children: [
+                            Expanded(
+                              flex: 3,
+                              child: TextField(
+                                controller: _mailHostCtrl,
+                                decoration: const InputDecoration(labelText: 'SMTP Host', hintText: 'smtp.gmail.com', isDense: true),
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              flex: 1,
+                              child: TextField(
+                                controller: _mailPortCtrl,
+                                keyboardType: TextInputType.number,
+                                decoration: const InputDecoration(labelText: 'Port', hintText: '587', isDense: true),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        TextField(
+                          controller: _mailUsernameCtrl,
+                          decoration: const InputDecoration(labelText: 'Email Akun (Username)', hintText: 'kucitcloud@gmail.com', isDense: true),
+                        ),
+                        const SizedBox(height: 8),
+                        TextField(
+                          controller: _mailPasswordCtrl,
+                          obscureText: _obscureMailPass,
+                          decoration: InputDecoration(
+                            labelText: 'App Password Gmail (16 Karakter)',
+                            isDense: true,
+                            suffixIcon: IconButton(
+                              icon: Icon(_obscureMailPass ? Icons.visibility_off : Icons.visibility, size: 18),
+                              onPressed: () => setState(() => _obscureMailPass = !_obscureMailPass),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        TextField(
+                          controller: _mailFromNameCtrl,
+                          decoration: const InputDecoration(labelText: 'Nama Pengirim Email', hintText: 'Apotek Santosa Farma', isDense: true),
+                        ),
+                        const Divider(height: 28),
+
+                        // Section 3: Midtrans Payment Gateway
+                        const Row(
+                          children: [
+                            Icon(Icons.payment, color: Color(0xFF2563EB), size: 18),
+                            SizedBox(width: 8),
+                            Text('Payment Gateway (Midtrans Snap)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                          ],
+                        ),
+                        const SizedBox(height: 10),
+                        TextField(
+                          controller: _midtransClientKeyCtrl,
+                          decoration: const InputDecoration(labelText: 'Midtrans Client Key', isDense: true),
+                        ),
+                        const SizedBox(height: 8),
+                        TextField(
+                          controller: _midtransServerKeyCtrl,
+                          obscureText: _obscureMidtrans,
+                          decoration: InputDecoration(
+                            labelText: 'Midtrans Server Key',
+                            isDense: true,
+                            suffixIcon: IconButton(
+                              icon: Icon(_obscureMidtrans ? Icons.visibility_off : Icons.visibility, size: 18),
+                              onPressed: () => setState(() => _obscureMidtrans = !_obscureMidtrans),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        SwitchListTile(
+                          contentPadding: EdgeInsets.zero,
+                          title: const Text('Mode Production (Live)', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+                          subtitle: Text(
+                            _midtransIsProduction ? 'Transaksi menggunakan uang asli (Production)' : 'Transaksi menggunakan simulasi Sandbox',
+                            style: TextStyle(fontSize: 11, color: _midtransIsProduction ? Colors.red : const Color(0xFF2563EB)),
+                          ),
+                          value: _midtransIsProduction,
+                          activeColor: Colors.red,
+                          onChanged: (val) => setState(() => _midtransIsProduction = val),
+                        ),
+                        const SizedBox(height: 16),
+
+                        // Save Button
+                        SizedBox(
+                          width: double.infinity,
+                          child: FilledButton.icon(
+                            style: FilledButton.styleFrom(
+                              backgroundColor: const Color(0xFF059669),
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                            ),
+                            icon: _isSavingIntegrations
+                                ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                                : const Icon(Icons.save, size: 18),
+                            label: Text(_isSavingIntegrations ? 'Menyimpan...' : 'Simpan Pengaturan Gateway'),
+                            onPressed: _isSavingIntegrations ? null : _handleSaveIntegrations,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+              ],
 
               // Data Management (Backup, Restore, Reset)
               Card(

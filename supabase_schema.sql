@@ -73,13 +73,26 @@ CREATE TABLE IF NOT EXISTS public.products (
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- STORE SETTINGS (Pengaturan Buka/Tutup & Pesanan Online)
+-- STORE SETTINGS (Pengaturan Buka/Tutup, Pesanan Online, dan Integrasi Gateway)
 CREATE TABLE IF NOT EXISTS public.store_settings (
     id INT PRIMARY KEY DEFAULT 1,
     is_open BOOLEAN NOT NULL DEFAULT TRUE,
     online_orders_enabled BOOLEAN NOT NULL DEFAULT FALSE,
     last_opened_at TIMESTAMPTZ,
     last_closed_at TIMESTAMPTZ,
+    -- WhatsApp Fonnte Gateway
+    fonnte_token TEXT DEFAULT '',
+    fonnte_url TEXT DEFAULT 'https://api.fonnte.com/send',
+    -- Email SMTP (Gmail)
+    mail_host TEXT DEFAULT 'smtp.gmail.com',
+    mail_port INT DEFAULT 587,
+    mail_username TEXT DEFAULT '',
+    mail_password TEXT DEFAULT '',
+    mail_from_name TEXT DEFAULT 'Apotek Santosa Farma',
+    -- Midtrans Payment Gateway
+    midtrans_client_key TEXT DEFAULT '',
+    midtrans_server_key TEXT DEFAULT '',
+    midtrans_is_production BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW(),
     CONSTRAINT single_store_setting CHECK (id = 1)
