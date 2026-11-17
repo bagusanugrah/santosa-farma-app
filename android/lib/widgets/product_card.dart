@@ -144,14 +144,21 @@ class ProductCard extends StatelessWidget {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
-                        Text(
-                          currency.format(product.price),
-                          style: const TextStyle(
-                            fontWeight: FontWeight.w900,
-                            fontSize: 14,
-                            color: Color(0xFF047857),
+                        Expanded(
+                          child: FittedBox(
+                            fit: BoxFit.scaleDown,
+                            alignment: Alignment.centerLeft,
+                            child: Text(
+                              currency.format(product.price),
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w900,
+                                fontSize: 14,
+                                color: Color(0xFF047857),
+                              ),
+                            ),
                           ),
                         ),
+                        const SizedBox(width: 4),
                         Material(
                           color: isOutOfStock ? const Color(0xFFE2E8F0) : const Color(0xFF059669),
                           borderRadius: BorderRadius.circular(10),

@@ -43,7 +43,7 @@ class StoreSetting {
 
   factory StoreSetting.fromMap(Map<String, dynamic> map) {
     return StoreSetting(
-      id: map['id'] is int ? map['id'] : int.parse(map['id'].toString()),
+      id: map['id'] is int ? map['id'] : (int.tryParse(map['id']?.toString() ?? '1') ?? 1),
       isOpen: map['is_open'] == true,
       onlineOrdersEnabled: map['online_orders_enabled'] == true,
       lastOpenedAt: map['last_opened_at'] != null ? DateTime.tryParse(map['last_opened_at']) : null,
@@ -58,6 +58,42 @@ class StoreSetting {
       midtransClientKey: map['midtrans_client_key']?.toString() ?? '',
       midtransServerKey: map['midtrans_server_key']?.toString() ?? '',
       midtransIsProduction: map['midtrans_is_production'] == true,
+    );
+  }
+
+  StoreSetting copyWith({
+    int? id,
+    bool? isOpen,
+    bool? onlineOrdersEnabled,
+    DateTime? lastOpenedAt,
+    DateTime? lastClosedAt,
+    String? fonnteToken,
+    String? fonnteUrl,
+    String? mailHost,
+    int? mailPort,
+    String? mailUsername,
+    String? mailPassword,
+    String? mailFromName,
+    String? midtransClientKey,
+    String? midtransServerKey,
+    bool? midtransIsProduction,
+  }) {
+    return StoreSetting(
+      id: id ?? this.id,
+      isOpen: isOpen ?? this.isOpen,
+      onlineOrdersEnabled: onlineOrdersEnabled ?? this.onlineOrdersEnabled,
+      lastOpenedAt: lastOpenedAt ?? this.lastOpenedAt,
+      lastClosedAt: lastClosedAt ?? this.lastClosedAt,
+      fonnteToken: fonnteToken ?? this.fonnteToken,
+      fonnteUrl: fonnteUrl ?? this.fonnteUrl,
+      mailHost: mailHost ?? this.mailHost,
+      mailPort: mailPort ?? this.mailPort,
+      mailUsername: mailUsername ?? this.mailUsername,
+      mailPassword: mailPassword ?? this.mailPassword,
+      mailFromName: mailFromName ?? this.mailFromName,
+      midtransClientKey: midtransClientKey ?? this.midtransClientKey,
+      midtransServerKey: midtransServerKey ?? this.midtransServerKey,
+      midtransIsProduction: midtransIsProduction ?? this.midtransIsProduction,
     );
   }
 
@@ -98,7 +134,7 @@ class UserModel {
 
   factory UserModel.fromMap(Map<String, dynamic> map) {
     return UserModel(
-      id: map['id'] is int ? map['id'] : int.parse(map['id'].toString()),
+      id: map['id'] is int ? map['id'] : (int.tryParse(map['id']?.toString() ?? '0') ?? 0),
       name: map['name'] ?? '',
       username: map['username'] ?? '',
       role: map['role'] ?? 'admin_kasir',

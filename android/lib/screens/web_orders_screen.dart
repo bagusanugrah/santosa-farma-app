@@ -195,20 +195,26 @@ class _WebOrdersScreenState extends State<WebOrdersScreen> with SingleTickerProv
                                   // Order Header
                                   Row(
                                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
-                                      Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            order.invoiceNo,
-                                            style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 14),
-                                          ),
-                                          Text(
-                                            dateFormat.format(order.createdAt),
-                                            style: const TextStyle(fontSize: 11, color: Color(0xFF64748B)),
-                                          ),
-                                        ],
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              order.invoiceNo,
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 14),
+                                            ),
+                                            Text(
+                                              dateFormat.format(order.createdAt),
+                                              style: const TextStyle(fontSize: 11, color: Color(0xFF64748B)),
+                                            ),
+                                          ],
+                                        ),
                                       ),
+                                      const SizedBox(width: 8),
                                       _buildStatusBadge(order.status),
                                     ],
                                   ),
@@ -219,9 +225,13 @@ class _WebOrdersScreenState extends State<WebOrdersScreen> with SingleTickerProv
                                     children: [
                                       const Icon(Icons.person, size: 16, color: Color(0xFF64748B)),
                                       const SizedBox(width: 6),
-                                      Text(
-                                        order.customerName ?? 'Pelanggan Web',
-                                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                                      Flexible(
+                                        child: Text(
+                                          order.customerName ?? 'Pelanggan Web',
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                                        ),
                                       ),
                                       if (order.customerPhone != null) ...[
                                         const SizedBox(width: 12),
@@ -264,10 +274,15 @@ class _WebOrdersScreenState extends State<WebOrdersScreen> with SingleTickerProv
                                           child: Row(
                                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                             children: [
-                                              Text(
-                                                '${item.qty}x ${item.productName}',
-                                                style: const TextStyle(fontSize: 12, color: Color(0xFF334155)),
+                                              Expanded(
+                                                child: Text(
+                                                  '${item.qty}x ${item.productName}',
+                                                  maxLines: 2,
+                                                  overflow: TextOverflow.ellipsis,
+                                                  style: const TextStyle(fontSize: 12, color: Color(0xFF334155)),
+                                                ),
                                               ),
+                                              const SizedBox(width: 8),
                                               Text(
                                                 currency.format(item.subtotal),
                                                 style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),

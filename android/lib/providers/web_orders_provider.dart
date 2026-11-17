@@ -48,12 +48,16 @@ class WebOrdersProvider extends ChangeNotifier {
           schema: 'public',
           table: 'transactions',
           callback: (payload) async {
-            final newRecord = payload.newRecord;
-            if (newRecord.isNotEmpty && newRecord['channel'] == 'online') {
-              // Play audio chime for incoming online order or payment
-              await AudioService.instance.playOrderChime();
-              _newOrdersCount++;
-              await loadOrders();
+            try {
+              final newRecord = payload.newRecord;
+              if (newRecord.isNotEmpty && newRecord['channel'] == 'online') {
+                // Play audio chime for incoming online order or payment
+                await AudioService.instance.playOrderChime();
+                _newOrdersCount++;
+                await loadOrders();
+              }
+            } catch (e) {
+              debugPrint('Realtime web orders callback error: $e');
             }
           },
         )

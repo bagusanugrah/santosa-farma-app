@@ -42,6 +42,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
     } catch (e) {
       debugPrint('Reports Error: $e');
     }
+    if (!mounted) return;
     setState(() => _isLoading = false);
   }
 
@@ -189,14 +190,30 @@ class _ReportsScreenState extends State<ReportsScreen> {
                               title: Row(
                                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                 children: [
-                                  Text(trx.invoiceNo, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                                  Expanded(
+                                    child: Text(
+                                      trx.invoiceNo,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
                                   Text(currency.format(trx.total), style: const TextStyle(fontWeight: FontWeight.w900, color: Color(0xFF047857), fontSize: 13)),
                                 ],
                               ),
                               subtitle: Row(
                                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                 children: [
-                                  Text(dateFormat.format(trx.createdAt), style: const TextStyle(fontSize: 11, color: Color(0xFF64748B))),
+                                  Expanded(
+                                    child: Text(
+                                      dateFormat.format(trx.createdAt),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(fontSize: 11, color: Color(0xFF64748B)),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
                                   Text(
                                     '${trx.paymentMethod.toUpperCase()} • ${trx.status.toUpperCase()}',
                                     style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFF475569)),

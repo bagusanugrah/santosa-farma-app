@@ -34,9 +34,13 @@ class StoreProvider extends ChangeNotifier {
           schema: 'public',
           table: 'store_settings',
           callback: (payload) {
-            if (payload.newRecord.isNotEmpty) {
-              _setting = StoreSetting.fromMap(payload.newRecord);
-              notifyListeners();
+            try {
+              if (payload.newRecord.isNotEmpty) {
+                _setting = StoreSetting.fromMap(payload.newRecord);
+                notifyListeners();
+              }
+            } catch (e) {
+              debugPrint('Realtime store_settings parse error: $e');
             }
           },
         )
@@ -44,11 +48,7 @@ class StoreProvider extends ChangeNotifier {
   }
 
   Future<void> toggleStoreOpen(bool val) async {
-    _setting = StoreSetting(
-      id: _setting.id,
-      isOpen: val,
-      onlineOrdersEnabled: _setting.onlineOrdersEnabled,
-    );
+    _setting = _setting.copyWith(isOpen: val);
     notifyListeners();
     await SupabaseService.instance.updateStoreStatus(
       isOpen: val,
@@ -57,11 +57,7 @@ class StoreProvider extends ChangeNotifier {
   }
 
   Future<void> toggleOnlineOrders(bool val) async {
-    _setting = StoreSetting(
-      id: _setting.id,
-      isOpen: _setting.isOpen,
-      onlineOrdersEnabled: val,
-    );
+    _setting = _setting.copyWith(onlineOrdersEnabled: val);
     notifyListeners();
     await SupabaseService.instance.updateStoreStatus(
       isOpen: _setting.isOpen,

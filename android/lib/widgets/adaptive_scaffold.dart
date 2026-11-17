@@ -193,6 +193,116 @@ class AdaptiveScaffold extends StatelessWidget {
       ],
     );
 
+    void showStoreStatusSheet() {
+      showModalBottomSheet(
+        context: context,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        builder: (ctx) => Consumer<StoreProvider>(
+          builder: (ctx, sp, _) {
+            return SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          'Kontrol Operasional Apotek',
+                          style: TextStyle(fontWeight: FontWeight.w900, fontSize: 16),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.close),
+                          onPressed: () => Navigator.of(ctx).pop(),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    SwitchListTile(
+                      value: sp.isOpen,
+                      onChanged: (val) => sp.toggleStoreOpen(val),
+                      title: const Text('Status Buka Apotek', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                      subtitle: Text(
+                        sp.isOpen ? 'Apotek sedang BUKA melayani pembeli' : 'Apotek sedang TUTUP',
+                        style: TextStyle(fontSize: 12, color: sp.isOpen ? const Color(0xFF047857) : Colors.red),
+                      ),
+                      secondary: Icon(
+                        Icons.storefront,
+                        color: sp.isOpen ? const Color(0xFF059669) : Colors.red,
+                      ),
+                      activeColor: const Color(0xFF059669),
+                    ),
+                    const Divider(),
+                    SwitchListTile(
+                      value: sp.onlineOrdersEnabled,
+                      onChanged: (val) => sp.toggleOnlineOrders(val),
+                      title: const Text('Pemesanan Web Pelanggan', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                      subtitle: Text(
+                        sp.onlineOrdersEnabled ? 'Pelanggan web BISA memesan obat' : 'Pemesanan online sedang dinonaktifkan',
+                        style: TextStyle(fontSize: 12, color: sp.onlineOrdersEnabled ? const Color(0xFF2563EB) : const Color(0xFF64748B)),
+                      ),
+                      secondary: Icon(
+                        Icons.language,
+                        color: sp.onlineOrdersEnabled ? const Color(0xFF2563EB) : const Color(0xFF64748B),
+                      ),
+                      activeColor: const Color(0xFF2563EB),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        ),
+      );
+    }
+
+    final mobileStatusPill = InkWell(
+      onTap: showStoreStatusSheet,
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+        decoration: BoxDecoration(
+          color: storeProvider.isOpen ? const Color(0xFFECFDF5) : const Color(0xFFFEF2F2),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: storeProvider.isOpen ? const Color(0xFFA7F3D0) : const Color(0xFFFECACA),
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.storefront,
+              size: 15,
+              color: storeProvider.isOpen ? const Color(0xFF059669) : Colors.red[700],
+            ),
+            const SizedBox(width: 4),
+            Text(
+              storeProvider.isOpen ? 'BUKA' : 'TUTUP',
+              style: TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.w800,
+                color: storeProvider.isOpen ? const Color(0xFF047857) : Colors.red[800],
+              ),
+            ),
+            const SizedBox(width: 6),
+            Container(width: 1, height: 12, color: const Color(0xFFCBD5E1)),
+            const SizedBox(width: 6),
+            Icon(
+              Icons.language,
+              size: 14,
+              color: storeProvider.onlineOrdersEnabled ? const Color(0xFF2563EB) : const Color(0xFF94A3B8),
+            ),
+            const Icon(Icons.arrow_drop_down, size: 16, color: Color(0xFF64748B)),
+          ],
+        ),
+      ),
+    );
+
     if (isTablet) {
       // Tablet / Landscape Split Layout
       return Scaffold(
@@ -255,11 +365,19 @@ class AdaptiveScaffold extends StatelessWidget {
       appBar: AppBar(
         title: Text(
           title,
-          style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15),
         ),
         actions: [
-          headerToggles,
+          mobileStatusPill,
           if (actions != null) ...actions!,
+          IconButton(
+            icon: const Icon(Icons.logout, size: 20, color: Color(0xFF64748B)),
+            tooltip: 'Keluar',
+            onPressed: () => authProvider.logout(),
+          ),
+          const SizedBox(width: 4),
         ],
       ),
       body: body,

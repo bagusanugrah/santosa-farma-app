@@ -19,12 +19,12 @@ class TransactionItem {
 
   factory TransactionItem.fromMap(Map<String, dynamic> map) {
     return TransactionItem(
-      id: map['id'] is int ? map['id'] : int.parse(map['id'].toString()),
+      id: map['id'] is int ? map['id'] : (int.tryParse(map['id']?.toString() ?? '0') ?? 0),
       transactionId: map['transaction_id'] is int
           ? map['transaction_id']
-          : int.parse(map['transaction_id'].toString()),
+          : (int.tryParse(map['transaction_id']?.toString() ?? '0') ?? 0),
       productId: map['product_id'] != null
-          ? (map['product_id'] is int ? map['product_id'] : int.parse(map['product_id'].toString()))
+          ? (map['product_id'] is int ? map['product_id'] : int.tryParse(map['product_id'].toString()))
           : null,
       productName: map['product_name'] ?? '',
       qty: map['qty'] is int ? map['qty'] : int.tryParse(map['qty']?.toString() ?? '1') ?? 1,

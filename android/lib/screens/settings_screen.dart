@@ -52,18 +52,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
   void didChangeDependencies() {
     super.didChangeDependencies();
     if (!_initializedIntegrations) {
-      final setting = context.read<StoreProvider>().setting;
-      _fonnteTokenCtrl.text = setting.fonnteToken;
-      _fonnteUrlCtrl.text = setting.fonnteUrl;
-      _mailHostCtrl.text = setting.mailHost;
-      _mailPortCtrl.text = setting.mailPort.toString();
-      _mailUsernameCtrl.text = setting.mailUsername;
-      _mailPasswordCtrl.text = setting.mailPassword;
-      _mailFromNameCtrl.text = setting.mailFromName;
-      _midtransClientKeyCtrl.text = setting.midtransClientKey;
-      _midtransServerKeyCtrl.text = setting.midtransServerKey;
-      _midtransIsProduction = setting.midtransIsProduction;
-      _initializedIntegrations = true;
+      final storeProvider = context.watch<StoreProvider>();
+      if (!storeProvider.isLoading) {
+        final setting = storeProvider.setting;
+        _fonnteTokenCtrl.text = setting.fonnteToken;
+        _fonnteUrlCtrl.text = setting.fonnteUrl;
+        _mailHostCtrl.text = setting.mailHost;
+        _mailPortCtrl.text = setting.mailPort.toString();
+        _mailUsernameCtrl.text = setting.mailUsername;
+        _mailPasswordCtrl.text = setting.mailPassword;
+        _mailFromNameCtrl.text = setting.mailFromName;
+        _midtransClientKeyCtrl.text = setting.midtransClientKey;
+        _midtransServerKeyCtrl.text = setting.midtransServerKey;
+        _midtransIsProduction = setting.midtransIsProduction;
+        _initializedIntegrations = true;
+      }
     }
   }
 

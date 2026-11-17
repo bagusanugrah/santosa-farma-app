@@ -130,11 +130,15 @@ class CartView extends StatelessWidget {
                             ],
                           ),
                           SizedBox(
-                            width: 80,
-                            child: Text(
-                              currency.format(item.subtotal),
-                              textAlign: TextAlign.right,
-                              style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13),
+                            width: 85,
+                            child: FittedBox(
+                              fit: BoxFit.scaleDown,
+                              alignment: Alignment.centerRight,
+                              child: Text(
+                                currency.format(item.subtotal),
+                                textAlign: TextAlign.right,
+                                style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13),
+                              ),
                             ),
                           ),
                         ],

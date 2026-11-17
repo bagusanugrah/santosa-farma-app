@@ -31,6 +31,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
     } catch (e) {
       debugPrint('Error: $e');
     }
+    if (!mounted) return;
     setState(() => _isLoading = false);
   }
 
@@ -144,6 +145,8 @@ class _ProductsScreenState extends State<ProductsScreen> {
                                 ),
                                 title: Text(
                                   product.name,
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
                                   style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
                                 ),
                                 subtitle: Column(

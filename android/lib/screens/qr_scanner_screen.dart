@@ -78,13 +78,23 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
               color: _isTorchOn ? Colors.amber : Colors.grey,
             ),
             onPressed: () async {
-              await _controller.toggleTorch();
-              setState(() => _isTorchOn = !_isTorchOn);
+              try {
+                await _controller.toggleTorch();
+                if (mounted) setState(() => _isTorchOn = !_isTorchOn);
+              } catch (e) {
+                debugPrint('Torch error: $e');
+              }
             },
           ),
           IconButton(
             icon: const Icon(Icons.cameraswitch),
-            onPressed: () => _controller.switchCamera(),
+            onPressed: () async {
+              try {
+                await _controller.switchCamera();
+              } catch (e) {
+                debugPrint('Camera switch error: $e');
+              }
+            },
           ),
         ],
       ),
@@ -98,6 +108,31 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
               children: [
                 MobileScanner(
                   controller: _controller,
+                  errorBuilder: (context, error, child) {
+                    return Container(
+                      color: const Color(0xFF0F172A),
+                      padding: const EdgeInsets.all(24),
+                      child: const Center(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.videocam_off, size: 48, color: Colors.white70),
+                            SizedBox(height: 12),
+                            Text(
+                              'Kamera Tidak Dapat Diakses',
+                              style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
+                            ),
+                            SizedBox(height: 6),
+                            Text(
+                              'Pastikan izin kamera telah diberikan di pengaturan perangkat Anda, atau gunakan input kode manual di bawah.',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(color: Colors.white60, fontSize: 12),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
                   onDetect: (capture) {
                     final List<Barcode> barcodes = capture.barcodes;
                     for (final barcode in barcodes) {

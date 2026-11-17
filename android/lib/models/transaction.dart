@@ -76,7 +76,7 @@ class TransactionModel {
     }
 
     return TransactionModel(
-      id: map['id'] is int ? map['id'] : int.parse(map['id'].toString()),
+      id: map['id'] is int ? map['id'] : (int.tryParse(map['id']?.toString() ?? '0') ?? 0),
       invoiceNo: map['invoice_no'] ?? '',
       channel: map['channel'] ?? 'toko',
       customerId: map['customer_id'] != null
