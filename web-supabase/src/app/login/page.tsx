@@ -14,8 +14,8 @@ function LoginForm() {
   const searchParams = useSearchParams();
   const redirectUrl = searchParams.get('redirect') || '/';
   const { user, token, loading: authLoading, login } = useAuth();
-  const { isOpen, onlineOrdersEnabled } = useStoreStatus();
-  const onlineOrdersDisabled = !isOpen || !onlineOrdersEnabled;
+  const { isOpen, onlineOrdersEnabled, loading: statusLoading } = useStoreStatus();
+  const onlineOrdersDisabled = !statusLoading && (!isOpen || !onlineOrdersEnabled);
 
   const [contactInput, setContactInput] = useState('');
   const [password, setPassword] = useState('');
@@ -34,7 +34,7 @@ function LoginForm() {
     }
   }, [user, token, authLoading, redirectUrl, router]);
 
-  if (authLoading || (user && token)) {
+  if (authLoading || statusLoading || (user && token)) {
     return (
       <div className="max-w-md mx-auto py-16 flex flex-col items-center justify-center space-y-3">
         <div className="w-8 h-8 border-4 border-brand-500 border-t-transparent rounded-full animate-spin"></div>

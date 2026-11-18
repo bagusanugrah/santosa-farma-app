@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
-import { verifyPassword, signCustomerJwt } from '@/lib/server-auth';
+import { verifyPassword, signCustomerJwt, getPhoneVariants } from '@/lib/server-auth';
+import { sendOtpNotification } from '@/lib/notifications';
 
 export async function POST(req: Request) {
   try {
@@ -35,31 +36,21 @@ export async function POST(req: Request) {
     const trimmedLogin = login.trim();
     const isEmail = trimmedLogin.includes('@');
 
-    // Phone variants
-    const phoneVariants = [trimmedLogin];
-    const cleanDigits = trimmedLogin.replace(/[^0-9]/g, '');
-    if (cleanDigits) {
-      if (cleanDigits.startsWith('0')) {
-        phoneVariants.push('62' + cleanDigits.substring(1));
-      } else if (cleanDigits.startsWith('62')) {
-        phoneVariants.push('0' + cleanDigits.substring(2));
-      }
-      phoneVariants.push(cleanDigits);
-    }
-
     let customer = null;
     if (isEmail) {
       const { data } = await supabaseAdmin
         .from('customers')
         .select('*')
         .ilike('email', trimmedLogin)
+        .limit(1)
         .maybeSingle();
       customer = data;
     } else {
       const { data } = await supabaseAdmin
         .from('customers')
         .select('*')
-        .in('phone', phoneVariants)
+        .in('phone', getPhoneVariants(trimmedLogin))
+        .limit(1)
         .maybeSingle();
       customer = data;
     }
@@ -79,12 +70,23 @@ export async function POST(req: Request) {
       );
     }
 
-    // Check verification status
+    // Check verification status — send fresh OTP automatically if unverified
     if (isEmail && !customer.email_verified_at) {
+      const code = Math.floor(100000 + Math.random() * 900000).toString();
+      const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
+      await supabaseAdmin.from('otp_codes').insert({
+        customer_id: customer.id,
+        type: 'email',
+        target: customer.email,
+        code,
+        expires_at: expiresAt,
+      });
+      await sendOtpNotification(customer.email, 'email', code);
+
       return NextResponse.json(
         {
           status: 'error',
-          message: 'Email belum diverifikasi. Silakan masukkan kode OTP.',
+          message: 'Email belum diverifikasi. Kode OTP baru telah dikirim ke email Anda.',
           require_verification: true,
           target: customer.email,
           type: 'email',
@@ -94,10 +96,21 @@ export async function POST(req: Request) {
     }
 
     if (!isEmail && !customer.phone_verified_at) {
+      const code = Math.floor(100000 + Math.random() * 900000).toString();
+      const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
+      await supabaseAdmin.from('otp_codes').insert({
+        customer_id: customer.id,
+        type: 'phone',
+        target: customer.phone,
+        code,
+        expires_at: expiresAt,
+      });
+      await sendOtpNotification(customer.phone, 'phone', code);
+
       return NextResponse.json(
         {
           status: 'error',
-          message: 'Nomor WhatsApp belum diverifikasi. Silakan masukkan kode OTP.',
+          message: 'Nomor WhatsApp belum diverifikasi. Kode OTP baru telah dikirim ke WhatsApp Anda.',
           require_verification: true,
           target: customer.phone,
           type: 'phone',

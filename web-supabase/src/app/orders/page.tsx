@@ -1,11 +1,12 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { API_BASE_URL, Transaction } from '@/lib/api';
 import QrPickupModal from '@/components/QrPickupModal';
-import { Package, QrCode, Clock, CheckCircle2, AlertCircle, Eye, ShoppingBag } from 'lucide-react';
+import { Package, QrCode, RefreshCw, ShoppingBag } from 'lucide-react';
 
 export default function MyOrdersPage() {
   const router = useRouter();
@@ -13,9 +14,30 @@ export default function MyOrdersPage() {
 
   const [orders, setOrders] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
+  const [verifyingInvoice, setVerifyingInvoice] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'all' | 'pending' | 'paid' | 'diambil'>('all');
   const [selectedTrx, setSelectedTrx] = useState<Transaction | null>(null);
   const [showQrModal, setShowQrModal] = useState(false);
+
+  const fetchOrders = useCallback(async () => {
+    if (!token) return;
+    try {
+      const res = await fetch(`${API_BASE_URL}/transactions/customer/my-orders`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          Accept: 'application/json',
+        },
+      });
+      if (res.ok) {
+        const json = await res.json();
+        setOrders(json.data || []);
+      }
+    } catch (err) {
+      console.error('Error fetching orders', err);
+    } finally {
+      setLoading(false);
+    }
+  }, [token]);
 
   useEffect(() => {
     if (authLoading) return;
@@ -25,28 +47,31 @@ export default function MyOrdersPage() {
       return;
     }
 
-    const fetchOrders = async () => {
-      try {
-        const res = await fetch(`${API_BASE_URL}/transactions/customer/my-orders`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            Accept: 'application/json',
-            'ngrok-skip-browser-warning': 'true',
-          },
-        });
-        if (res.ok) {
-          const json = await res.json();
-          setOrders(json.data);
-        }
-      } catch (err) {
-        console.error('Error fetching orders', err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchOrders();
-  }, [user, token, authLoading, router]);
+  }, [user, token, authLoading, router, fetchOrders]);
+
+  const handleVerifyPayment = async (invoiceNo: string) => {
+    if (!token) return;
+    setVerifyingInvoice(invoiceNo);
+    try {
+      const res = await fetch(`${API_BASE_URL}/transactions/verify-payment`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ invoice_no: invoiceNo }),
+      });
+      if (res.ok) {
+        await fetchOrders();
+      }
+    } catch (err) {
+      console.error('Error verifying payment:', err);
+    } finally {
+      setVerifyingInvoice(null);
+    }
+  };
 
   if (authLoading) {
     return (
@@ -150,7 +175,12 @@ export default function MyOrdersPage() {
             >
               <div className="flex items-center justify-between flex-wrap gap-2 pb-3 border-b border-slate-100">
                 <div>
-                  <span className="text-xs font-bold text-slate-900 block">{order.invoice_no}</span>
+                  <Link
+                    href={`/orders/${order.invoice_no}`}
+                    className="text-xs font-bold text-slate-900 hover:text-brand-600 transition block"
+                  >
+                    {order.invoice_no}
+                  </Link>
                   <span className="text-[11px] text-slate-400">
                     {new Date(order.created_at).toLocaleDateString('id-ID', {
                       day: 'numeric',
@@ -172,7 +202,7 @@ export default function MyOrdersPage() {
                       {item.qty}x {item.product_name}
                     </span>
                     <span className="font-bold text-slate-900">
-                      Rp {item.subtotal.toLocaleString('id-ID')}
+                      Rp {Number(item.subtotal).toLocaleString('id-ID')}
                     </span>
                   </div>
                 ))}
@@ -183,11 +213,26 @@ export default function MyOrdersPage() {
                 <div className="flex sm:flex-col justify-between sm:justify-start items-center sm:items-start">
                   <span className="text-[11px] text-slate-400 block font-medium">Total Pembayaran</span>
                   <span className="text-base font-extrabold text-slate-900">
-                    Rp {order.total.toLocaleString('id-ID')}
+                    Rp {Number(order.total).toLocaleString('id-ID')}
                   </span>
                 </div>
 
                 <div className="flex items-center space-x-2 w-full sm:w-auto">
+                  {order.status === 'pending' && (
+                    <button
+                      onClick={() => handleVerifyPayment(order.invoice_no)}
+                      disabled={verifyingInvoice === order.invoice_no}
+                      className="w-full sm:w-auto justify-center px-4 py-2.5 bg-amber-500 hover:bg-amber-600 disabled:opacity-50 text-white font-bold text-xs rounded-xl shadow-sm flex items-center space-x-1.5 transition"
+                    >
+                      <RefreshCw
+                        className={`w-3.5 h-3.5 ${verifyingInvoice === order.invoice_no ? 'animate-spin' : ''}`}
+                      />
+                      <span>
+                        {verifyingInvoice === order.invoice_no ? 'Memeriksa...' : 'Cek Status Bayar'}
+                      </span>
+                    </button>
+                  )}
+
                   {order.status === 'paid' && (
                     <button
                       onClick={() => {

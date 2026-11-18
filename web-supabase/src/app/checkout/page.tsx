@@ -19,29 +19,50 @@ export default function CheckoutPage() {
   const router = useRouter();
   const { user, token, loading: authLoading } = useAuth();
   const { items, totalPrice, clearCart } = useCart();
-  const { isOpen, onlineOrdersEnabled } = useStoreStatus();
+  const {
+    isOpen,
+    onlineOrdersEnabled,
+    loading: statusLoading,
+    midtransClientKey,
+    midtransIsProduction,
+  } = useStoreStatus();
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [createdTrx, setCreatedTrx] = useState<any>(null);
   const [showQrModal, setShowQrModal] = useState(false);
-  const onlineOrdersDisabled = !isOpen || !onlineOrdersEnabled;
+  const onlineOrdersDisabled = !statusLoading && (!isOpen || !onlineOrdersEnabled);
 
-  // Load Midtrans Snap Script
+  // Dynamically load Midtrans Snap Script (Sandbox or Production from Supabase store_settings)
   useEffect(() => {
-    const snapScriptUrl = 'https://app.sandbox.midtrans.com/snap/snap.js';
-    const clientKey = process.env.NEXT_PUBLIC_MIDTRANS_CLIENT_KEY || 'SB-Mid-client-demo';
+    if (statusLoading) return;
+    const snapScriptUrl = midtransIsProduction
+      ? 'https://app.midtrans.com/snap/snap.js'
+      : 'https://app.sandbox.midtrans.com/snap/snap.js';
+    const clientKey =
+      midtransClientKey || process.env.NEXT_PUBLIC_MIDTRANS_CLIENT_KEY || '';
+
+    const scriptId = 'midtrans-snap-script';
+    const existing = document.getElementById(scriptId);
+    if (existing) {
+      existing.remove();
+    }
 
     const script = document.createElement('script');
+    script.id = scriptId;
     script.src = snapScriptUrl;
-    script.setAttribute('data-client-key', clientKey);
+    if (clientKey) {
+      script.setAttribute('data-client-key', clientKey);
+    }
     script.async = true;
     document.body.appendChild(script);
 
     return () => {
-      document.body.removeChild(script);
+      if (script.parentNode) {
+        script.parentNode.removeChild(script);
+      }
     };
-  }, []);
+  }, [statusLoading, midtransClientKey, midtransIsProduction]);
 
   useEffect(() => {
     if (authLoading) return;
@@ -50,6 +71,15 @@ export default function CheckoutPage() {
       router.push('/login?redirect=/checkout');
     }
   }, [user, token, authLoading, router]);
+
+  if (authLoading || statusLoading) {
+    return (
+      <div className="max-w-md mx-auto py-16 flex flex-col items-center justify-center space-y-3">
+        <div className="w-8 h-8 border-4 border-brand-500 border-t-transparent rounded-full animate-spin"></div>
+        <p className="text-xs text-slate-500 font-medium">Menyiapkan halaman pembayaran...</p>
+      </div>
+    );
+  }
 
   if (!user) return null;
 
@@ -136,15 +166,28 @@ export default function CheckoutPage() {
       // Trigger Midtrans Snap or Mock Simulator
       if (window.snap && snapToken && !snapToken.startsWith('mock-')) {
         window.snap.pay(snapToken, {
-          onSuccess: function (result: any) {
+          onSuccess: async function () {
+            try {
+              await fetch(`${API_BASE_URL}/transactions/verify-payment`, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  Accept: 'application/json',
+                  Authorization: `Bearer ${token}`,
+                },
+                body: JSON.stringify({ invoice_no: transaction.invoice_no }),
+              });
+            } catch (e) {
+              console.error('Verify payment sync error:', e);
+            }
             clearCart();
             router.push('/orders');
           },
-          onPending: function (result: any) {
+          onPending: function () {
             clearCart();
             router.push('/orders');
           },
-          onError: function (result: any) {
+          onError: function () {
             setError('Pembayaran gagal atau dibatalkan.');
           },
           onClose: function () {

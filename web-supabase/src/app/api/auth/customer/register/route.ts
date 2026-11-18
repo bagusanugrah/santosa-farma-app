@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
-import { hashPassword } from '@/lib/server-auth';
+import { hashPassword, getPhoneVariants } from '@/lib/server-auth';
 import { sendOtpNotification } from '@/lib/notifications';
 
 export async function POST(req: Request) {
@@ -25,14 +25,21 @@ export async function POST(req: Request) {
       );
     }
 
-    if (!name || !type || !password) {
+    if (!name || !name.trim() || !type || !['phone', 'email'].includes(type) || !password) {
       return NextResponse.json(
         { status: 'error', message: 'Nama, tipe registrasi, dan password wajib diisi.' },
         { status: 422 }
       );
     }
 
-    const target = type === 'phone' ? phone?.trim() : email?.trim();
+    if (String(password).length < 6) {
+      return NextResponse.json(
+        { status: 'error', message: 'Password minimal 6 karakter.' },
+        { status: 422 }
+      );
+    }
+
+    const target = type === 'phone' ? phone?.trim() : email?.trim().toLowerCase();
     if (!target) {
       return NextResponse.json(
         { status: 'error', message: `Field ${type} wajib diisi.` },
@@ -40,13 +47,25 @@ export async function POST(req: Request) {
       );
     }
 
-    // Check uniqueness
-    const field = type === 'phone' ? 'phone' : 'email';
-    const { data: existing } = await supabaseAdmin
-      .from('customers')
-      .select('id')
-      .eq(field, target)
-      .maybeSingle();
+    // Check uniqueness (case-insensitive email or Indonesian phone variants)
+    let existing = null;
+    if (type === 'phone') {
+      const { data } = await supabaseAdmin
+        .from('customers')
+        .select('id')
+        .in('phone', getPhoneVariants(target))
+        .limit(1)
+        .maybeSingle();
+      existing = data;
+    } else {
+      const { data } = await supabaseAdmin
+        .from('customers')
+        .select('id')
+        .ilike('email', target)
+        .limit(1)
+        .maybeSingle();
+      existing = data;
+    }
 
     if (existing) {
       return NextResponse.json(
@@ -95,8 +114,6 @@ export async function POST(req: Request) {
       expires_at: expiresAt,
     });
 
-    console.log(`[OTP Generated for ${target}]: ${code}`);
-
     // Send actual WhatsApp or Email message
     await sendOtpNotification(target, type, code);
 
@@ -108,7 +125,6 @@ export async function POST(req: Request) {
           customer_id: insertedCustomer.id,
           target,
           type,
-          debug_code: code,
         },
       },
       { status: 201 }

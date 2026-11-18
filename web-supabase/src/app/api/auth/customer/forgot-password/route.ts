@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import crypto from 'crypto';
 import { supabaseAdmin } from '@/lib/supabase';
 import { sendPasswordResetNotification } from '@/lib/notifications';
+import { getPhoneVariants } from '@/lib/server-auth';
 
 export async function POST(req: Request) {
   try {
@@ -24,13 +25,15 @@ export async function POST(req: Request) {
         .from('customers')
         .select('*')
         .ilike('email', trimmed)
+        .limit(1)
         .maybeSingle();
       customer = data;
     } else {
       const { data } = await supabaseAdmin
         .from('customers')
         .select('*')
-        .eq('phone', trimmed)
+        .in('phone', getPhoneVariants(trimmed))
+        .limit(1)
         .maybeSingle();
       customer = data;
     }
@@ -43,27 +46,32 @@ export async function POST(req: Request) {
       });
     }
 
+    const storedTarget = isEmail ? customer.email : customer.phone;
     const token = crypto.randomBytes(24).toString('hex');
     const expiresAt = new Date(Date.now() + 30 * 60 * 1000).toISOString(); // 30 minutes
 
     await supabaseAdmin.from('password_resets').insert({
       customer_id: customer.id,
-      target: trimmed,
+      target: storedTarget,
       token,
       type: isEmail ? 'email' : 'phone',
       expires_at: expiresAt,
     });
 
-    const relativeUrl = `/reset-password?token=${token}&target=${encodeURIComponent(trimmed)}`;
-    const origin = req.headers.get('origin') || process.env.WEB_URL || 'http://localhost:3000';
+    const relativeUrl = `/reset-password?token=${token}&target=${encodeURIComponent(storedTarget)}`;
+    const proto = req.headers.get('x-forwarded-proto') || 'https';
+    const host = req.headers.get('x-forwarded-host') || req.headers.get('host');
+    const vercelOrigin = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : '';
+    const origin =
+      req.headers.get('origin') ||
+      process.env.WEB_URL ||
+      (host ? `${proto}://${host}` : vercelOrigin || 'http://localhost:3000');
     const fullResetUrl = `${origin}${relativeUrl}`;
-
-    console.log(`[Password Reset Token for ${trimmed}]: ${token}`);
 
     // Send actual WhatsApp or Email reset link
     await sendPasswordResetNotification(
       customer.name,
-      trimmed,
+      storedTarget,
       isEmail ? 'email' : 'phone',
       fullResetUrl
     );
@@ -71,7 +79,6 @@ export async function POST(req: Request) {
     return NextResponse.json({
       status: 'success',
       message: `Link reset password telah dikirimkan ke ${isEmail ? 'email' : 'WhatsApp'} Anda. Silakan periksa pesan Anda.`,
-      reset_url: relativeUrl,
     });
   } catch (err: any) {
     return NextResponse.json(

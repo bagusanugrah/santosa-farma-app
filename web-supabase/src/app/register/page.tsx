@@ -12,8 +12,8 @@ import { UserPlus, Smartphone, Mail, AlertCircle, Store } from 'lucide-react';
 export default function CustomerRegisterPage() {
   const router = useRouter();
   const { user, token, loading: authLoading, login } = useAuth();
-  const { isOpen, onlineOrdersEnabled } = useStoreStatus();
-  const onlineOrdersDisabled = !isOpen || !onlineOrdersEnabled;
+  const { isOpen, onlineOrdersEnabled, loading: statusLoading } = useStoreStatus();
+  const onlineOrdersDisabled = !statusLoading && (!isOpen || !onlineOrdersEnabled);
 
   const [registerType, setRegisterType] = useState<'phone' | 'email'>('phone');
   const [name, setName] = useState('');
@@ -31,7 +31,7 @@ export default function CustomerRegisterPage() {
     }
   }, [user, token, authLoading, router]);
 
-  if (authLoading || (user && token)) {
+  if (authLoading || statusLoading || (user && token)) {
     return (
       <div className="max-w-md mx-auto py-16 flex flex-col items-center justify-center space-y-3">
         <div className="w-8 h-8 border-4 border-brand-500 border-t-transparent rounded-full animate-spin"></div>

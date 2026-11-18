@@ -82,13 +82,17 @@ export interface StoreStatus {
   is_online_active: boolean;
   last_opened_at?: string | null;
   last_closed_at?: string | null;
+  midtrans_client_key?: string;
+  midtrans_is_production?: boolean;
 }
 
 export async function fetchStoreStatus(): Promise<StoreStatus> {
   try {
     const { data, error } = await supabase
       .from('store_settings')
-      .select('*')
+      .select(
+        'id, is_open, online_orders_enabled, last_opened_at, last_closed_at, midtrans_client_key, midtrans_is_production'
+      )
       .eq('id', 1)
       .maybeSingle();
 
@@ -99,6 +103,8 @@ export async function fetchStoreStatus(): Promise<StoreStatus> {
         store_status: 'buka',
         online_orders_enabled: false,
         is_online_active: false,
+        midtrans_client_key: process.env.NEXT_PUBLIC_MIDTRANS_CLIENT_KEY || '',
+        midtrans_is_production: process.env.NEXT_PUBLIC_MIDTRANS_IS_PRODUCTION === 'true',
       };
     }
 
@@ -112,6 +118,9 @@ export async function fetchStoreStatus(): Promise<StoreStatus> {
       is_online_active: isOpen && onlineOrdersEnabled,
       last_opened_at: data.last_opened_at,
       last_closed_at: data.last_closed_at,
+      midtrans_client_key:
+        data.midtrans_client_key || process.env.NEXT_PUBLIC_MIDTRANS_CLIENT_KEY || '',
+      midtrans_is_production: Boolean(data.midtrans_is_production),
     };
   } catch (err) {
     console.error('Error fetching store status:', err);
@@ -120,6 +129,8 @@ export async function fetchStoreStatus(): Promise<StoreStatus> {
       store_status: 'tutup',
       online_orders_enabled: false,
       is_online_active: false,
+      midtrans_client_key: process.env.NEXT_PUBLIC_MIDTRANS_CLIENT_KEY || '',
+      midtrans_is_production: false,
     };
   }
 }
@@ -150,10 +161,14 @@ export async function fetchProducts(params: {
     }
 
     // Sort order
-    if (params.sort === 'price_asc') {
+    if (params.sort === 'name_desc') {
+      query = query.order('name', { ascending: false });
+    } else if (params.sort === 'price_asc') {
       query = query.order('price', { ascending: true });
     } else if (params.sort === 'price_desc') {
       query = query.order('price', { ascending: false });
+    } else if (params.sort === 'latest') {
+      query = query.order('id', { ascending: false });
     } else if (params.sort === 'stock_desc') {
       query = query.order('stock', { ascending: false });
     } else {

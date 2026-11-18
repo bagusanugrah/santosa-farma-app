@@ -8,6 +8,9 @@ interface StoreStatusContextType {
   status: StoreStatus;
   isOpen: boolean;
   onlineOrdersEnabled: boolean;
+  loading: boolean;
+  midtransClientKey: string;
+  midtransIsProduction: boolean;
   refreshStatus: () => Promise<void>;
 }
 
@@ -16,17 +19,23 @@ const defaultStatus: StoreStatus = {
   store_status: 'buka',
   online_orders_enabled: false,
   is_online_active: false,
+  midtrans_client_key: process.env.NEXT_PUBLIC_MIDTRANS_CLIENT_KEY || '',
+  midtrans_is_production: false,
 };
 
 const StoreStatusContext = createContext<StoreStatusContextType>({
   status: defaultStatus,
   isOpen: true,
   onlineOrdersEnabled: false,
+  loading: true,
+  midtransClientKey: process.env.NEXT_PUBLIC_MIDTRANS_CLIENT_KEY || '',
+  midtransIsProduction: false,
   refreshStatus: async () => {},
 });
 
 export const StoreStatusProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [status, setStatus] = useState<StoreStatus>(defaultStatus);
+  const [loading, setLoading] = useState<boolean>(true);
 
   const refreshStatus = useCallback(async () => {
     try {
@@ -34,6 +43,8 @@ export const StoreStatusProvider: React.FC<{ children: React.ReactNode }> = ({ c
       setStatus(data);
     } catch (err) {
       console.error('Failed to update store status', err);
+    } finally {
+      setLoading(false);
     }
   }, []);
 
@@ -50,14 +61,21 @@ export const StoreStatusProvider: React.FC<{ children: React.ReactNode }> = ({ c
           if (payload.new) {
             const isOpen = Boolean(payload.new.is_open);
             const onlineOrders = Boolean(payload.new.online_orders_enabled);
-            setStatus({
+            setStatus((prev) => ({
               is_open: isOpen,
               store_status: isOpen ? 'buka' : 'tutup',
               online_orders_enabled: onlineOrders,
               is_online_active: isOpen && onlineOrders,
               last_opened_at: payload.new.last_opened_at,
               last_closed_at: payload.new.last_closed_at,
-            });
+              midtrans_client_key:
+                payload.new.midtrans_client_key ?? prev.midtrans_client_key,
+              midtrans_is_production:
+                typeof payload.new.midtrans_is_production === 'boolean'
+                  ? payload.new.midtrans_is_production
+                  : prev.midtrans_is_production,
+            }));
+            setLoading(false);
           } else {
             refreshStatus();
           }
@@ -87,6 +105,10 @@ export const StoreStatusProvider: React.FC<{ children: React.ReactNode }> = ({ c
         status,
         isOpen: status.is_open,
         onlineOrdersEnabled: status.online_orders_enabled,
+        loading,
+        midtransClientKey:
+          status.midtrans_client_key || process.env.NEXT_PUBLIC_MIDTRANS_CLIENT_KEY || '',
+        midtransIsProduction: Boolean(status.midtrans_is_production),
         refreshStatus,
       }}
     >

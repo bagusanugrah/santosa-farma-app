@@ -12,7 +12,8 @@ export const supabase = createClient<any>(supabaseUrl, supabaseAnonKey, {
 });
 
 // Admin client for server-side trusted operations (e.g., Midtrans webhooks, automated stock deduction)
-const supabaseServiceKey = process.env.SUPABASE_SECRET_KEY || '';
+const supabaseServiceKey =
+  process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 export const supabaseAdmin = createClient<any>(
   supabaseUrl,
   supabaseServiceKey || supabaseAnonKey,

@@ -7,7 +7,7 @@ import ProductCard from '@/components/ProductCard';
 import { Search, SlidersHorizontal, ChevronLeft, ChevronRight, AlertTriangle, Sparkles, Store } from 'lucide-react';
 
 export default function CatalogPage() {
-  const { isOpen: isStoreOpen, onlineOrdersEnabled } = useStoreStatus();
+  const { isOpen: isStoreOpen, onlineOrdersEnabled, loading: statusLoading } = useStoreStatus();
 
   const [products, setProducts] = useState<Product[]>([]);
   const [meta, setMeta] = useState<MetaPagination>({
@@ -100,7 +100,7 @@ export default function CatalogPage() {
       </div>
 
       {/* Loading State before status known */}
-      {loading && isStoreOpen === null && (
+      {statusLoading && (
         <div className="py-16 text-center flex flex-col items-center justify-center space-y-3">
           <div className="w-8 h-8 border-4 border-brand-500 border-t-transparent rounded-full animate-spin"></div>
           <p className="text-xs text-slate-500 font-medium">Memeriksa status apotek...</p>
@@ -108,7 +108,7 @@ export default function CatalogPage() {
       )}
 
       {/* When Store is Closed */}
-      {isStoreOpen === false && (
+      {!statusLoading && isStoreOpen === false && (
         <div className="bg-amber-50 border-2 border-amber-300 rounded-3xl p-8 sm:p-12 text-center max-w-xl mx-auto shadow-sm animate-fade-in space-y-4">
           <div className="w-16 h-16 rounded-2xl bg-amber-100 text-amber-700 flex items-center justify-center mx-auto shadow-inner">
             <AlertTriangle className="w-8 h-8" />
@@ -123,7 +123,7 @@ export default function CatalogPage() {
       )}
 
       {/* Active Catalog View */}
-      {isStoreOpen === true && (
+      {!statusLoading && isStoreOpen === true && (
         <div className="space-y-6">
           {/* Notice when cashier only accepts offline orders */}
           {!onlineOrdersEnabled && (

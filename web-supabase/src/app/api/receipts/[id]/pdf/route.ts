@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(req: Request, { params }: { params: { id: string } }) {
   try {
     const id = params.id;
@@ -36,7 +38,14 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
       year: 'numeric',
       hour: '2-digit',
       minute: '2-digit',
+      timeZone: 'Asia/Jakarta',
     });
+
+    const isPaid = ['paid', 'diambil', 'selesai'].includes(transaction.status);
+    const statusLabel = isPaid
+      ? `LUNAS (${transaction.status.toUpperCase()})`
+      : `BELUM LUNAS (${transaction.status.toUpperCase()})`;
+    const statusColor = isPaid ? '#10b981' : '#d97706';
 
     const html = `
     <!DOCTYPE html>
@@ -110,9 +119,9 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
             <span>TOTAL:</span>
             <span style="color: #047857;">Rp ${Number(transaction.total).toLocaleString('id-ID')}</span>
           </div>
-          <div style="display: flex; justify-content: space-between; font-size: 11px; color: #10b981; margin-top: 4px; font-weight: 600;">
+          <div style="display: flex; justify-content: space-between; font-size: 11px; color: ${statusColor}; margin-top: 4px; font-weight: 600;">
             <span>Status:</span>
-            <span>LUNAS (${transaction.status.toUpperCase()})</span>
+            <span>${statusLabel}</span>
           </div>
         </div>
 

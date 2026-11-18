@@ -121,10 +121,10 @@ export default function OrderDetailPage() {
               <div key={item.id} className="py-2.5 flex items-center justify-between text-xs">
                 <div>
                   <span className="font-bold text-slate-800">{item.product_name}</span>
-                  <span className="text-slate-400 block">{item.qty} x Rp {item.price.toLocaleString('id-ID')}</span>
+                  <span className="text-slate-400 block">{item.qty} x Rp {Number(item.price).toLocaleString('id-ID')}</span>
                 </div>
                 <span className="font-extrabold text-slate-900">
-                  Rp {item.subtotal.toLocaleString('id-ID')}
+                  Rp {Number(item.subtotal).toLocaleString('id-ID')}
                 </span>
               </div>
             ))}
@@ -135,7 +135,7 @@ export default function OrderDetailPage() {
         <div className="pt-4 border-t border-slate-100 flex items-center justify-between">
           <span className="text-sm font-bold text-slate-700">Total Pembayaran</span>
           <span className="text-xl font-black text-brand-700">
-            Rp {order.total.toLocaleString('id-ID')}
+            Rp {Number(order.total).toLocaleString('id-ID')}
           </span>
         </div>
       </div>

@@ -20,10 +20,14 @@ export async function POST(req: Request) {
       return NextResponse.json({ status: 'error', message: 'Missing order_id' }, { status: 400 });
     }
 
-    // Verify signature key if present and server key is not demo
+    // Verify signature key when Midtrans server key is configured
     const settings = await getIntegrationSettings();
     const serverKey = settings.midtransServerKey;
-    if (signatureKey && !serverKey.includes('demo')) {
+    if (serverKey && !serverKey.includes('demo')) {
+      if (!signatureKey) {
+        console.warn('[Midtrans Webhook] Missing signature key for order:', orderId);
+        return NextResponse.json({ status: 'error', message: 'Missing signature key' }, { status: 403 });
+      }
       const hash = crypto
         .createHash('sha512')
         .update(orderId + statusCode + grossAmount + serverKey)
@@ -79,8 +83,8 @@ export async function POST(req: Request) {
         // Generate pickup QR token
         const qrToken = 'PKP-' + crypto.randomBytes(12).toString('hex').toUpperCase();
 
-        // Update transaction to paid
-        await supabaseAdmin
+        // Update transaction to paid atomically (guards against double stock deduction)
+        const { data: updatedTrx } = await supabaseAdmin
           .from('transactions')
           .update({
             status: 'paid',
@@ -88,21 +92,25 @@ export async function POST(req: Request) {
             midtrans_va_number: vaNumber || transaction.midtrans_va_number,
             paid_at: new Date().toISOString(),
             qr_token: qrToken,
+            updated_at: new Date().toISOString(),
           })
-          .eq('id', transaction.id);
+          .eq('id', transaction.id)
+          .eq('status', 'pending')
+          .select('id')
+          .maybeSingle();
 
-        // Deduct product stocks
-        if (transaction.items && Array.isArray(transaction.items)) {
+        // Deduct product stocks only if this request transitioned pending -> paid
+        if (updatedTrx && transaction.items && Array.isArray(transaction.items)) {
           for (const item of transaction.items) {
             if (item.product_id) {
               const { data: prod } = await supabaseAdmin
                 .from('products')
                 .select('stock')
                 .eq('id', item.product_id)
-                .single();
+                .maybeSingle();
 
               if (prod) {
-                const newStock = Math.max(0, prod.stock - item.qty);
+                const newStock = Math.max(0, Number(prod.stock) - Number(item.qty));
                 await supabaseAdmin
                   .from('products')
                   .update({ stock: newStock })

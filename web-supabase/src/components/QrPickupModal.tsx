@@ -54,7 +54,7 @@ export default function QrPickupModal({ isOpen, onClose, transaction }: QrPickup
           </div>
           <div className="flex justify-between">
             <span className="text-slate-500">Total Belanja:</span>
-            <span className="font-extrabold text-slate-900">Rp {transaction.total.toLocaleString('id-ID')}</span>
+            <span className="font-extrabold text-slate-900">Rp {Number(transaction.total).toLocaleString('id-ID')}</span>
           </div>
         </div>
 

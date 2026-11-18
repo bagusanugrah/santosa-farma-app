@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
-import { getCustomerFromAuthHeader } from '@/lib/server-auth';
+import { getCustomerFromAuthHeader, getPhoneVariants } from '@/lib/server-auth';
 import { sendOtpNotification } from '@/lib/notifications';
 
 export async function POST(req: Request) {
@@ -20,14 +20,30 @@ export async function POST(req: Request) {
       );
     }
 
-    const trimmedTarget = target.trim();
+    const trimmedTarget =
+      type === 'email' ? String(target).trim().toLowerCase() : String(target).trim();
 
     // Check if target is already used by another account
-    const { data: existing } = await (supabaseAdmin.from('customers') as any)
-      .select('id')
-      .eq(type, trimmedTarget)
-      .neq('id', customer.id)
-      .maybeSingle();
+    let existing = null;
+    if (type === 'phone') {
+      const { data } = await supabaseAdmin
+        .from('customers')
+        .select('id')
+        .in('phone', getPhoneVariants(trimmedTarget))
+        .neq('id', customer.id)
+        .limit(1)
+        .maybeSingle();
+      existing = data;
+    } else {
+      const { data } = await supabaseAdmin
+        .from('customers')
+        .select('id')
+        .ilike('email', trimmedTarget)
+        .neq('id', customer.id)
+        .limit(1)
+        .maybeSingle();
+      existing = data;
+    }
 
     if (existing) {
       return NextResponse.json(
@@ -50,8 +66,6 @@ export async function POST(req: Request) {
       expires_at: expiresAt,
     });
 
-    console.log(`[Add Contact OTP for ${trimmedTarget}]: ${code}`);
-
     // Send actual WhatsApp or Email message
     await sendOtpNotification(trimmedTarget, type, code);
 
@@ -61,7 +75,6 @@ export async function POST(req: Request) {
       data: {
         target: trimmedTarget,
         type,
-        debug_code: code,
       },
     });
   } catch (err: any) {

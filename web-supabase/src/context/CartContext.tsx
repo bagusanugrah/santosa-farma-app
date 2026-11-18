@@ -35,21 +35,27 @@ const CartContext = createContext<CartContextType>({
 export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [items, setItems] = useState<CartItem[]>([]);
   const [isOpen, setIsOpen] = useState(false);
+  const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
     const saved = localStorage.getItem('asf_web_cart');
     if (saved) {
       try {
-        setItems(JSON.parse(saved));
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) {
+          setItems(parsed);
+        }
       } catch (e) {
         console.error('Error loading cart', e);
       }
     }
+    setHydrated(true);
   }, []);
 
   useEffect(() => {
+    if (!hydrated) return;
     localStorage.setItem('asf_web_cart', JSON.stringify(items));
-  }, [items]);
+  }, [items, hydrated]);
 
   const addItem = (product: Product, qty = 1) => {
     setItems((prev) => {

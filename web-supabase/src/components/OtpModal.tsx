@@ -22,6 +22,8 @@ export default function OtpModal({ isOpen, onClose, target, type, onSuccess, aut
 
   useEffect(() => {
     if (!isOpen) return;
+    setCode('');
+    setError('');
     setTimer(60);
     const interval = setInterval(() => {
       setTimer((prev) => (prev > 0 ? prev - 1 : 0));
@@ -72,9 +74,16 @@ export default function OtpModal({ isOpen, onClose, target, type, onSuccess, aut
     setResending(true);
     setError('');
     try {
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+      };
+      if (authToken) {
+        headers['Authorization'] = `Bearer ${authToken}`;
+      }
       const res = await fetch(`${API_BASE_URL}/auth/customer/resend-otp`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        headers,
         body: JSON.stringify({ target, type }),
       });
       const data = await res.json();

@@ -63,14 +63,22 @@ export async function POST(req: Request) {
     }> = [];
 
     for (const item of items) {
-      const prod = productMap.get(item.product_id);
+      const qty = parseInt(String(item.qty), 10);
+      if (!Number.isFinite(qty) || qty <= 0) {
+        return NextResponse.json(
+          { status: 'error', message: 'Jumlah pesanan obat harus minimal 1.' },
+          { status: 422 }
+        );
+      }
+
+      const prod = productMap.get(Number(item.product_id));
       if (!prod) {
         return NextResponse.json(
           { status: 'error', message: `Obat ID ${item.product_id} tidak ditemukan.` },
           { status: 422 }
         );
       }
-      if (prod.stock < item.qty) {
+      if (prod.stock < qty) {
         return NextResponse.json(
           { status: 'error', message: `Stok obat '${prod.name}' tidak mencukupi (Tersisa: ${prod.stock}).` },
           { status: 422 }
@@ -78,13 +86,13 @@ export async function POST(req: Request) {
       }
 
       const price = Number(prod.price);
-      const subtotal = price * item.qty;
+      const subtotal = price * qty;
       grandTotal += subtotal;
 
       orderItems.push({
         product_id: prod.id,
         product_name: prod.name,
-        qty: item.qty,
+        qty,
         price,
         subtotal,
       });
@@ -143,7 +151,7 @@ export async function POST(req: Request) {
       ? 'https://app.midtrans.com/snap/v1/transactions'
       : 'https://app.sandbox.midtrans.com/snap/v1/transactions';
 
-    if (!midtransServerKey.includes('demo')) {
+    if (midtransServerKey && !midtransServerKey.includes('demo')) {
       try {
         const midtransPayload = {
           transaction_details: {

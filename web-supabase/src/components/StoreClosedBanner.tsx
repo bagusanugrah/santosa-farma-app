@@ -5,7 +5,9 @@ import { useStoreStatus } from '@/context/StoreStatusContext';
 import { AlertCircle, Clock, ShoppingBag, Store } from 'lucide-react';
 
 export default function StoreClosedBanner() {
-  const { isOpen, onlineOrdersEnabled } = useStoreStatus();
+  const { isOpen, onlineOrdersEnabled, loading } = useStoreStatus();
+
+  if (loading) return null;
 
   // Case 1: Store is physically closed
   if (!isOpen) {

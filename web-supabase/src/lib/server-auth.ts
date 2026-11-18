@@ -34,6 +34,23 @@ export async function verifyPassword(plain: string, hash: string): Promise<boole
   return bcrypt.compare(plain, hash);
 }
 
+export function getPhoneVariants(rawPhone: string): string[] {
+  const trimmed = rawPhone.trim();
+  const variants = new Set<string>([trimmed]);
+  const cleanDigits = trimmed.replace(/[^0-9]/g, '');
+  if (cleanDigits) {
+    variants.add(cleanDigits);
+    if (cleanDigits.startsWith('0')) {
+      variants.add('62' + cleanDigits.substring(1));
+      variants.add('+62' + cleanDigits.substring(1));
+    } else if (cleanDigits.startsWith('62')) {
+      variants.add('0' + cleanDigits.substring(2));
+      variants.add('+' + cleanDigits);
+    }
+  }
+  return Array.from(variants);
+}
+
 export async function getCustomerFromAuthHeader(req: Request): Promise<any | null> {
   const authHeader = req.headers.get('authorization') || req.headers.get('Authorization');
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
