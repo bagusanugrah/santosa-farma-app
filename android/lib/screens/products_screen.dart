@@ -117,91 +117,102 @@ class _ProductsScreenState extends State<ProductsScreen> {
                         onRefresh: _loadProducts,
                         color: const Color(0xFF059669),
                         child: ListView.separated(
-                          padding: const EdgeInsets.all(16),
+                          padding: const EdgeInsets.fromLTRB(16, 16, 16, 88),
                           itemCount: _products.length,
                           separatorBuilder: (_, __) => const SizedBox(height: 10),
                           itemBuilder: (context, index) {
                             final product = _products[index];
                             final isOutOfStock = product.stock <= 0;
 
-                            return Card(
-                              child: ListTile(
-                                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                                leading: Container(
-                                  width: 52,
-                                  height: 52,
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFFF1F5F9),
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  clipBehavior: Clip.antiAlias,
-                                  child: product.imageUrl.isNotEmpty
-                                      ? CachedNetworkImage(
-                                          imageUrl: product.imageUrl,
-                                          fit: BoxFit.cover,
-                                          errorWidget: (_, __, ___) => const Icon(Icons.medication, color: Colors.grey),
-                                        )
-                                      : const Icon(Icons.medication, color: Colors.grey),
-                                ),
-                                title: Text(
-                                  product.name,
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-                                ),
-                                subtitle: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    const SizedBox(height: 4),
-                                    Row(
+                            return Center(
+                              child: ConstrainedBox(
+                                constraints: const BoxConstraints(maxWidth: 900),
+                                child: Card(
+                                  child: ListTile(
+                                    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                                    leading: Container(
+                                      width: 50,
+                                      height: 50,
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFFF1F5F9),
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      clipBehavior: Clip.antiAlias,
+                                      child: product.imageUrl.isNotEmpty
+                                          ? CachedNetworkImage(
+                                              imageUrl: product.imageUrl,
+                                              fit: BoxFit.cover,
+                                              errorWidget: (_, __, ___) => const Icon(Icons.medication, color: Colors.grey),
+                                            )
+                                          : const Icon(Icons.medication, color: Colors.grey),
+                                    ),
+                                    title: Text(
+                                      product.name,
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                                    ),
+                                    subtitle: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
-                                        if (product.category != null)
-                                          Container(
-                                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                            decoration: BoxDecoration(
-                                              color: const Color(0xFFF1F5F9),
-                                              borderRadius: BorderRadius.circular(6),
+                                        const SizedBox(height: 4),
+                                        Wrap(
+                                          spacing: 6,
+                                          runSpacing: 4,
+                                          crossAxisAlignment: WrapCrossAlignment.center,
+                                          children: [
+                                            if (product.category != null && product.category!.isNotEmpty)
+                                              Container(
+                                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                                decoration: BoxDecoration(
+                                                  color: const Color(0xFFF1F5F9),
+                                                  borderRadius: BorderRadius.circular(6),
+                                                ),
+                                                child: Text(
+                                                  product.category!,
+                                                  style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFF475569)),
+                                                ),
+                                              ),
+                                            Text(
+                                              isOutOfStock ? 'Stok Habis' : 'Stok: ${product.stock}',
+                                              style: TextStyle(
+                                                fontSize: 11,
+                                                fontWeight: FontWeight.bold,
+                                                color: isOutOfStock ? Colors.red : (product.stock < 10 ? Colors.amber[800] : const Color(0xFF16A34A)),
+                                              ),
                                             ),
-                                            child: Text(
-                                              product.category!,
-                                              style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFF475569)),
-                                            ),
-                                          ),
-                                        const SizedBox(width: 8),
+                                          ],
+                                        ),
+                                        const SizedBox(height: 4),
                                         Text(
-                                          isOutOfStock ? 'Stok Habis' : 'Stok: ${product.stock}',
-                                          style: TextStyle(
-                                            fontSize: 11,
-                                            fontWeight: FontWeight.bold,
-                                            color: isOutOfStock ? Colors.red : (product.stock < 10 ? Colors.amber[800] : const Color(0xFF16A34A)),
-                                          ),
+                                          currency.format(product.price),
+                                          style: const TextStyle(fontWeight: FontWeight.w900, color: Color(0xFF047857), fontSize: 13),
                                         ),
                                       ],
                                     ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      currency.format(product.price),
-                                      style: const TextStyle(fontWeight: FontWeight.w900, color: Color(0xFF047857), fontSize: 13),
+                                    trailing: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        IconButton(
+                                          visualDensity: VisualDensity.compact,
+                                          constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                                          icon: const Icon(Icons.edit, color: Color(0xFF059669), size: 20),
+                                          onPressed: () async {
+                                            final res = await Navigator.of(context).push(
+                                              MaterialPageRoute(builder: (_) => ProductFormScreen(product: product)),
+                                            );
+                                            if (res == true) _loadProducts();
+                                          },
+                                        ),
+                                        IconButton(
+                                          visualDensity: VisualDensity.compact,
+                                          constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                                          icon: const Icon(Icons.delete_outline, color: Colors.red, size: 20),
+                                          onPressed: () => _confirmDelete(product),
+                                        ),
+                                      ],
                                     ),
-                                  ],
-                                ),
-                                trailing: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    IconButton(
-                                      icon: const Icon(Icons.edit, color: Color(0xFF059669), size: 20),
-                                      onPressed: () async {
-                                        final res = await Navigator.of(context).push(
-                                          MaterialPageRoute(builder: (_) => ProductFormScreen(product: product)),
-                                        );
-                                        if (res == true) _loadProducts();
-                                      },
-                                    ),
-                                    IconButton(
-                                      icon: const Icon(Icons.delete_outline, color: Colors.red, size: 20),
-                                      onPressed: () => _confirmDelete(product),
-                                    ),
-                                  ],
+                                  ),
                                 ),
                               ),
                             );

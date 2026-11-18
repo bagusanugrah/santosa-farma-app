@@ -153,21 +153,26 @@ class _WebOrdersScreenState extends State<WebOrdersScreen> with SingleTickerProv
 
                     if (filtered.isEmpty) {
                       return Center(
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(Icons.inbox_outlined, size: 56, color: Colors.grey[300]),
-                            const SizedBox(height: 12),
-                            const Text(
-                              'Belum ada transaksi di tab ini',
-                              style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF64748B)),
-                            ),
-                            const SizedBox(height: 4),
-                            const Text(
-                              'Pesanan online yang masuk melalui website akan otomatis tampil di sini',
-                              style: TextStyle(fontSize: 12, color: Color(0xFF94A3B8)),
-                            ),
-                          ],
+                        child: Padding(
+                          padding: const EdgeInsets.all(24),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.inbox_outlined, size: 56, color: Colors.grey[300]),
+                              const SizedBox(height: 12),
+                              const Text(
+                                'Belum ada transaksi di tab ini',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF64748B)),
+                              ),
+                              const SizedBox(height: 4),
+                              const Text(
+                                'Pesanan online yang masuk melalui website akan otomatis tampil di sini',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(fontSize: 12, color: Color(0xFF94A3B8)),
+                              ),
+                            ],
+                          ),
                         ),
                       );
                     }
@@ -181,7 +186,10 @@ class _WebOrdersScreenState extends State<WebOrdersScreen> with SingleTickerProv
                         separatorBuilder: (_, __) => const SizedBox(height: 12),
                         itemBuilder: (context, index) {
                           final order = filtered[index];
-                          return Card(
+                          return Center(
+                            child: ConstrainedBox(
+                              constraints: const BoxConstraints(maxWidth: 860),
+                              child: Card(
                             elevation: 1,
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(18),
@@ -295,9 +303,12 @@ class _WebOrdersScreenState extends State<WebOrdersScreen> with SingleTickerProv
                                   ),
                                   const SizedBox(height: 12),
 
-                                  // Total & Action Button
-                                  Row(
-                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  // Total & Action Button (Wrap prevents overflow on narrow smartphones)
+                                  Wrap(
+                                    alignment: WrapAlignment.spaceBetween,
+                                    crossAxisAlignment: WrapCrossAlignment.center,
+                                    spacing: 12,
+                                    runSpacing: 10,
                                     children: [
                                       Column(
                                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -310,6 +321,7 @@ class _WebOrdersScreenState extends State<WebOrdersScreen> with SingleTickerProv
                                         ],
                                       ),
                                       Row(
+                                        mainAxisSize: MainAxisSize.min,
                                         children: [
                                           if (order.status == 'paid')
                                             FilledButton.icon(
@@ -344,6 +356,8 @@ class _WebOrdersScreenState extends State<WebOrdersScreen> with SingleTickerProv
                                   ),
                                 ],
                               ),
+                            ),
+                          ),
                             ),
                           );
                         },

@@ -29,34 +29,45 @@ class CartView extends StatelessWidget {
         children: [
           // Cart Header
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Row(
-                  children: [
-                    const Icon(Icons.shopping_cart_outlined, color: Color(0xFF047857), size: 20),
-                    const SizedBox(width: 8),
-                    const Text(
-                      'Keranjang Kasir',
-                      style: TextStyle(fontWeight: FontWeight.w900, fontSize: 15),
-                    ),
-                    const SizedBox(width: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFECFDF5),
-                        borderRadius: BorderRadius.circular(10),
+                Expanded(
+                  child: Row(
+                    children: [
+                      const Icon(Icons.shopping_cart_outlined, color: Color(0xFF047857), size: 20),
+                      const SizedBox(width: 8),
+                      const Flexible(
+                        child: Text(
+                          'Keranjang Kasir',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(fontWeight: FontWeight.w900, fontSize: 15),
+                        ),
                       ),
-                      child: Text(
-                        '${posProvider.totalItemsInCart}',
-                        style: const TextStyle(color: Color(0xFF047857), fontWeight: FontWeight.bold, fontSize: 11),
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFECFDF5),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Text(
+                          '${posProvider.totalItemsInCart}',
+                          style: const TextStyle(color: Color(0xFF047857), fontWeight: FontWeight.bold, fontSize: 11),
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
                 if (cartItems.isNotEmpty)
                   TextButton.icon(
+                    style: TextButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      minimumSize: Size.zero,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
                     icon: const Icon(Icons.delete_outline, size: 16, color: Colors.red),
                     label: const Text('Kosongkan', style: TextStyle(color: Colors.red, fontSize: 12, fontWeight: FontWeight.bold)),
                     onPressed: () => posProvider.clearCart(),
@@ -114,16 +125,26 @@ class CartView extends StatelessWidget {
                             ),
                           ),
                           Row(
+                            mainAxisSize: MainAxisSize.min,
                             children: [
                               IconButton(
+                                visualDensity: VisualDensity.compact,
+                                padding: EdgeInsets.zero,
+                                constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
                                 icon: const Icon(Icons.remove_circle_outline, size: 20, color: Color(0xFF64748B)),
                                 onPressed: () => posProvider.decrementQty(item.product.id),
                               ),
-                              Text(
-                                '${item.qty}',
-                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                              Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 2),
+                                child: Text(
+                                  '${item.qty}',
+                                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                                ),
                               ),
                               IconButton(
+                                visualDensity: VisualDensity.compact,
+                                padding: EdgeInsets.zero,
+                                constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
                                 icon: const Icon(Icons.add_circle_outline, size: 20, color: Color(0xFF059669)),
                                 onPressed: () => posProvider.addToCart(item.product),
                               ),

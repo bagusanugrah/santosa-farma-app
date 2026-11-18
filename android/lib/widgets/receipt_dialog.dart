@@ -66,7 +66,15 @@ class ReceiptDialog extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     const Text('No. Invoice', style: TextStyle(fontSize: 12, color: Color(0xFF64748B))),
-                    Text(transaction.invoiceNo, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                    const SizedBox(width: 8),
+                    Flexible(
+                      child: Text(
+                        transaction.invoiceNo,
+                        textAlign: TextAlign.right,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                      ),
+                    ),
                   ],
                 ),
                 const SizedBox(height: 4),
@@ -74,7 +82,14 @@ class ReceiptDialog extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     const Text('Metode Bayar', style: TextStyle(fontSize: 12, color: Color(0xFF64748B))),
-                    Text(transaction.paymentMethod.toUpperCase(), style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                    const SizedBox(width: 8),
+                    Flexible(
+                      child: Text(
+                        transaction.paymentMethod.toUpperCase(),
+                        textAlign: TextAlign.right,
+                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                      ),
+                    ),
                   ],
                 ),
                 const SizedBox(height: 4),
@@ -82,7 +97,14 @@ class ReceiptDialog extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     const Text('Waktu', style: TextStyle(fontSize: 12, color: Color(0xFF64748B))),
-                    Text(dateFormat.format(transaction.createdAt), style: const TextStyle(fontSize: 11)),
+                    const SizedBox(width: 8),
+                    Flexible(
+                      child: Text(
+                        dateFormat.format(transaction.createdAt),
+                        textAlign: TextAlign.right,
+                        style: const TextStyle(fontSize: 11),
+                      ),
+                    ),
                   ],
                 ),
                 const Divider(height: 24),

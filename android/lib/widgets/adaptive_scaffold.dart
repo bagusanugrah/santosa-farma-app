@@ -22,7 +22,9 @@ class AdaptiveScaffold extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isTablet = MediaQuery.of(context).size.width >= 800;
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isTablet = screenWidth >= 800;
+    final isWideTablet = screenWidth >= 980;
     final storeProvider = context.watch<StoreProvider>();
     final webOrdersProvider = context.watch<WebOrdersProvider>();
     final authProvider = context.watch<AuthProvider>();
@@ -31,7 +33,7 @@ class AdaptiveScaffold extends StatelessWidget {
       const NavigationDestination(
         icon: Icon(Icons.point_of_sale_outlined),
         selectedIcon: Icon(Icons.point_of_sale, color: Color(0xFF047857)),
-        label: 'Kasir POS',
+        label: 'Kasir',
       ),
       NavigationDestination(
         icon: Badge(
@@ -46,12 +48,12 @@ class AdaptiveScaffold extends StatelessWidget {
           backgroundColor: Colors.amber[700],
           child: const Icon(Icons.shopping_bag, color: Color(0xFF047857)),
         ),
-        label: 'Pesanan Web',
+        label: 'Pesanan',
       ),
       const NavigationDestination(
         icon: Icon(Icons.medication_outlined),
         selectedIcon: Icon(Icons.medication, color: Color(0xFF047857)),
-        label: 'Kelola Obat',
+        label: 'Obat',
       ),
       const NavigationDestination(
         icon: Icon(Icons.bar_chart_outlined),
@@ -61,7 +63,7 @@ class AdaptiveScaffold extends StatelessWidget {
       const NavigationDestination(
         icon: Icon(Icons.settings_outlined),
         selectedIcon: Icon(Icons.settings, color: Color(0xFF047857)),
-        label: 'Pengaturan',
+        label: 'Setelan',
       ),
     ];
 
@@ -318,25 +320,32 @@ class AdaptiveScaffold extends StatelessWidget {
                 child: const Icon(Icons.local_pharmacy, color: Color(0xFF059669), size: 22),
               ),
               const SizedBox(width: 12),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 18),
-                  ),
-                  const Text(
-                    'Apotek Santosa Farma — Mode Tablet POS',
-                    style: TextStyle(fontSize: 11, color: Color(0xFF64748B)),
-                  ),
-                ],
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 18),
+                    ),
+                    const Text(
+                      'Apotek Santosa Farma — Mode Tablet POS',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(fontSize: 11, color: Color(0xFF64748B)),
+                    ),
+                  ],
+                ),
               ),
             ],
           ),
           actions: [
-            headerToggles,
+            isWideTablet ? headerToggles : mobileStatusPill,
             if (actions != null) ...actions!,
-            const SizedBox(width: 12),
+            const SizedBox(width: 8),
             IconButton(
               tooltip: 'Keluar (${authProvider.currentUser?.name ?? "Kasir"})',
               icon: const Icon(Icons.logout, color: Color(0xFF64748B)),
@@ -382,6 +391,7 @@ class AdaptiveScaffold extends StatelessWidget {
       ),
       body: body,
       bottomNavigationBar: NavigationBar(
+        height: 68,
         selectedIndex: currentIndex,
         onDestinationSelected: onNavigationChanged,
         destinations: destinations,

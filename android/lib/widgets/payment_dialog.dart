@@ -112,7 +112,7 @@ class _PaymentDialogState extends State<PaymentDialog> with SingleTickerProvider
 
             // Grand Total Card
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
               decoration: BoxDecoration(
                 color: const Color(0xFFECFDF5),
                 borderRadius: BorderRadius.circular(16),
@@ -121,10 +121,21 @@ class _PaymentDialogState extends State<PaymentDialog> with SingleTickerProvider
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text('Total yang Harus Dibayar', style: TextStyle(fontSize: 13, color: Color(0xFF065F46), fontWeight: FontWeight.w600)),
-                  Text(
-                    currency.format(widget.grandTotal),
-                    style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: Color(0xFF047857)),
+                  const Expanded(
+                    child: Text(
+                      'Total yang Harus Dibayar',
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(fontSize: 13, color: Color(0xFF065F46), fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(
+                      currency.format(widget.grandTotal),
+                      style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: Color(0xFF047857)),
+                    ),
                   ),
                 ],
               ),
@@ -203,14 +214,21 @@ class _PaymentDialogState extends State<PaymentDialog> with SingleTickerProvider
                                   color: _cashAmount >= widget.grandTotal ? const Color(0xFF15803D) : Colors.red[800],
                                 ),
                               ),
-                              Text(
-                                _cashAmount >= widget.grandTotal
-                                    ? currency.format(changeAmount)
-                                    : '- ${currency.format(widget.grandTotal - _cashAmount)}',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.w900,
-                                  fontSize: 16,
-                                  color: _cashAmount >= widget.grandTotal ? const Color(0xFF16A34A) : Colors.red[800],
+                              const SizedBox(width: 8),
+                              Flexible(
+                                child: FittedBox(
+                                  fit: BoxFit.scaleDown,
+                                  alignment: Alignment.centerRight,
+                                  child: Text(
+                                    _cashAmount >= widget.grandTotal
+                                        ? currency.format(changeAmount)
+                                        : '- ${currency.format(widget.grandTotal - _cashAmount)}',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.w900,
+                                      fontSize: 16,
+                                      color: _cashAmount >= widget.grandTotal ? const Color(0xFF16A34A) : Colors.red[800],
+                                    ),
+                                  ),
                                 ),
                               ),
                             ],
@@ -222,23 +240,25 @@ class _PaymentDialogState extends State<PaymentDialog> with SingleTickerProvider
 
                   // Tab 2: QRIS
                   Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        QrImageView(
-                          data: '00020101021226580016ID.CO.SHOPEE.WWW01189360099800000000000208MOCKQRIS520458125303360540${widget.grandTotal.toInt()}5802ID5919Apotek Santosa Farma6006SUBANG6304',
-                          version: QrVersions.auto,
-                          size: 160.0,
-                          eyeStyle: const QrEyeStyle(eyeShape: QrEyeShape.square, color: Color(0xFF0F172A)),
-                          dataModuleStyle: const QrDataModuleStyle(dataModuleShape: QrDataModuleShape.square, color: Color(0xFF0F172A)),
-                        ),
-                        const SizedBox(height: 10),
-                        const Text(
-                          'Scan menggunakan BCA, Mandiri, GoPay, OVO, atau ShopeePay',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(fontSize: 11, color: Color(0xFF64748B)),
-                        ),
-                      ],
+                    child: SingleChildScrollView(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          QrImageView(
+                            data: '00020101021226580016ID.CO.SHOPEE.WWW01189360099800000000000208MOCKQRIS520458125303360540${widget.grandTotal.toInt()}5802ID5919Apotek Santosa Farma6006SUBANG6304',
+                            version: QrVersions.auto,
+                            size: 160.0,
+                            eyeStyle: const QrEyeStyle(eyeShape: QrEyeShape.square, color: Color(0xFF0F172A)),
+                            dataModuleStyle: const QrDataModuleStyle(dataModuleShape: QrDataModuleShape.square, color: Color(0xFF0F172A)),
+                          ),
+                          const SizedBox(height: 10),
+                          const Text(
+                            'Scan menggunakan BCA, Mandiri, GoPay, OVO, atau ShopeePay',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(fontSize: 11, color: Color(0xFF64748B)),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ],
@@ -251,7 +271,10 @@ class _PaymentDialogState extends State<PaymentDialog> with SingleTickerProvider
               icon: _isProcessing
                   ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
                   : const Icon(Icons.check_circle_outline),
-              label: Text(_isProcessing ? 'Memproses...' : 'Selesaikan Pembayaran & Cetak Struk'),
+              label: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(_isProcessing ? 'Memproses...' : 'Selesaikan Pembayaran & Cetak Struk'),
+              ),
               onPressed: _isProcessing
                   ? null
                   : () {

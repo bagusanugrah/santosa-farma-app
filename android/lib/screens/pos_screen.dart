@@ -10,7 +10,8 @@ class PosScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isTablet = MediaQuery.of(context).size.width >= 800;
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isTablet = screenWidth >= 800;
     final posProvider = context.watch<PosProvider>();
     final currency = NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ', decimalDigits: 0);
 
@@ -103,9 +104,9 @@ class PosScreen extends StatelessWidget {
                       color: const Color(0xFF059669),
                       child: GridView.builder(
                         padding: const EdgeInsets.all(12),
-                        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: isTablet ? 3 : 2,
-                          childAspectRatio: 0.78,
+                        gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                          maxCrossAxisExtent: 220,
+                          mainAxisExtent: 255,
                           crossAxisSpacing: 12,
                           mainAxisSpacing: 12,
                         ),
@@ -131,9 +132,9 @@ class PosScreen extends StatelessWidget {
         children: [
           Expanded(flex: 6, child: catalogContent),
           const VerticalDivider(width: 1, thickness: 1, color: Color(0xFFE2E8F0)),
-          const SizedBox(
-            width: 360,
-            child: CartView(),
+          SizedBox(
+            width: screenWidth >= 1050 ? 360 : 310,
+            child: const CartView(),
           ),
         ],
       );
@@ -186,13 +187,18 @@ class PosScreen extends StatelessWidget {
                       ),
                       const SizedBox(width: 12),
                       Expanded(
-                        child: Text(
-                          currency.format(posProvider.grandTotal),
-                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 16),
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          alignment: Alignment.centerLeft,
+                          child: Text(
+                            currency.format(posProvider.grandTotal),
+                            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 16),
+                          ),
                         ),
                       ),
+                      const SizedBox(width: 8),
                       const Text(
-                        'Lihat Keranjang',
+                        'Keranjang',
                         style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
                       ),
                       const SizedBox(width: 4),

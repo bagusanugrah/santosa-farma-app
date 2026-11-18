@@ -48,52 +48,59 @@ class ProductCard extends StatelessWidget {
                   else
                     _buildPlaceholder(),
 
-                  // Category Badge (Top Left)
-                  if (product.category != null && product.category!.isNotEmpty)
-                    Positioned(
-                      top: 8,
-                      left: 8,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.92),
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: const Color(0xFFE2E8F0)),
-                        ),
-                        child: Text(
-                          product.category!,
-                          style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFF334155)),
-                        ),
-                      ),
-                    ),
-
-                  // Stock Badge (Top Right)
+                  // Top Badges Row (Category + Stock — guaranteed never to overlap on small phones)
                   Positioned(
-                    top: 8,
-                    right: 8,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                      decoration: BoxDecoration(
-                        color: isOutOfStock
-                            ? const Color(0xFFFEE2E2)
-                            : (product.stock < 10 ? const Color(0xFFFEF3C7) : const Color(0xFFDCFCE7)),
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(
-                          color: isOutOfStock
-                              ? const Color(0xFFFECACA)
-                              : (product.stock < 10 ? const Color(0xFFFDE68A) : const Color(0xFFBBF7D0)),
+                    top: 6,
+                    left: 6,
+                    right: 6,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        if (product.category != null && product.category!.isNotEmpty)
+                          Flexible(
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withOpacity(0.92),
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(color: const Color(0xFFE2E8F0)),
+                              ),
+                              child: Text(
+                                product.category!,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFF334155)),
+                              ),
+                            ),
+                          )
+                        else
+                          const SizedBox.shrink(),
+                        const SizedBox(width: 4),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: isOutOfStock
+                                ? const Color(0xFFFEE2E2)
+                                : (product.stock < 10 ? const Color(0xFFFEF3C7) : const Color(0xFFDCFCE7)),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color: isOutOfStock
+                                  ? const Color(0xFFFECACA)
+                                  : (product.stock < 10 ? const Color(0xFFFDE68A) : const Color(0xFFBBF7D0)),
+                            ),
+                          ),
+                          child: Text(
+                            isOutOfStock ? 'Habis' : 'Stok: ${product.stock}',
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w800,
+                              color: isOutOfStock
+                                  ? const Color(0xFFDC2626)
+                                  : (product.stock < 10 ? const Color(0xFFD97706) : const Color(0xFF16A34A)),
+                            ),
+                          ),
                         ),
-                      ),
-                      child: Text(
-                        isOutOfStock ? 'Habis' : 'Stok: ${product.stock}',
-                        style: TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w800,
-                          color: isOutOfStock
-                              ? const Color(0xFFDC2626)
-                              : (product.stock < 10 ? const Color(0xFFD97706) : const Color(0xFF16A34A)),
-                        ),
-                      ),
+                      ],
                     ),
                   ),
 

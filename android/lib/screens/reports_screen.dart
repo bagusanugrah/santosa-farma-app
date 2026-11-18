@@ -93,144 +93,191 @@ class _ReportsScreenState extends State<ReportsScreen> {
         ),
         const Divider(height: 1, color: Color(0xFFE2E8F0)),
 
-        // Summary Cards
-        Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            children: [
-              Expanded(
-                child: _buildMetricCard(
-                  'Total Omset Penjualan',
-                  currency.format(totalOmset),
-                  Icons.account_balance_wallet,
-                  const Color(0xFF059669),
-                  const Color(0xFFECFDF5),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: _buildMetricCard(
-                  'Total Transaksi',
-                  '$totalTrx Transaksi',
-                  Icons.receipt_long,
-                  const Color(0xFF2563EB),
-                  const Color(0xFFEFF6FF),
-                ),
-              ),
-            ],
-          ),
-        ),
-
-        // Channel Breakdown Pill
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: const Color(0xFFE2E8F0)),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                _buildSubMetric('Tunai (Cash)', '$cashCount'),
-                const SizedBox(height: 24, child: VerticalDivider()),
-                _buildSubMetric('QRIS', '$qrisCount'),
-                const SizedBox(height: 24, child: VerticalDivider()),
-                _buildSubMetric('Pesanan Web', '$onlineCount'),
-              ],
-            ),
-          ),
-        ),
-        const SizedBox(height: 16),
-
-        // Transactions History
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text('Riwayat Transaksi', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 14)),
-              Text('${_transactions.length} tercatat', style: const TextStyle(fontSize: 12, color: Color(0xFF64748B))),
-            ],
-          ),
-        ),
-        const SizedBox(height: 8),
-
+        // Scrollable Body (Works cleanly in portrait, landscape phone, and tablet)
         Expanded(
-          child: _isLoading
-              ? const Center(child: CircularProgressIndicator(color: Color(0xFF059669)))
-              : _transactions.isEmpty
-                  ? const Center(child: Text('Belum ada transaksi di periode ini', style: TextStyle(color: Color(0xFF94A3B8))))
-                  : RefreshIndicator(
-                      onRefresh: _loadReports,
-                      color: const Color(0xFF059669),
-                      child: ListView.separated(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                        itemCount: _transactions.length,
-                        separatorBuilder: (_, __) => const SizedBox(height: 8),
-                        itemBuilder: (context, index) {
+          child: RefreshIndicator(
+            onRefresh: _loadReports,
+            color: const Color(0xFF059669),
+            child: CustomScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              slivers: [
+                SliverToBoxAdapter(
+                  child: Center(
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 900),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          // Summary Cards
+                          Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: _buildMetricCard(
+                                    'Total Omset Penjualan',
+                                    currency.format(totalOmset),
+                                    Icons.account_balance_wallet,
+                                    const Color(0xFF059669),
+                                    const Color(0xFFECFDF5),
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: _buildMetricCard(
+                                    'Total Transaksi',
+                                    '$totalTrx Transaksi',
+                                    Icons.receipt_long,
+                                    const Color(0xFF2563EB),
+                                    const Color(0xFFEFF6FF),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+
+                          // Channel Breakdown Pill
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(color: const Color(0xFFE2E8F0)),
+                              ),
+                              child: Row(
+                                children: [
+                                  Expanded(child: _buildSubMetric('Tunai (Cash)', '$cashCount')),
+                                  const SizedBox(height: 24, child: VerticalDivider()),
+                                  Expanded(child: _buildSubMetric('QRIS', '$qrisCount')),
+                                  const SizedBox(height: 24, child: VerticalDivider()),
+                                  Expanded(child: _buildSubMetric('Pesanan Web', '$onlineCount')),
+                                ],
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+
+                          // Transactions History Header
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                const Text('Riwayat Transaksi', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 14)),
+                                Text('${_transactions.length} tercatat', style: const TextStyle(fontSize: 12, color: Color(0xFF64748B))),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+
+                if (_isLoading)
+                  const SliverFillRemaining(
+                    hasScrollBody: false,
+                    child: Center(child: CircularProgressIndicator(color: Color(0xFF059669))),
+                  )
+                else if (_transactions.isEmpty)
+                  const SliverFillRemaining(
+                    hasScrollBody: false,
+                    child: Center(
+                      child: Padding(
+                        padding: EdgeInsets.all(24),
+                        child: Text(
+                          'Belum ada transaksi di periode ini',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(color: Color(0xFF94A3B8)),
+                        ),
+                      ),
+                    ),
+                  )
+                else
+                  SliverPadding(
+                    padding: const EdgeInsets.fromLTRB(16, 4, 16, 20),
+                    sliver: SliverList(
+                      delegate: SliverChildBuilderDelegate(
+                        (context, index) {
                           final trx = _transactions[index];
-                          return Card(
-                            child: ListTile(
-                              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                              leading: Container(
-                                padding: const EdgeInsets.all(8),
-                                decoration: BoxDecoration(
-                                  color: trx.isOnline ? const Color(0xFFEFF6FF) : const Color(0xFFECFDF5),
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                                child: Icon(
-                                  trx.isOnline ? Icons.shopping_bag : Icons.point_of_sale,
-                                  color: trx.isOnline ? const Color(0xFF2563EB) : const Color(0xFF059669),
-                                  size: 20,
-                                ),
-                              ),
-                              title: Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Expanded(
-                                    child: Text(
-                                      trx.invoiceNo,
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                          return Center(
+                            child: ConstrainedBox(
+                              constraints: const BoxConstraints(maxWidth: 900),
+                              child: Padding(
+                                padding: const EdgeInsets.only(bottom: 8),
+                                child: Card(
+                                  child: ListTile(
+                                    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+                                    leading: Container(
+                                      padding: const EdgeInsets.all(8),
+                                      decoration: BoxDecoration(
+                                        color: trx.isOnline ? const Color(0xFFEFF6FF) : const Color(0xFFECFDF5),
+                                        borderRadius: BorderRadius.circular(10),
+                                      ),
+                                      child: Icon(
+                                        trx.isOnline ? Icons.shopping_bag : Icons.point_of_sale,
+                                        color: trx.isOnline ? const Color(0xFF2563EB) : const Color(0xFF059669),
+                                        size: 20,
+                                      ),
                                     ),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Text(currency.format(trx.total), style: const TextStyle(fontWeight: FontWeight.w900, color: Color(0xFF047857), fontSize: 13)),
-                                ],
-                              ),
-                              subtitle: Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Expanded(
-                                    child: Text(
-                                      dateFormat.format(trx.createdAt),
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: const TextStyle(fontSize: 11, color: Color(0xFF64748B)),
+                                    title: Row(
+                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Expanded(
+                                          child: Text(
+                                            trx.invoiceNo,
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Text(
+                                          currency.format(trx.total),
+                                          style: const TextStyle(fontWeight: FontWeight.w900, color: Color(0xFF047857), fontSize: 13),
+                                        ),
+                                      ],
                                     ),
+                                    subtitle: Row(
+                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Expanded(
+                                          child: Text(
+                                            dateFormat.format(trx.createdAt),
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: const TextStyle(fontSize: 11, color: Color(0xFF64748B)),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Text(
+                                          '${trx.paymentMethod.toUpperCase()} • ${trx.status.toUpperCase()}',
+                                          style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFF475569)),
+                                        ),
+                                      ],
+                                    ),
+                                    onTap: () {
+                                      showDialog(
+                                        context: context,
+                                        builder: (_) => ReceiptDialog(transaction: trx),
+                                      );
+                                    },
                                   ),
-                                  const SizedBox(width: 8),
-                                  Text(
-                                    '${trx.paymentMethod.toUpperCase()} • ${trx.status.toUpperCase()}',
-                                    style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFF475569)),
-                                  ),
-                                ],
+                                ),
                               ),
-                              onTap: () {
-                                showDialog(
-                                  context: context,
-                                  builder: (_) => ReceiptDialog(transaction: trx),
-                                );
-                              },
                             ),
                           );
                         },
+                        childCount: _transactions.length,
                       ),
                     ),
+                  ),
+              ],
+            ),
+          ),
         ),
       ],
     );
@@ -258,7 +305,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
 
   Widget _buildMetricCard(String label, String value, IconData icon, Color color, Color bg) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: bg,
         borderRadius: BorderRadius.circular(20),
@@ -269,15 +316,28 @@ class _ReportsScreenState extends State<ReportsScreen> {
         children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(label, style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: color)),
-              Icon(icon, color: color, size: 20),
+              Expanded(
+                child: Text(
+                  label,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: color),
+                ),
+              ),
+              const SizedBox(width: 4),
+              Icon(icon, color: color, size: 18),
             ],
           ),
           const SizedBox(height: 8),
-          Text(
-            value,
-            style: TextStyle(fontWeight: FontWeight.w900, fontSize: 18, color: color),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Text(
+              value,
+              style: TextStyle(fontWeight: FontWeight.w900, fontSize: 18, color: color),
+            ),
           ),
         ],
       ),
@@ -286,10 +346,17 @@ class _ReportsScreenState extends State<ReportsScreen> {
 
   Widget _buildSubMetric(String label, String count) {
     return Column(
+      mainAxisSize: MainAxisSize.min,
       children: [
         Text(count, style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16)),
         const SizedBox(height: 2),
-        Text(label, style: const TextStyle(fontSize: 11, color: Color(0xFF64748B))),
+        Text(
+          label,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          textAlign: TextAlign.center,
+          style: const TextStyle(fontSize: 11, color: Color(0xFF64748B)),
+        ),
       ],
     );
   }

@@ -166,41 +166,43 @@ class _SettingsScreenState extends State<SettingsScreen> {
           children: [
             Icon(Icons.warning_amber_rounded, color: Colors.red),
             SizedBox(width: 8),
-            Text('Reset Pabrik Apotek?'),
+            Expanded(child: Text('Reset Pabrik Apotek?')),
           ],
         ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Tindakan ini akan menghapus semua riwayat transaksi, pesanan web, dan mengembalikan katalog obat ke data awal.',
-              style: TextStyle(fontSize: 13, height: 1.4),
-            ),
-            const SizedBox(height: 12),
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: const Color(0xFFFEF2F2),
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: const Color(0xFFFECACA)),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Tindakan ini akan menghapus semua riwayat transaksi, pesanan web, dan mengembalikan katalog obat ke data awal.',
+                style: TextStyle(fontSize: 13, height: 1.4),
               ),
-              child: const Text(
-                'Sistem akan otomatis mencadangkan file ZIP ke memori sebelum penghapusan data dimulai.',
-                style: TextStyle(fontSize: 11, color: Color(0xFF991B1B), fontWeight: FontWeight.bold),
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFEF2F2),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: const Color(0xFFFECACA)),
+                ),
+                child: const Text(
+                  'Sistem akan otomatis mencadangkan file ZIP ke memori sebelum penghapusan data dimulai.',
+                  style: TextStyle(fontSize: 11, color: Color(0xFF991B1B), fontWeight: FontWeight.bold),
+                ),
               ),
-            ),
-            const SizedBox(height: 16),
-            const Text('Ketik "RESET" untuk konfirmasi:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
-            const SizedBox(height: 6),
-            TextField(
-              controller: confirmController,
-              decoration: const InputDecoration(
-                hintText: 'Ketik RESET',
-                isDense: true,
+              const SizedBox(height: 16),
+              const Text('Ketik "RESET" untuk konfirmasi:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+              const SizedBox(height: 6),
+              TextField(
+                controller: confirmController,
+                decoration: const InputDecoration(
+                  hintText: 'Ketik RESET',
+                  isDense: true,
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
         actions: [
           TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('Batal')),
@@ -246,14 +248,72 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
+  Widget _buildDataActionTile({
+    required bool isCompact,
+    required IconData icon,
+    required Color iconColor,
+    required Color iconBg,
+    required String title,
+    Color? titleColor,
+    required String subtitle,
+    required Widget actionButton,
+  }) {
+    final headerRow = Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(color: iconBg, borderRadius: BorderRadius.circular(12)),
+          child: Icon(icon, color: iconColor),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: titleColor),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                subtitle,
+                style: const TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+              ),
+            ],
+          ),
+        ),
+        if (!isCompact) ...[
+          const SizedBox(width: 12),
+          actionButton,
+        ],
+      ],
+    );
+
+    if (!isCompact) return headerRow;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        headerRow,
+        const SizedBox(height: 10),
+        SizedBox(width: double.infinity, child: actionButton),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final auth = context.watch<AuthProvider>();
     final store = context.watch<StoreProvider>();
     final isSuperAdmin = auth.currentUser?.isSuperAdmin == true;
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isCompact = screenWidth < 520;
+    final userName = auth.currentUser?.name.trim() ?? '';
+    final userInitial = userName.isNotEmpty ? userName[0].toUpperCase() : 'K';
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(20),
+      padding: EdgeInsets.all(isCompact ? 14 : 20),
       child: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 700),
@@ -263,39 +323,66 @@ class _SettingsScreenState extends State<SettingsScreen> {
               // User Profile Card
               Card(
                 child: Padding(
-                  padding: const EdgeInsets.all(20),
-                  child: Row(
+                  padding: EdgeInsets.all(isCompact ? 16 : 20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      CircleAvatar(
-                        radius: 28,
-                        backgroundColor: const Color(0xFFECFDF5),
-                        child: Text(
-                          auth.currentUser?.name.substring(0, 1).toUpperCase() ?? 'K',
-                          style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Color(0xFF059669)),
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              auth.currentUser?.name ?? 'Petugas Kasir',
-                              style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16),
+                      Row(
+                        children: [
+                          CircleAvatar(
+                            radius: isCompact ? 24 : 28,
+                            backgroundColor: const Color(0xFFECFDF5),
+                            child: Text(
+                              userInitial,
+                              style: TextStyle(
+                                fontSize: isCompact ? 20 : 24,
+                                fontWeight: FontWeight.bold,
+                                color: const Color(0xFF059669),
+                              ),
                             ),
-                            const SizedBox(height: 2),
-                            Text(
-                              'Username: ${auth.currentUser?.username} • Role: ${auth.currentUser?.role}',
-                              style: const TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+                          ),
+                          const SizedBox(width: 14),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  userName.isNotEmpty ? userName : 'Petugas Kasir',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  'Username: ${auth.currentUser?.username ?? "-"} • Role: ${auth.currentUser?.role ?? "-"}',
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+                                ),
+                              ],
+                            ),
+                          ),
+                          if (!isCompact) ...[
+                            const SizedBox(width: 12),
+                            OutlinedButton.icon(
+                              icon: const Icon(Icons.logout, size: 16),
+                              label: const Text('Keluar'),
+                              onPressed: () => auth.logout(),
                             ),
                           ],
+                        ],
+                      ),
+                      if (isCompact) ...[
+                        const SizedBox(height: 12),
+                        SizedBox(
+                          width: double.infinity,
+                          child: OutlinedButton.icon(
+                            icon: const Icon(Icons.logout, size: 16),
+                            label: const Text('Keluar dari Akun'),
+                            onPressed: () => auth.logout(),
+                          ),
                         ),
-                      ),
-                      OutlinedButton.icon(
-                        icon: const Icon(Icons.logout, size: 16),
-                        label: const Text('Keluar'),
-                        onPressed: () => auth.logout(),
-                      ),
+                      ],
                     ],
                   ),
                 ),
@@ -429,7 +516,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         Row(
                           children: [
                             Expanded(
-                              flex: 3,
+                              flex: 2,
                               child: TextField(
                                 controller: _mailHostCtrl,
                                 decoration: const InputDecoration(labelText: 'SMTP Host', hintText: 'smtp.gmail.com', isDense: true),
@@ -536,7 +623,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               // Data Management (Backup, Restore, Reset)
               Card(
                 child: Padding(
-                  padding: const EdgeInsets.all(20),
+                  padding: EdgeInsets.all(isCompact ? 16 : 20),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -547,51 +634,52 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         style: TextStyle(fontSize: 12, color: Color(0xFF64748B)),
                       ),
                       const Divider(height: 24),
-                      ListTile(
-                        contentPadding: EdgeInsets.zero,
-                        leading: Container(
-                          padding: const EdgeInsets.all(10),
-                          decoration: BoxDecoration(color: const Color(0xFFECFDF5), borderRadius: BorderRadius.circular(12)),
-                          child: const Icon(Icons.cloud_upload_outlined, color: Color(0xFF059669)),
-                        ),
-                        title: const Text('Cadangkan Database (ZIP / Drive)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                        subtitle: const Text('Export seluruh data ke file ZIP dan bagikan ke Drive atau WhatsApp', style: TextStyle(fontSize: 12, color: Color(0xFF64748B))),
-                        trailing: FilledButton.icon(
-                          icon: _isBackingUp ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)) : const Icon(Icons.download, size: 16),
+                      _buildDataActionTile(
+                        isCompact: isCompact,
+                        icon: Icons.cloud_upload_outlined,
+                        iconColor: const Color(0xFF059669),
+                        iconBg: const Color(0xFFECFDF5),
+                        title: 'Cadangkan Database (ZIP / Drive)',
+                        subtitle: 'Export seluruh data ke file ZIP dan bagikan ke Drive atau WhatsApp',
+                        actionButton: FilledButton.icon(
+                          icon: _isBackingUp
+                              ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                              : const Icon(Icons.download, size: 16),
                           label: const Text('Backup'),
                           onPressed: _isBackingUp ? null : _handleBackup,
                         ),
                       ),
-                      const Divider(height: 20),
-                      ListTile(
-                        contentPadding: EdgeInsets.zero,
-                        leading: Container(
-                          padding: const EdgeInsets.all(10),
-                          decoration: BoxDecoration(color: const Color(0xFFEFF6FF), borderRadius: BorderRadius.circular(12)),
-                          child: const Icon(Icons.settings_backup_restore, color: Color(0xFF2563EB)),
-                        ),
-                        title: const Text('Pulihkan Data dari Backup', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                        subtitle: const Text('Pilih file ZIP atau JSON backup yang pernah Anda simpan', style: TextStyle(fontSize: 12, color: Color(0xFF64748B))),
-                        trailing: OutlinedButton.icon(
-                          icon: _isRestoring ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.folder_open, size: 16),
+                      const Divider(height: 24),
+                      _buildDataActionTile(
+                        isCompact: isCompact,
+                        icon: Icons.settings_backup_restore,
+                        iconColor: const Color(0xFF2563EB),
+                        iconBg: const Color(0xFFEFF6FF),
+                        title: 'Pulihkan Data dari Backup',
+                        subtitle: 'Pilih file ZIP atau JSON backup yang pernah Anda simpan',
+                        actionButton: OutlinedButton.icon(
+                          icon: _isRestoring
+                              ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2))
+                              : const Icon(Icons.folder_open, size: 16),
                           label: const Text('Restore'),
                           onPressed: _isRestoring ? null : _handleRestore,
                         ),
                       ),
-                      const Divider(height: 20),
-                      ListTile(
-                        contentPadding: EdgeInsets.zero,
-                        leading: Container(
-                          padding: const EdgeInsets.all(10),
-                          decoration: BoxDecoration(color: const Color(0xFFFEF2F2), borderRadius: BorderRadius.circular(12)),
-                          child: const Icon(Icons.delete_forever, color: Colors.red),
-                        ),
-                        title: const Text('Reset Pabrik (Factory Reset)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.red)),
-                        subtitle: const Text('Hapus seluruh transaksi dan kembalikan stok obat ke data awal', style: TextStyle(fontSize: 12, color: Color(0xFF64748B))),
-                        trailing: FilledButton(
+                      const Divider(height: 24),
+                      _buildDataActionTile(
+                        isCompact: isCompact,
+                        icon: Icons.delete_forever,
+                        iconColor: Colors.red,
+                        iconBg: const Color(0xFFFEF2F2),
+                        title: 'Reset Pabrik (Factory Reset)',
+                        titleColor: Colors.red,
+                        subtitle: 'Hapus seluruh transaksi dan kembalikan stok obat ke data awal',
+                        actionButton: FilledButton(
                           style: FilledButton.styleFrom(backgroundColor: Colors.red),
                           onPressed: _isResetting ? null : _handleFactoryReset,
-                          child: _isResetting ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)) : const Text('Reset'),
+                          child: _isResetting
+                              ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                              : const Text('Reset'),
                         ),
                       ),
                     ],
