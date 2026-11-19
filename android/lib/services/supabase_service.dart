@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
@@ -83,6 +84,46 @@ class SupabaseService {
     };
 
     await client.from('store_settings').update(updateData).eq('id', 1);
+  }
+
+  Future<bool> verifyMidtransCredentials({
+    required String clientKey,
+    required String serverKey,
+    required bool isProduction,
+  }) async {
+    final cleanClient = clientKey.trim();
+    final cleanServer = serverKey.trim();
+
+    if (cleanClient.isEmpty || cleanServer.isEmpty) return false;
+    if (cleanClient.length < 15 || cleanServer.length < 15) return false;
+
+    final host = isProduction ? 'api.midtrans.com' : 'api.sandbox.midtrans.com';
+    final client = HttpClient()..connectionTimeout = const Duration(seconds: 4);
+
+    try {
+      final auth = base64Encode(utf8.encode('$cleanServer:'));
+      final req = await client
+          .getUrl(Uri.parse('https://$host/v2/dummy-auth-check/status'))
+          .timeout(const Duration(seconds: 5));
+      req.headers.set('Authorization', 'Basic $auth');
+      req.headers.set('Accept', 'application/json');
+      final res = await req.close().timeout(const Duration(seconds: 5));
+      client.close();
+
+      if (res.statusCode == 401 || res.statusCode == 403) {
+        return false;
+      }
+      return true;
+    } on TimeoutException {
+      client.close();
+      return cleanServer.contains('server-') && cleanClient.contains('client-');
+    } on SocketException {
+      client.close();
+      return cleanServer.contains('server-') && cleanClient.contains('client-');
+    } catch (e) {
+      client.close();
+      return false;
+    }
   }
 
   Future<void> updateIntegrationSettings({

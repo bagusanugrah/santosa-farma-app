@@ -109,7 +109,9 @@ export async function fetchStoreStatus(): Promise<StoreStatus> {
     }
 
     const isOpen = Boolean(data.is_open);
-    const onlineOrdersEnabled = Boolean(data.online_orders_enabled);
+    const clientKey = (data.midtrans_client_key || '').trim();
+    const hasValidMidtrans = clientKey.length >= 15;
+    const onlineOrdersEnabled = Boolean(data.online_orders_enabled) && hasValidMidtrans;
 
     return {
       is_open: isOpen,
@@ -118,8 +120,7 @@ export async function fetchStoreStatus(): Promise<StoreStatus> {
       is_online_active: isOpen && onlineOrdersEnabled,
       last_opened_at: data.last_opened_at,
       last_closed_at: data.last_closed_at,
-      midtrans_client_key:
-        data.midtrans_client_key || process.env.NEXT_PUBLIC_MIDTRANS_CLIENT_KEY || '',
+      midtrans_client_key: clientKey,
       midtrans_is_production: Boolean(data.midtrans_is_production),
     };
   } catch (err) {

@@ -173,18 +173,31 @@ class AdaptiveScaffold extends StatelessWidget {
                 ),
                 const SizedBox(width: 6),
                 Text(
-                  storeProvider.onlineOrdersEnabled ? 'WEB: AKTIF' : 'WEB: NONAKTIF',
+                  !storeProvider.isMidtransValid
+                      ? 'WEB: KUNCI'
+                      : (storeProvider.onlineOrdersEnabled ? 'WEB: AKTIF' : 'WEB: NONAKTIF'),
                   style: TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.w800,
-                    color: storeProvider.onlineOrdersEnabled ? const Color(0xFF1D4ED8) : const Color(0xFF334155),
+                    color: !storeProvider.isMidtransValid
+                        ? Colors.red[700]
+                        : (storeProvider.onlineOrdersEnabled ? const Color(0xFF1D4ED8) : const Color(0xFF334155)),
                   ),
                 ),
                 Transform.scale(
                   scale: 0.7,
                   child: Switch(
                     value: storeProvider.onlineOrdersEnabled,
-                    onChanged: (val) => storeProvider.toggleOnlineOrders(val),
+                    onChanged: storeProvider.isMidtransValid
+                        ? (val) => storeProvider.toggleOnlineOrders(val)
+                        : (val) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Pemesanan web terkunci: Kredensial Midtrans belum valid di Pengaturan Toko.'),
+                                backgroundColor: Colors.red,
+                              ),
+                            );
+                          },
                     activeColor: const Color(0xFF2563EB),
                   ),
                 ),
@@ -241,15 +254,32 @@ class AdaptiveScaffold extends StatelessWidget {
                     const Divider(),
                     SwitchListTile(
                       value: sp.onlineOrdersEnabled,
-                      onChanged: (val) => sp.toggleOnlineOrders(val),
+                      onChanged: sp.isMidtransValid
+                          ? (val) => sp.toggleOnlineOrders(val)
+                          : (val) {
+                              Navigator.of(ctx).pop();
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Pemesanan web terkunci: Kredensial Midtrans belum valid di Pengaturan Toko.'),
+                                  backgroundColor: Colors.red,
+                                ),
+                              );
+                            },
                       title: const Text('Pemesanan Web Pelanggan', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
                       subtitle: Text(
-                        sp.onlineOrdersEnabled ? 'Pelanggan web BISA memesan obat' : 'Pemesanan online sedang dinonaktifkan',
-                        style: TextStyle(fontSize: 12, color: sp.onlineOrdersEnabled ? const Color(0xFF2563EB) : const Color(0xFF64748B)),
+                        !sp.isMidtransValid
+                            ? 'Terkunci (Kredensial Midtrans belum valid di Pengaturan Toko)'
+                            : (sp.onlineOrdersEnabled ? 'Pelanggan web BISA memesan obat' : 'Pemesanan online sedang dinonaktifkan'),
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: !sp.isMidtransValid
+                              ? Colors.red[700]
+                              : (sp.onlineOrdersEnabled ? const Color(0xFF2563EB) : const Color(0xFF64748B)),
+                        ),
                       ),
                       secondary: Icon(
                         Icons.language,
-                        color: sp.onlineOrdersEnabled ? const Color(0xFF2563EB) : const Color(0xFF64748B),
+                        color: !sp.isMidtransValid ? Colors.red[400] : (sp.onlineOrdersEnabled ? const Color(0xFF2563EB) : const Color(0xFF64748B)),
                       ),
                       activeColor: const Color(0xFF2563EB),
                     ),

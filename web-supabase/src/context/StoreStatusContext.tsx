@@ -60,21 +60,25 @@ export const StoreStatusProvider: React.FC<{ children: React.ReactNode }> = ({ c
         (payload: any) => {
           if (payload.new) {
             const isOpen = Boolean(payload.new.is_open);
-            const onlineOrders = Boolean(payload.new.online_orders_enabled);
-            setStatus((prev) => ({
-              is_open: isOpen,
-              store_status: isOpen ? 'buka' : 'tutup',
-              online_orders_enabled: onlineOrders,
-              is_online_active: isOpen && onlineOrders,
-              last_opened_at: payload.new.last_opened_at,
-              last_closed_at: payload.new.last_closed_at,
-              midtrans_client_key:
-                payload.new.midtrans_client_key ?? prev.midtrans_client_key,
-              midtrans_is_production:
-                typeof payload.new.midtrans_is_production === 'boolean'
-                  ? payload.new.midtrans_is_production
-                  : prev.midtrans_is_production,
-            }));
+            setStatus((prev) => {
+              const clientKey = (payload.new.midtrans_client_key ?? prev.midtrans_client_key ?? '').trim();
+              const hasMidtrans = clientKey.length >= 15;
+              const onlineOrders = Boolean(payload.new.online_orders_enabled) && hasMidtrans;
+
+              return {
+                is_open: isOpen,
+                store_status: isOpen ? 'buka' : 'tutup',
+                online_orders_enabled: onlineOrders,
+                is_online_active: isOpen && onlineOrders,
+                last_opened_at: payload.new.last_opened_at,
+                last_closed_at: payload.new.last_closed_at,
+                midtrans_client_key: clientKey,
+                midtrans_is_production:
+                  typeof payload.new.midtrans_is_production === 'boolean'
+                    ? payload.new.midtrans_is_production
+                    : prev.midtrans_is_production,
+              };
+            });
             setLoading(false);
           } else {
             refreshStatus();

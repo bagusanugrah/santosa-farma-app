@@ -11,10 +11,10 @@ export async function POST(req: Request) {
       return NextResponse.json({ status: 'error', message: 'Silakan login terlebih dahulu.' }, { status: 401 });
     }
 
-    // 1. Verify store status
+    // 1. Verify store status and Midtrans credentials
     const { data: storeSetting } = await supabaseAdmin
       .from('store_settings')
-      .select('is_open, online_orders_enabled')
+      .select('is_open, online_orders_enabled, midtrans_client_key, midtrans_server_key')
       .eq('id', 1)
       .maybeSingle();
 
@@ -28,6 +28,19 @@ export async function POST(req: Request) {
     if (!storeSetting?.online_orders_enabled) {
       return NextResponse.json(
         { status: 'error', message: 'Fitur pemesanan online dinonaktifkan oleh kasir toko.' },
+        { status: 403 }
+      );
+    }
+
+    const midClient = (storeSetting?.midtrans_client_key || '').trim();
+    const midServer = (storeSetting?.midtrans_server_key || '').trim();
+    if (!midClient || !midServer || midClient.length < 15 || midServer.length < 15) {
+      return NextResponse.json(
+        {
+          status: 'error',
+          message:
+            'Metode pembayaran online (Midtrans) belum dikonfigurasi secara valid oleh admin toko. Pemesanan web saat ini tidak dapat diproses.',
+        },
         { status: 403 }
       );
     }
@@ -143,59 +156,67 @@ export async function POST(req: Request) {
     }
 
     // 6. Request Midtrans Snap Token
-    let snapToken = null;
     const settings = await getIntegrationSettings();
-    const midtransServerKey = settings.midtransServerKey;
+    const midtransServerKey = (settings.midtransServerKey || storeSetting.midtrans_server_key || '').trim();
     const isProd = settings.midtransIsProduction;
     const snapEndpoint = isProd
       ? 'https://app.midtrans.com/snap/v1/transactions'
       : 'https://app.sandbox.midtrans.com/snap/v1/transactions';
 
-    if (midtransServerKey && !midtransServerKey.includes('demo')) {
-      try {
-        const midtransPayload = {
-          transaction_details: {
-            order_id: invoiceNo,
-            gross_amount: Math.round(grandTotal),
-          },
-          item_details: orderItems.map((i) => ({
-            id: String(i.product_id),
-            price: Math.round(i.price),
-            quantity: i.qty,
-            name: i.product_name.substring(0, 50),
-          })),
-          customer_details: {
-            first_name: customer.name,
-            email: customer.email || 'pelanggan@santosa.id',
-            phone: customer.phone || '08123456789',
-          },
-        };
+    const midtransPayload = {
+      transaction_details: {
+        order_id: invoiceNo,
+        gross_amount: Math.round(grandTotal),
+      },
+      item_details: orderItems.map((i) => ({
+        id: String(i.product_id),
+        price: Math.round(i.price),
+        quantity: i.qty,
+        name: i.product_name.substring(0, 50),
+      })),
+      customer_details: {
+        first_name: customer.name,
+        email: customer.email || 'pelanggan@santosa.id',
+        phone: customer.phone || '08123456789',
+      },
+    };
 
-        const authHeader = 'Basic ' + Buffer.from(`${midtransServerKey}:`).toString('base64');
-        const snapRes = await fetch(snapEndpoint, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Accept: 'application/json',
-            Authorization: authHeader,
-          },
-          body: JSON.stringify(midtransPayload),
-        });
+    let snapToken = null;
+    try {
+      const authHeader = 'Basic ' + Buffer.from(`${midtransServerKey}:`).toString('base64');
+      const snapRes = await fetch(snapEndpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+          Authorization: authHeader,
+        },
+        body: JSON.stringify(midtransPayload),
+      });
 
-        if (snapRes.ok) {
-          const snapData = await snapRes.json();
-          snapToken = snapData.token;
-        } else {
-          console.warn('[Midtrans Snap API Warning]', await snapRes.text());
-        }
-      } catch (err) {
-        console.warn('[Midtrans Snap Fetch Exception]', err);
+      if (snapRes.ok) {
+        const snapData = await snapRes.json();
+        snapToken = snapData.token;
+      } else {
+        const errText = await snapRes.text();
+        console.error('[Midtrans Snap API Error]', errText);
       }
+    } catch (err) {
+      console.error('[Midtrans Snap Fetch Exception]', err);
     }
 
-    // Fallback mock token if demo or network error
+    // If Midtrans failed or rejected credentials, rollback transaction to prevent invalid state
     if (!snapToken) {
-      snapToken = `mock-snap-${invoiceNo}-${crypto.randomBytes(6).toString('hex')}`;
+      await supabaseAdmin.from('transaction_items').delete().eq('transaction_id', newTrx.id);
+      await supabaseAdmin.from('transactions').delete().eq('id', newTrx.id);
+      return NextResponse.json(
+        {
+          status: 'error',
+          message:
+            'Gagal menghubungi gateway pembayaran Midtrans. Pastikan kredensial Midtrans di Pengaturan Toko valid dan sesuai mode (Sandbox/Production).',
+        },
+        { status: 502 }
+      );
     }
 
     // Update snap token in transaction record

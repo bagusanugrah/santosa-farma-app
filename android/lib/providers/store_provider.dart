@@ -6,13 +6,17 @@ import '../services/supabase_service.dart';
 class StoreProvider extends ChangeNotifier {
   StoreSetting _setting = StoreSetting(id: 1, isOpen: true, onlineOrdersEnabled: false);
   bool _isLoading = true;
+  bool _isMidtransValid = false;
+  bool _isValidatingMidtrans = false;
   RealtimeChannel? _subscription;
 
   StoreSetting get setting => _setting;
   bool get isOpen => _setting.isOpen;
   bool get onlineOrdersEnabled => _setting.onlineOrdersEnabled;
-  bool get isOnlineActive => _setting.isOnlineActive;
+  bool get isOnlineActive => _setting.isOpen && _setting.onlineOrdersEnabled && _isMidtransValid;
   bool get isLoading => _isLoading;
+  bool get isMidtransValid => _isMidtransValid;
+  bool get isValidatingMidtrans => _isValidatingMidtrans;
 
   StoreProvider() {
     loadStatus();
@@ -21,8 +25,42 @@ class StoreProvider extends ChangeNotifier {
 
   Future<void> loadStatus() async {
     _setting = await SupabaseService.instance.getStoreSetting();
+    await _validateAndSyncMidtrans();
     _isLoading = false;
     notifyListeners();
+  }
+
+  Future<void> _validateAndSyncMidtrans() async {
+    if (!_setting.hasMidtransConfig) {
+      _isMidtransValid = false;
+      // If Midtrans is not configured, automatically force disable online orders
+      if (_setting.onlineOrdersEnabled) {
+        _setting = _setting.copyWith(onlineOrdersEnabled: false);
+        await SupabaseService.instance.updateStoreStatus(
+          isOpen: _setting.isOpen,
+          onlineOrdersEnabled: false,
+        );
+      }
+      return;
+    }
+
+    _isValidatingMidtrans = true;
+    final valid = await SupabaseService.instance.verifyMidtransCredentials(
+      clientKey: _setting.midtransClientKey,
+      serverKey: _setting.midtransServerKey,
+      isProduction: _setting.midtransIsProduction,
+    );
+    _isMidtransValid = valid;
+    _isValidatingMidtrans = false;
+
+    // If Midtrans credentials are invalid, force disable online orders
+    if (!valid && _setting.onlineOrdersEnabled) {
+      _setting = _setting.copyWith(onlineOrdersEnabled: false);
+      await SupabaseService.instance.updateStoreStatus(
+        isOpen: _setting.isOpen,
+        onlineOrdersEnabled: false,
+      );
+    }
   }
 
   void _subscribeRealtime() {
@@ -33,10 +71,11 @@ class StoreProvider extends ChangeNotifier {
           event: PostgresChangeEvent.all,
           schema: 'public',
           table: 'store_settings',
-          callback: (payload) {
+          callback: (payload) async {
             try {
               if (payload.newRecord.isNotEmpty) {
                 _setting = StoreSetting.fromMap(payload.newRecord);
+                await _validateAndSyncMidtrans();
                 notifyListeners();
               }
             } catch (e) {
@@ -56,12 +95,31 @@ class StoreProvider extends ChangeNotifier {
     );
   }
 
-  Future<void> toggleOnlineOrders(bool val) async {
+  /// Toggle online orders. Returns true if successfully updated, or false if rejected due to invalid Midtrans.
+  Future<bool> toggleOnlineOrders(bool val) async {
+    if (val && !_isMidtransValid) {
+      // Reject activation if Midtrans credentials are not valid!
+      return false;
+    }
     _setting = _setting.copyWith(onlineOrdersEnabled: val);
     notifyListeners();
     await SupabaseService.instance.updateStoreStatus(
       isOpen: _setting.isOpen,
       onlineOrdersEnabled: val,
+    );
+    return true;
+  }
+
+  /// Test Midtrans credentials interactively from UI
+  Future<bool> testMidtransConnection({
+    required String clientKey,
+    required String serverKey,
+    required bool isProduction,
+  }) async {
+    return await SupabaseService.instance.verifyMidtransCredentials(
+      clientKey: clientKey,
+      serverKey: serverKey,
+      isProduction: isProduction,
     );
   }
 

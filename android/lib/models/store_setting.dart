@@ -39,7 +39,10 @@ class StoreSetting {
     this.midtransIsProduction = false,
   });
 
-  bool get isOnlineActive => isOpen && onlineOrdersEnabled;
+  bool get isOnlineActive => isOpen && onlineOrdersEnabled && hasMidtransConfig;
+
+  bool get hasMidtransConfig =>
+      midtransClientKey.trim().isNotEmpty && midtransServerKey.trim().isNotEmpty;
 
   factory StoreSetting.fromMap(Map<String, dynamic> map) {
     return StoreSetting(

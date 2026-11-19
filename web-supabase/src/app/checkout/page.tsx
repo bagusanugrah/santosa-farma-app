@@ -316,12 +316,29 @@ export default function CheckoutPage() {
               </div>
             </div>
 
+            {!onlineOrdersEnabled && (
+              <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-800 flex items-start space-x-2">
+                <AlertCircle className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
+                <span>
+                  Layanan pemesanan obat online saat ini nonaktif (gateway pembayaran Midtrans belum aktif atau pesanan web dimatikan oleh apotek).
+                </span>
+              </div>
+            )}
+
             <button
               onClick={handlePayNow}
-              disabled={loading}
+              disabled={loading || !onlineOrdersEnabled || !isOpen}
               className="w-full py-3.5 bg-brand-600 hover:bg-brand-700 disabled:opacity-50 text-white font-bold rounded-xl sm:rounded-2xl transition shadow-lg shadow-brand-600/20 text-xs sm:text-sm flex items-center justify-center space-x-2"
             >
-              <span>{loading ? 'Menyiapkan Pembayaran...' : 'Bayar Sekarang (Midtrans)'}</span>
+              <span>
+                {loading
+                  ? 'Menyiapkan Pembayaran...'
+                  : !isOpen
+                  ? 'Apotek Sedang Tutup'
+                  : !onlineOrdersEnabled
+                  ? 'Pemesanan Online Nonaktif'
+                  : 'Bayar Sekarang (Midtrans)'}
+              </span>
               <ArrowRight className="w-4 h-4" />
             </button>
           </div>

@@ -29,6 +29,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   late final TextEditingController _midtransServerKeyCtrl;
   bool _midtransIsProduction = false;
   bool _isSavingIntegrations = false;
+  bool _isTestingMidtrans = false;
   bool _obscureFonnte = true;
   bool _obscureMailPass = true;
   bool _obscureMidtrans = true;
@@ -84,6 +85,54 @@ class _SettingsScreenState extends State<SettingsScreen> {
     super.dispose();
   }
 
+  Future<void> _handleTestMidtrans() async {
+    setState(() => _isTestingMidtrans = true);
+    final clientKey = _midtransClientKeyCtrl.text.trim();
+    final serverKey = _midtransServerKeyCtrl.text.trim();
+
+    if (clientKey.isEmpty || serverKey.isEmpty) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Client Key dan Server Key Midtrans tidak boleh kosong.'),
+            backgroundColor: Colors.amber,
+          ),
+        );
+      }
+      setState(() => _isTestingMidtrans = false);
+      return;
+    }
+
+    final isValid = await context.read<StoreProvider>().testMidtransConnection(
+          clientKey: clientKey,
+          serverKey: serverKey,
+          isProduction: _midtransIsProduction,
+        );
+
+    if (mounted) {
+      if (isValid) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Kredensial Midtrans Valid! Terhubung ke ${_midtransIsProduction ? "Production" : "Sandbox"} dengan sukses.',
+            ),
+            backgroundColor: const Color(0xFF059669),
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Kredensial Midtrans Tidak Valid atau ditolak (${_midtransIsProduction ? "Production" : "Sandbox"}). Periksa Server Key.',
+            ),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+      setState(() => _isTestingMidtrans = false);
+    }
+  }
+
   Future<void> _handleSaveIntegrations() async {
     setState(() => _isSavingIntegrations = true);
     try {
@@ -100,12 +149,22 @@ class _SettingsScreenState extends State<SettingsScreen> {
             midtransIsProduction: _midtransIsProduction,
           );
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Pengaturan WhatsApp, Email & Midtrans berhasil disimpan ke database!'),
-            backgroundColor: Color(0xFF059669),
-          ),
-        );
+        final store = context.read<StoreProvider>();
+        if (store.isMidtransValid) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Pengaturan tersimpan & Kredensial Midtrans VALID! QRIS dan Pemesanan Web aktif.'),
+              backgroundColor: Color(0xFF059669),
+            ),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Pengaturan tersimpan. Perhatian: Kredensial Midtrans kosong/invalid. Fitur QRIS & Pemesanan Web dinonaktifkan demi keamanan.'),
+              backgroundColor: Colors.amber,
+            ),
+          );
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -419,14 +478,30 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         contentPadding: EdgeInsets.zero,
                         title: const Text('Fitur Transaksi di Web Pelanggan', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
                         subtitle: Text(
-                          store.onlineOrdersEnabled
-                              ? 'Pelanggan dapat checkout dan memesan obat via website'
-                              : 'Transaksi online dinonaktifkan sementara (pelanggan hanya bisa melihat katalog)',
-                          style: TextStyle(fontSize: 12, color: store.onlineOrdersEnabled ? const Color(0xFF2563EB) : Colors.amber[800]),
+                          !store.isMidtransValid
+                              ? 'Terkunci: Kredensial Midtrans belum diisi atau belum valid. Lengkapi di bagian Integrasi agar transaksi web dapat diaktifkan.'
+                              : (store.onlineOrdersEnabled
+                                  ? 'Pelanggan dapat checkout dan memesan obat via website'
+                                  : 'Transaksi online dinonaktifkan sementara (pelanggan hanya bisa melihat katalog)'),
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: !store.isMidtransValid
+                                ? Colors.red[700]
+                                : (store.onlineOrdersEnabled ? const Color(0xFF2563EB) : Colors.amber[800]),
+                          ),
                         ),
                         value: store.onlineOrdersEnabled,
                         activeColor: const Color(0xFF2563EB),
-                        onChanged: (val) => store.toggleOnlineOrders(val),
+                        onChanged: store.isMidtransValid
+                            ? (val) => store.toggleOnlineOrders(val)
+                            : (val) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('Pemesanan web terkunci sebelum Kredensial Midtrans valid.'),
+                                    backgroundColor: Colors.red,
+                                  ),
+                                );
+                              },
                       ),
                     ],
                   ),
@@ -559,14 +634,71 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         const Divider(height: 28),
 
                         // Section 3: Midtrans Payment Gateway
-                        const Row(
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Icon(Icons.payment, color: Color(0xFF2563EB), size: 18),
-                            SizedBox(width: 8),
-                            Text('Payment Gateway (Midtrans Snap)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                            const Row(
+                              children: [
+                                Icon(Icons.payment, color: Color(0xFF2563EB), size: 18),
+                                SizedBox(width: 8),
+                                Text('Payment Gateway (Midtrans Snap)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                              ],
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: store.isMidtransValid ? const Color(0xFFECFDF5) : const Color(0xFFFEF2F2),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                  color: store.isMidtransValid ? const Color(0xFFA7F3D0) : const Color(0xFFFECACA),
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    store.isMidtransValid ? Icons.check_circle : Icons.warning_amber_rounded,
+                                    size: 13,
+                                    color: store.isMidtransValid ? const Color(0xFF059669) : const Color(0xFFDC2626),
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    store.isMidtransValid ? 'Midtrans Valid' : 'Belum Valid',
+                                    style: TextStyle(
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.bold,
+                                      color: store.isMidtransValid ? const Color(0xFF065F46) : const Color(0xFF991B1B),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
                           ],
                         ),
                         const SizedBox(height: 10),
+                        if (!store.isMidtransValid)
+                          Container(
+                            padding: const EdgeInsets.all(10),
+                            margin: const EdgeInsets.only(bottom: 12),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFFFFBEB),
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(color: const Color(0xFFFDE68A)),
+                            ),
+                            child: const Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Icon(Icons.info_outline, size: 16, color: Color(0xFFD97706)),
+                                SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    'Kredensial Midtrans belum valid atau masih kosong. Fitur QRIS di kasir dan Transaksi Web dinonaktifkan demi keamanan.',
+                                    style: TextStyle(fontSize: 11, color: Color(0xFF92400E), height: 1.3),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
                         TextField(
                           controller: _midtransClientKeyCtrl,
                           decoration: const InputDecoration(labelText: 'Midtrans Client Key', isDense: true),
@@ -596,7 +728,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           activeColor: Colors.red,
                           onChanged: (val) => setState(() => _midtransIsProduction = val),
                         ),
-                        const SizedBox(height: 16),
+                        const SizedBox(height: 12),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: OutlinedButton.icon(
+                                icon: _isTestingMidtrans
+                                    ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2))
+                                    : const Icon(Icons.sync_alt, size: 16),
+                                label: Text(_isTestingMidtrans ? 'Memverifikasi...' : 'Uji Kredensial Midtrans'),
+                                onPressed: _isTestingMidtrans ? null : _handleTestMidtrans,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
 
                         // Save Button
                         SizedBox(

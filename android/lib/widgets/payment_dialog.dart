@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import '../providers/auth_provider.dart';
 import '../providers/pos_provider.dart';
+import '../providers/store_provider.dart';
 import 'quick_cash_buttons.dart';
 import 'receipt_dialog.dart';
 
@@ -27,6 +28,9 @@ class _PaymentDialogState extends State<PaymentDialog> with SingleTickerProvider
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+    _tabController.addListener(() {
+      if (mounted) setState(() {});
+    });
     _cashAmount = widget.grandTotal;
     _cashController.text = widget.grandTotal.toStringAsFixed(0);
   }
@@ -41,6 +45,18 @@ class _PaymentDialogState extends State<PaymentDialog> with SingleTickerProvider
   double get changeAmount => _cashAmount >= widget.grandTotal ? _cashAmount - widget.grandTotal : 0.0;
 
   Future<void> _processPayment(String method) async {
+    if (method == 'qris') {
+      final isMidtransValid = context.read<StoreProvider>().isMidtransValid;
+      if (!isMidtransValid) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Pembayaran QRIS gagal: Kredensial Midtrans belum dikonfigurasi secara valid di Pengaturan Toko.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+    }
     if (method == 'tunai' && _cashAmount < widget.grandTotal) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -83,6 +99,9 @@ class _PaymentDialogState extends State<PaymentDialog> with SingleTickerProvider
 
   @override
   Widget build(BuildContext context) {
+    final isMidtransValid = context.watch<StoreProvider>().isMidtransValid;
+    final isQrisLocked = _tabController.index == 1 && !isMidtransValid;
+
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
       insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
@@ -150,9 +169,12 @@ class _PaymentDialogState extends State<PaymentDialog> with SingleTickerProvider
               indicatorColor: const Color(0xFF059669),
               indicatorWeight: 3,
               labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-              tabs: const [
-                Tab(icon: Icon(Icons.payments_outlined), text: 'Tunai (Cash)'),
-                Tab(icon: Icon(Icons.qr_code_2), text: 'QRIS Midtrans'),
+              tabs: [
+                const Tab(icon: Icon(Icons.payments_outlined), text: 'Tunai (Cash)'),
+                Tab(
+                  icon: Icon(isMidtransValid ? Icons.qr_code_2 : Icons.lock_outline),
+                  text: isMidtransValid ? 'QRIS Midtrans' : 'QRIS (Terkunci)',
+                ),
               ],
             ),
             const SizedBox(height: 16),
@@ -239,28 +261,61 @@ class _PaymentDialogState extends State<PaymentDialog> with SingleTickerProvider
                   ),
 
                   // Tab 2: QRIS
-                  Center(
-                    child: SingleChildScrollView(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          QrImageView(
-                            data: '00020101021226580016ID.CO.SHOPEE.WWW01189360099800000000000208MOCKQRIS520458125303360540${widget.grandTotal.toInt()}5802ID5919Apotek Santosa Farma6006SUBANG6304',
-                            version: QrVersions.auto,
-                            size: 160.0,
-                            eyeStyle: const QrEyeStyle(eyeShape: QrEyeShape.square, color: Color(0xFF0F172A)),
-                            dataModuleStyle: const QrDataModuleStyle(dataModuleShape: QrDataModuleShape.square, color: Color(0xFF0F172A)),
+                  if (!isMidtransValid)
+                    Center(
+                      child: SingleChildScrollView(
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(16),
+                                decoration: const BoxDecoration(
+                                  color: Color(0xFFFEF2F2),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(Icons.lock_outline, size: 44, color: Color(0xFFDC2626)),
+                              ),
+                              const SizedBox(height: 14),
+                              const Text(
+                                'Fitur QRIS Dinonaktifkan',
+                                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Color(0xFF1E293B)),
+                              ),
+                              const SizedBox(height: 6),
+                              const Text(
+                                'Kredensial Midtrans belum diisi atau belum valid di Pengaturan Toko. Demi keamanan kasir hanya dapat memproses pembayaran Tunai.',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(fontSize: 11, color: Color(0xFF64748B), height: 1.4),
+                              ),
+                            ],
                           ),
-                          const SizedBox(height: 10),
-                          const Text(
-                            'Scan menggunakan BCA, Mandiri, GoPay, OVO, atau ShopeePay',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(fontSize: 11, color: Color(0xFF64748B)),
-                          ),
-                        ],
+                        ),
+                      ),
+                    )
+                  else
+                    Center(
+                      child: SingleChildScrollView(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            QrImageView(
+                              data: '00020101021226580016ID.CO.SHOPEE.WWW01189360099800000000000208MOCKQRIS520458125303360540${widget.grandTotal.toInt()}5802ID5919Apotek Santosa Farma6006SUBANG6304',
+                              version: QrVersions.auto,
+                              size: 160.0,
+                              eyeStyle: const QrEyeStyle(eyeShape: QrEyeShape.square, color: Color(0xFF0F172A)),
+                              dataModuleStyle: const QrDataModuleStyle(dataModuleShape: QrDataModuleShape.square, color: Color(0xFF0F172A)),
+                            ),
+                            const SizedBox(height: 10),
+                            const Text(
+                              'Scan menggunakan BCA, Mandiri, GoPay, OVO, atau ShopeePay',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(fontSize: 11, color: Color(0xFF64748B)),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
-                  ),
                 ],
               ),
             ),
@@ -268,14 +323,23 @@ class _PaymentDialogState extends State<PaymentDialog> with SingleTickerProvider
 
             // Pay Button
             FilledButton.icon(
+              style: isQrisLocked
+                  ? FilledButton.styleFrom(backgroundColor: const Color(0xFF94A3B8))
+                  : null,
               icon: _isProcessing
                   ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                  : const Icon(Icons.check_circle_outline),
+                  : Icon(isQrisLocked ? Icons.lock_outline : Icons.check_circle_outline),
               label: FittedBox(
                 fit: BoxFit.scaleDown,
-                child: Text(_isProcessing ? 'Memproses...' : 'Selesaikan Pembayaran & Cetak Struk'),
+                child: Text(
+                  _isProcessing
+                      ? 'Memproses...'
+                      : (isQrisLocked
+                          ? 'QRIS Midtrans Belum Aktif'
+                          : 'Selesaikan Pembayaran & Cetak Struk'),
+                ),
               ),
-              onPressed: _isProcessing
+              onPressed: (_isProcessing || isQrisLocked)
                   ? null
                   : () {
                       final method = _tabController.index == 0 ? 'tunai' : 'qris';
