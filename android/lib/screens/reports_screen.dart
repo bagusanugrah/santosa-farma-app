@@ -85,7 +85,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                 ),
               ),
               IconButton(
-                icon: const Icon(Icons.refresh, color: Color(0xFF047857)),
+                icon: const Icon(Icons.refresh, color: Color(0xFF0E7490)),
                 onPressed: _loadReports,
               ),
             ],
@@ -97,7 +97,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
         Expanded(
           child: RefreshIndicator(
             onRefresh: _loadReports,
-            color: const Color(0xFF059669),
+            color: const Color(0xFF0891B2),
             child: CustomScrollView(
               physics: const AlwaysScrollableScrollPhysics(),
               slivers: [
@@ -118,8 +118,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                     'Total Omset Penjualan',
                                     currency.format(totalOmset),
                                     Icons.account_balance_wallet,
-                                    const Color(0xFF059669),
-                                    const Color(0xFFECFDF5),
+                                    const Color(0xFF0891B2),
+                                    const Color(0xFFECFEFF),
                                   ),
                                 ),
                                 const SizedBox(width: 12),
@@ -180,7 +180,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                 if (_isLoading)
                   const SliverFillRemaining(
                     hasScrollBody: false,
-                    child: Center(child: CircularProgressIndicator(color: Color(0xFF059669))),
+                    child: Center(child: CircularProgressIndicator(color: Color(0xFF0891B2))),
                   )
                 else if (_transactions.isEmpty)
                   const SliverFillRemaining(
@@ -214,12 +214,12 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                     leading: Container(
                                       padding: const EdgeInsets.all(8),
                                       decoration: BoxDecoration(
-                                        color: trx.isOnline ? const Color(0xFFEFF6FF) : const Color(0xFFECFDF5),
+                                        color: trx.isOnline ? const Color(0xFFEFF6FF) : const Color(0xFFECFEFF),
                                         borderRadius: BorderRadius.circular(10),
                                       ),
                                       child: Icon(
                                         trx.isOnline ? Icons.shopping_bag : Icons.point_of_sale,
-                                        color: trx.isOnline ? const Color(0xFF2563EB) : const Color(0xFF059669),
+                                        color: trx.isOnline ? const Color(0xFF2563EB) : const Color(0xFF0891B2),
                                         size: 20,
                                       ),
                                     ),
@@ -237,7 +237,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                         const SizedBox(width: 8),
                                         Text(
                                           currency.format(trx.total),
-                                          style: const TextStyle(fontWeight: FontWeight.w900, color: Color(0xFF047857), fontSize: 13),
+                                          style: const TextStyle(fontWeight: FontWeight.w900, color: Color(0xFF0E7490), fontSize: 13),
                                         ),
                                       ],
                                     ),
@@ -291,9 +291,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
       labelStyle: TextStyle(
         fontSize: 12,
         fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-        color: isSelected ? const Color(0xFF047857) : const Color(0xFF475569),
+        color: isSelected ? const Color(0xFF0E7490) : const Color(0xFF475569),
       ),
-      selectedColor: const Color(0xFFDCFCE7),
+      selectedColor: const Color(0xFFCFFAFE),
       backgroundColor: Colors.white,
       side: BorderSide(color: isSelected ? const Color(0xFF86EFAC) : const Color(0xFFE2E8F0)),
       onSelected: (_) {

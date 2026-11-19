@@ -142,7 +142,7 @@ class ReceiptDialog extends StatelessWidget {
                     const Text('Total Pembayaran', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 13)),
                     Text(
                       currency.format(transaction.total),
-                      style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16, color: Color(0xFF047857)),
+                      style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16, color: Color(0xFF0E7490)),
                     ),
                   ],
                 ),

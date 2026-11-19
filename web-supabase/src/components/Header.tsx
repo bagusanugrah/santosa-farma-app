@@ -17,11 +17,13 @@ export default function Header() {
       <div className="max-w-7xl mx-auto px-3.5 sm:px-6 lg:px-8 h-14 sm:h-16 flex items-center justify-between">
         {/* Brand Logo */}
         <Link href="/" className="flex items-center space-x-2.5 sm:space-x-3 group min-w-0">
-          <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-brand-600 flex items-center justify-center text-white shadow-md group-hover:bg-brand-700 transition flex-shrink-0">
-            <span className="font-black text-lg sm:text-xl">✚</span>
-          </div>
+          <img
+            src="/icon.png"
+            alt="Logo Apotek Santosa Farma"
+            className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl object-contain shadow-xs border border-slate-100 flex-shrink-0"
+          />
           <div className="min-w-0">
-            <h1 className="font-extrabold text-slate-900 text-sm sm:text-lg leading-tight tracking-tight truncate">
+            <h1 className="font-extrabold text-slate-900 text-sm sm:text-lg leading-tight tracking-tight truncate group-hover:text-brand-600 transition">
               Apotek Santosa Farma
             </h1>
             <p className="text-[11px] text-slate-500 font-medium hidden sm:block">Jalancagak, Subang</p>

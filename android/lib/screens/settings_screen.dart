@@ -116,7 +116,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             content: Text(
               'Kredensial Midtrans Valid! Terhubung ke ${_midtransIsProduction ? "Production" : "Sandbox"} dengan sukses.',
             ),
-            backgroundColor: const Color(0xFF059669),
+            backgroundColor: const Color(0xFF0891B2),
           ),
         );
       } else {
@@ -154,7 +154,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text('Pengaturan tersimpan & Kredensial Midtrans VALID! QRIS dan Pemesanan Web aktif.'),
-              backgroundColor: Color(0xFF059669),
+              backgroundColor: Color(0xFF0891B2),
             ),
           );
         } else {
@@ -200,7 +200,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Data berhasil dipulihkan dari file backup!'),
-            backgroundColor: Color(0xFF059669),
+            backgroundColor: Color(0xFF0891B2),
           ),
         );
       }
@@ -291,7 +291,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text('Reset Pabrik berhasil diselesaikan. Data telah kembali ke setelan awal.'),
-              backgroundColor: Color(0xFF059669),
+              backgroundColor: Color(0xFF0891B2),
             ),
           );
         }
@@ -390,13 +390,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         children: [
                           CircleAvatar(
                             radius: isCompact ? 24 : 28,
-                            backgroundColor: const Color(0xFFECFDF5),
+                            backgroundColor: const Color(0xFFECFEFF),
                             child: Text(
                               userInitial,
                               style: TextStyle(
                                 fontSize: isCompact ? 20 : 24,
                                 fontWeight: FontWeight.bold,
-                                color: const Color(0xFF059669),
+                                color: const Color(0xFF0891B2),
                               ),
                             ),
                           ),
@@ -470,7 +470,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           style: TextStyle(fontSize: 12, color: store.isOpen ? const Color(0xFF16A34A) : Colors.red),
                         ),
                         value: store.isOpen,
-                        activeColor: const Color(0xFF059669),
+                        activeColor: const Color(0xFF0891B2),
                         onChanged: (val) => store.toggleStoreOpen(val),
                       ),
                       const Divider(height: 16),
@@ -522,10 +522,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             Container(
                               padding: const EdgeInsets.all(8),
                               decoration: BoxDecoration(
-                                color: const Color(0xFFECFDF5),
+                                color: const Color(0xFFECFEFF),
                                 borderRadius: BorderRadius.circular(8),
                               ),
-                              child: const Icon(Icons.admin_panel_settings, color: Color(0xFF059669), size: 20),
+                              child: const Icon(Icons.admin_panel_settings, color: Color(0xFF0891B2), size: 20),
                             ),
                             const SizedBox(width: 12),
                             const Expanded(
@@ -647,10 +647,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                               decoration: BoxDecoration(
-                                color: store.isMidtransValid ? const Color(0xFFECFDF5) : const Color(0xFFFEF2F2),
+                                color: store.isMidtransValid ? const Color(0xFFECFEFF) : const Color(0xFFFEF2F2),
                                 borderRadius: BorderRadius.circular(12),
                                 border: Border.all(
-                                  color: store.isMidtransValid ? const Color(0xFFA7F3D0) : const Color(0xFFFECACA),
+                                  color: store.isMidtransValid ? const Color(0xFFA5F3FC) : const Color(0xFFFECACA),
                                 ),
                               ),
                               child: Row(
@@ -659,7 +659,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                   Icon(
                                     store.isMidtransValid ? Icons.check_circle : Icons.warning_amber_rounded,
                                     size: 13,
-                                    color: store.isMidtransValid ? const Color(0xFF059669) : const Color(0xFFDC2626),
+                                    color: store.isMidtransValid ? const Color(0xFF0891B2) : const Color(0xFFDC2626),
                                   ),
                                   const SizedBox(width: 4),
                                   Text(
@@ -667,7 +667,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                     style: TextStyle(
                                       fontSize: 10,
                                       fontWeight: FontWeight.bold,
-                                      color: store.isMidtransValid ? const Color(0xFF065F46) : const Color(0xFF991B1B),
+                                      color: store.isMidtransValid ? const Color(0xFF155E75) : const Color(0xFF991B1B),
                                     ),
                                   ),
                                 ],
@@ -749,7 +749,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           width: double.infinity,
                           child: FilledButton.icon(
                             style: FilledButton.styleFrom(
-                              backgroundColor: const Color(0xFF059669),
+                              backgroundColor: const Color(0xFF0891B2),
                               padding: const EdgeInsets.symmetric(vertical: 14),
                             ),
                             icon: _isSavingIntegrations
@@ -783,8 +783,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       _buildDataActionTile(
                         isCompact: isCompact,
                         icon: Icons.cloud_upload_outlined,
-                        iconColor: const Color(0xFF059669),
-                        iconBg: const Color(0xFFECFDF5),
+                        iconColor: const Color(0xFF0891B2),
+                        iconBg: const Color(0xFFECFEFF),
                         title: 'Cadangkan Database (ZIP / Drive)',
                         subtitle: 'Export seluruh data ke file ZIP dan bagikan ke Drive atau WhatsApp',
                         actionButton: FilledButton.icon(

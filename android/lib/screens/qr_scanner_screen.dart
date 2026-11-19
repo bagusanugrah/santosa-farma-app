@@ -43,7 +43,7 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Pesanan ${trx.invoiceNo} berhasil diserah-terimakan!'),
-            backgroundColor: const Color(0xFF059669),
+            backgroundColor: const Color(0xFF0891B2),
           ),
         );
       } else {
@@ -155,7 +155,7 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
                     width: frameSize,
                     height: frameSize,
                     decoration: BoxDecoration(
-                      border: Border.all(color: const Color(0xFF059669), width: 3),
+                      border: Border.all(color: const Color(0xFF0891B2), width: 3),
                       borderRadius: BorderRadius.circular(24),
                     ),
                   ),

@@ -27,7 +27,7 @@ class PosScreen extends StatelessWidget {
               TextField(
                 decoration: InputDecoration(
                   hintText: 'Cari nama obat (misal: Amoxicillin, Bodrex)...',
-                  prefixIcon: const Icon(Icons.search, color: Color(0xFF059669)),
+                  prefixIcon: const Icon(Icons.search, color: Color(0xFF0891B2)),
                   suffixIcon: posProvider.searchQuery.isNotEmpty
                       ? IconButton(
                           icon: const Icon(Icons.clear),
@@ -56,12 +56,12 @@ class PosScreen extends StatelessWidget {
                       labelStyle: TextStyle(
                         fontSize: 12,
                         fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
-                        color: isSelected ? const Color(0xFF047857) : const Color(0xFF475569),
+                        color: isSelected ? const Color(0xFF0E7490) : const Color(0xFF475569),
                       ),
                       backgroundColor: Colors.white,
-                      selectedColor: const Color(0xFFDCFCE7),
+                      selectedColor: const Color(0xFFCFFAFE),
                       side: BorderSide(
-                        color: isSelected ? const Color(0xFF86EFAC) : const Color(0xFFE2E8F0),
+                        color: isSelected ? const Color(0xFFA5F3FC) : const Color(0xFFE2E8F0),
                         width: isSelected ? 1.5 : 1,
                       ),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
@@ -78,7 +78,7 @@ class PosScreen extends StatelessWidget {
         Expanded(
           child: posProvider.isLoading
               ? const Center(
-                  child: CircularProgressIndicator(color: Color(0xFF059669)),
+                  child: CircularProgressIndicator(color: Color(0xFF0891B2)),
                 )
               : posProvider.products.isEmpty
                   ? Center(
@@ -101,7 +101,7 @@ class PosScreen extends StatelessWidget {
                     )
                   : RefreshIndicator(
                       onRefresh: () => posProvider.loadProducts(),
-                      color: const Color(0xFF059669),
+                      color: const Color(0xFF0891B2),
                       child: GridView.builder(
                         padding: const EdgeInsets.all(12),
                         gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
@@ -153,10 +153,10 @@ class PosScreen extends StatelessWidget {
             right: 16,
             bottom: 12,
             child: Material(
-              color: const Color(0xFF047857),
+              color: const Color(0xFF0E7490),
               borderRadius: BorderRadius.circular(20),
               elevation: 8,
-              shadowColor: const Color(0xFF059669).withOpacity(0.4),
+              shadowColor: const Color(0xFF0891B2).withOpacity(0.4),
               child: InkWell(
                 borderRadius: BorderRadius.circular(20),
                 onTap: () {

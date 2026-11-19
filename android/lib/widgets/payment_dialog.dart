@@ -133,9 +133,9 @@ class _PaymentDialogState extends State<PaymentDialog> with SingleTickerProvider
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
               decoration: BoxDecoration(
-                color: const Color(0xFFECFDF5),
+                color: const Color(0xFFECFEFF),
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: const Color(0xFFA7F3D0)),
+                border: Border.all(color: const Color(0xFFA5F3FC)),
               ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -145,7 +145,7 @@ class _PaymentDialogState extends State<PaymentDialog> with SingleTickerProvider
                       'Total yang Harus Dibayar',
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: TextStyle(fontSize: 13, color: Color(0xFF065F46), fontWeight: FontWeight.w600),
+                      style: TextStyle(fontSize: 13, color: Color(0xFF155E75), fontWeight: FontWeight.w600),
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -153,7 +153,7 @@ class _PaymentDialogState extends State<PaymentDialog> with SingleTickerProvider
                     fit: BoxFit.scaleDown,
                     child: Text(
                       currency.format(widget.grandTotal),
-                      style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: Color(0xFF047857)),
+                      style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: Color(0xFF0E7490)),
                     ),
                   ),
                 ],
@@ -164,9 +164,9 @@ class _PaymentDialogState extends State<PaymentDialog> with SingleTickerProvider
             // Tab Bar
             TabBar(
               controller: _tabController,
-              labelColor: const Color(0xFF047857),
+              labelColor: const Color(0xFF0E7490),
               unselectedLabelColor: const Color(0xFF64748B),
-              indicatorColor: const Color(0xFF059669),
+              indicatorColor: const Color(0xFF0891B2),
               indicatorWeight: 3,
               labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
               tabs: [
@@ -219,10 +219,10 @@ class _PaymentDialogState extends State<PaymentDialog> with SingleTickerProvider
                         Container(
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
-                            color: _cashAmount >= widget.grandTotal ? const Color(0xFFF0FDF4) : const Color(0xFFFEF2F2),
+                            color: _cashAmount >= widget.grandTotal ? const Color(0xFFECFEFF) : const Color(0xFFFEF2F2),
                             borderRadius: BorderRadius.circular(12),
                             border: Border.all(
-                              color: _cashAmount >= widget.grandTotal ? const Color(0xFFBBF7D0) : const Color(0xFFFECACA),
+                              color: _cashAmount >= widget.grandTotal ? const Color(0xFFA5F3FC) : const Color(0xFFFECACA),
                             ),
                           ),
                           child: Row(
@@ -233,7 +233,7 @@ class _PaymentDialogState extends State<PaymentDialog> with SingleTickerProvider
                                 style: TextStyle(
                                   fontWeight: FontWeight.bold,
                                   fontSize: 13,
-                                  color: _cashAmount >= widget.grandTotal ? const Color(0xFF15803D) : Colors.red[800],
+                                  color: _cashAmount >= widget.grandTotal ? const Color(0xFF0E7490) : Colors.red[800],
                                 ),
                               ),
                               const SizedBox(width: 8),
@@ -248,7 +248,7 @@ class _PaymentDialogState extends State<PaymentDialog> with SingleTickerProvider
                                     style: TextStyle(
                                       fontWeight: FontWeight.w900,
                                       fontSize: 16,
-                                      color: _cashAmount >= widget.grandTotal ? const Color(0xFF16A34A) : Colors.red[800],
+                                      color: _cashAmount >= widget.grandTotal ? const Color(0xFF0891B2) : Colors.red[800],
                                     ),
                                   ),
                                 ),

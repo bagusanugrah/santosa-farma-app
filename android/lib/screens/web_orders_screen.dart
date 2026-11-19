@@ -101,7 +101,7 @@ class _WebOrdersScreenState extends State<WebOrdersScreen> with SingleTickerProv
                   icon: const Icon(Icons.qr_code_scanner),
                   label: const Text('Scan QR Pengambilan Obat'),
                   style: FilledButton.styleFrom(
-                    backgroundColor: const Color(0xFF047857),
+                    backgroundColor: const Color(0xFF0E7490),
                     padding: const EdgeInsets.symmetric(vertical: 14),
                   ),
                   onPressed: () {
@@ -114,7 +114,7 @@ class _WebOrdersScreenState extends State<WebOrdersScreen> with SingleTickerProv
               const SizedBox(width: 12),
               IconButton.outlined(
                 tooltip: 'Muat Ulang Pesanan',
-                icon: const Icon(Icons.refresh, color: Color(0xFF047857)),
+                icon: const Icon(Icons.refresh, color: Color(0xFF0E7490)),
                 onPressed: () => webOrdersProvider.loadOrders(),
               ),
             ],
@@ -127,9 +127,9 @@ class _WebOrdersScreenState extends State<WebOrdersScreen> with SingleTickerProv
           child: TabBar(
             controller: _tabController,
             isScrollable: true,
-            labelColor: const Color(0xFF047857),
+            labelColor: const Color(0xFF0E7490),
             unselectedLabelColor: const Color(0xFF64748B),
-            indicatorColor: const Color(0xFF059669),
+            indicatorColor: const Color(0xFF0891B2),
             indicatorWeight: 3,
             labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
             tabs: [
@@ -145,7 +145,7 @@ class _WebOrdersScreenState extends State<WebOrdersScreen> with SingleTickerProv
         // Orders List
         Expanded(
           child: webOrdersProvider.isLoading
-              ? const Center(child: CircularProgressIndicator(color: Color(0xFF059669)))
+              ? const Center(child: CircularProgressIndicator(color: Color(0xFF0891B2)))
               : TabBarView(
                   controller: _tabController,
                   children: List.generate(4, (tabIndex) {
@@ -179,7 +179,7 @@ class _WebOrdersScreenState extends State<WebOrdersScreen> with SingleTickerProv
 
                     return RefreshIndicator(
                       onRefresh: () => webOrdersProvider.loadOrders(),
-                      color: const Color(0xFF059669),
+                      color: const Color(0xFF0891B2),
                       child: ListView.separated(
                         padding: const EdgeInsets.all(16),
                         itemCount: filtered.length,
@@ -316,7 +316,7 @@ class _WebOrdersScreenState extends State<WebOrdersScreen> with SingleTickerProv
                                           const Text('Total Pesanan', style: TextStyle(fontSize: 11, color: Color(0xFF64748B))),
                                           Text(
                                             currency.format(order.total),
-                                            style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16, color: Color(0xFF047857)),
+                                            style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16, color: Color(0xFF0E7490)),
                                           ),
                                         ],
                                       ),
@@ -327,7 +327,7 @@ class _WebOrdersScreenState extends State<WebOrdersScreen> with SingleTickerProv
                                             FilledButton.icon(
                                               icon: const Icon(Icons.handshake, size: 16),
                                               label: const Text('Serah Terima Obat'),
-                                              style: FilledButton.styleFrom(backgroundColor: const Color(0xFF059669)),
+                                              style: FilledButton.styleFrom(backgroundColor: const Color(0xFF0891B2)),
                                               onPressed: () async {
                                                 final updated = await webOrdersProvider.verifyPickup(order.invoiceNo);
                                                 if (updated != null) {

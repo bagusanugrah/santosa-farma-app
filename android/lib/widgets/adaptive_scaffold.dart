@@ -32,7 +32,7 @@ class AdaptiveScaffold extends StatelessWidget {
     final destinations = [
       const NavigationDestination(
         icon: Icon(Icons.point_of_sale_outlined),
-        selectedIcon: Icon(Icons.point_of_sale, color: Color(0xFF047857)),
+        selectedIcon: Icon(Icons.point_of_sale, color: Color(0xFF0E7490)),
         label: 'Kasir',
       ),
       NavigationDestination(
@@ -46,23 +46,23 @@ class AdaptiveScaffold extends StatelessWidget {
           isLabelVisible: webOrdersProvider.pendingPickupCount > 0,
           label: Text('${webOrdersProvider.pendingPickupCount}'),
           backgroundColor: Colors.amber[700],
-          child: const Icon(Icons.shopping_bag, color: Color(0xFF047857)),
+          child: const Icon(Icons.shopping_bag, color: Color(0xFF0E7490)),
         ),
         label: 'Pesanan',
       ),
       const NavigationDestination(
         icon: Icon(Icons.medication_outlined),
-        selectedIcon: Icon(Icons.medication, color: Color(0xFF047857)),
+        selectedIcon: Icon(Icons.medication, color: Color(0xFF0E7490)),
         label: 'Obat',
       ),
       const NavigationDestination(
         icon: Icon(Icons.bar_chart_outlined),
-        selectedIcon: Icon(Icons.bar_chart, color: Color(0xFF047857)),
+        selectedIcon: Icon(Icons.bar_chart, color: Color(0xFF0E7490)),
         label: 'Laporan',
       ),
       const NavigationDestination(
         icon: Icon(Icons.settings_outlined),
-        selectedIcon: Icon(Icons.settings, color: Color(0xFF047857)),
+        selectedIcon: Icon(Icons.settings, color: Color(0xFF0E7490)),
         label: 'Setelan',
       ),
     ];
@@ -114,10 +114,10 @@ class AdaptiveScaffold extends StatelessWidget {
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
             decoration: BoxDecoration(
-              color: storeProvider.isOpen ? const Color(0xFFECFDF5) : const Color(0xFFFEF2F2),
+              color: storeProvider.isOpen ? const Color(0xFFECFEFF) : const Color(0xFFFEF2F2),
               borderRadius: BorderRadius.circular(20),
               border: Border.all(
-                color: storeProvider.isOpen ? const Color(0xFFA7F3D0) : const Color(0xFFFECACA),
+                color: storeProvider.isOpen ? const Color(0xFFA5F3FC) : const Color(0xFFFECACA),
               ),
             ),
             child: Row(
@@ -126,7 +126,7 @@ class AdaptiveScaffold extends StatelessWidget {
                 Icon(
                   Icons.storefront,
                   size: 16,
-                  color: storeProvider.isOpen ? const Color(0xFF059669) : Colors.red[700],
+                  color: storeProvider.isOpen ? const Color(0xFF0891B2) : Colors.red[700],
                 ),
                 const SizedBox(width: 6),
                 Text(
@@ -134,7 +134,7 @@ class AdaptiveScaffold extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.w800,
-                    color: storeProvider.isOpen ? const Color(0xFF047857) : Colors.red[800],
+                    color: storeProvider.isOpen ? const Color(0xFF0E7490) : Colors.red[800],
                   ),
                 ),
                 Transform.scale(
@@ -142,7 +142,7 @@ class AdaptiveScaffold extends StatelessWidget {
                   child: Switch(
                     value: storeProvider.isOpen,
                     onChanged: (val) => storeProvider.toggleStoreOpen(val),
-                    activeColor: const Color(0xFF059669),
+                    activeColor: const Color(0xFF0891B2),
                   ),
                 ),
               ],
@@ -243,13 +243,13 @@ class AdaptiveScaffold extends StatelessWidget {
                       title: const Text('Status Buka Apotek', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
                       subtitle: Text(
                         sp.isOpen ? 'Apotek sedang BUKA melayani pembeli' : 'Apotek sedang TUTUP',
-                        style: TextStyle(fontSize: 12, color: sp.isOpen ? const Color(0xFF047857) : Colors.red),
+                        style: TextStyle(fontSize: 12, color: sp.isOpen ? const Color(0xFF0E7490) : Colors.red),
                       ),
                       secondary: Icon(
                         Icons.storefront,
-                        color: sp.isOpen ? const Color(0xFF059669) : Colors.red,
+                        color: sp.isOpen ? const Color(0xFF0891B2) : Colors.red,
                       ),
-                      activeColor: const Color(0xFF059669),
+                      activeColor: const Color(0xFF0891B2),
                     ),
                     const Divider(),
                     SwitchListTile(
@@ -298,10 +298,10 @@ class AdaptiveScaffold extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
         decoration: BoxDecoration(
-          color: storeProvider.isOpen ? const Color(0xFFECFDF5) : const Color(0xFFFEF2F2),
+          color: storeProvider.isOpen ? const Color(0xFFECFEFF) : const Color(0xFFFEF2F2),
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: storeProvider.isOpen ? const Color(0xFFA7F3D0) : const Color(0xFFFECACA),
+            color: storeProvider.isOpen ? const Color(0xFFA5F3FC) : const Color(0xFFFECACA),
           ),
         ),
         child: Row(
@@ -310,7 +310,7 @@ class AdaptiveScaffold extends StatelessWidget {
             Icon(
               Icons.storefront,
               size: 15,
-              color: storeProvider.isOpen ? const Color(0xFF059669) : Colors.red[700],
+              color: storeProvider.isOpen ? const Color(0xFF0891B2) : Colors.red[700],
             ),
             const SizedBox(width: 4),
             Text(
@@ -318,7 +318,7 @@ class AdaptiveScaffold extends StatelessWidget {
               style: TextStyle(
                 fontSize: 10,
                 fontWeight: FontWeight.w800,
-                color: storeProvider.isOpen ? const Color(0xFF047857) : Colors.red[800],
+                color: storeProvider.isOpen ? const Color(0xFF0E7490) : Colors.red[800],
               ),
             ),
             const SizedBox(width: 6),
@@ -341,13 +341,14 @@ class AdaptiveScaffold extends StatelessWidget {
         appBar: AppBar(
           title: Row(
             children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFECFDF5),
-                  borderRadius: BorderRadius.circular(12),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(10),
+                child: Image.asset(
+                  'assets/icon/app_icon.png',
+                  width: 36,
+                  height: 36,
+                  fit: BoxFit.cover,
                 ),
-                child: const Icon(Icons.local_pharmacy, color: Color(0xFF059669), size: 22),
               ),
               const SizedBox(width: 12),
               Expanded(

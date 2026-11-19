@@ -40,7 +40,7 @@ class ProductCard extends StatelessWidget {
                       placeholder: (context, url) => Container(
                         color: const Color(0xFFF1F5F9),
                         child: const Center(
-                          child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF059669)),
+                          child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF0891B2)),
                         ),
                       ),
                       errorWidget: (context, url, error) => _buildPlaceholder(),
@@ -112,7 +112,7 @@ class ProductCard extends StatelessWidget {
                       child: Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
-                          color: const Color(0xFF059669),
+                          color: const Color(0xFF0891B2),
                           borderRadius: BorderRadius.circular(12),
                           boxShadow: [
                             BoxShadow(
@@ -160,14 +160,14 @@ class ProductCard extends StatelessWidget {
                               style: const TextStyle(
                                 fontWeight: FontWeight.w900,
                                 fontSize: 14,
-                                color: Color(0xFF047857),
+                                color: Color(0xFF0E7490),
                               ),
                             ),
                           ),
                         ),
                         const SizedBox(width: 4),
                         Material(
-                          color: isOutOfStock ? const Color(0xFFE2E8F0) : const Color(0xFF059669),
+                          color: isOutOfStock ? const Color(0xFFE2E8F0) : const Color(0xFF0891B2),
                           borderRadius: BorderRadius.circular(10),
                           child: InkWell(
                             onTap: isOutOfStock ? null : onAddToCart,

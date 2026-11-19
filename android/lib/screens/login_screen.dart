@@ -70,27 +70,28 @@ class _LoginScreenState extends State<LoginScreen> {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    // Brand Icon
+                    // Official Brand Logo
                     Center(
                       child: Container(
-                        width: 72,
-                        height: 72,
+                        width: 84,
+                        height: 84,
                         decoration: BoxDecoration(
-                          gradient: const LinearGradient(
-                            colors: [Color(0xFF059669), Color(0xFF047857)],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                          ),
-                          borderRadius: BorderRadius.circular(22),
+                          shape: BoxShape.circle,
+                          color: Colors.white,
                           boxShadow: [
                             BoxShadow(
-                              color: const Color(0xFF059669).withOpacity(0.3),
-                              blurRadius: 16,
-                              offset: const Offset(0, 8),
+                              color: const Color(0xFF0891B2).withOpacity(0.2),
+                              blurRadius: 18,
+                              offset: const Offset(0, 6),
                             ),
                           ],
                         ),
-                        child: const Icon(Icons.local_pharmacy, color: Colors.white, size: 38),
+                        child: ClipOval(
+                          child: Image.asset(
+                            'assets/icon/app_icon.png',
+                            fit: BoxFit.cover,
+                          ),
+                        ),
                       ),
                     ),
                     const SizedBox(height: 20),

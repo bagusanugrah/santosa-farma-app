@@ -79,7 +79,7 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
               const Text('Ambil Foto Obat', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
               const SizedBox(height: 16),
               ListTile(
-                leading: const Icon(Icons.camera_alt, color: Color(0xFF059669)),
+                leading: const Icon(Icons.camera_alt, color: Color(0xFF0891B2)),
                 title: const Text('Buka Kamera HP'),
                 onTap: () {
                   Navigator.of(context).pop();
@@ -87,7 +87,7 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
                 },
               ),
               ListTile(
-                leading: const Icon(Icons.photo_library, color: Color(0xFF059669)),
+                leading: const Icon(Icons.photo_library, color: Color(0xFF0891B2)),
                 title: const Text('Pilih dari Galeri Foto'),
                 onTap: () {
                   Navigator.of(context).pop();
@@ -145,7 +145,7 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(widget.product == null ? 'Obat baru berhasil ditambahkan!' : 'Data obat berhasil diperbarui!'),
-            backgroundColor: const Color(0xFF059669),
+            backgroundColor: const Color(0xFF0891B2),
           ),
         );
       }
@@ -225,7 +225,7 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
                           right: 4,
                           bottom: 4,
                           child: Material(
-                            color: const Color(0xFF059669),
+                            color: const Color(0xFF0891B2),
                             shape: const CircleBorder(),
                             child: InkWell(
                               customBorder: const CircleBorder(),

@@ -97,7 +97,7 @@ class SantosaPosApp extends StatelessWidget {
               return const Scaffold(
                 backgroundColor: Color(0xFFF8FAFC),
                 body: Center(
-                  child: CircularProgressIndicator(color: Color(0xFF059669)),
+                  child: CircularProgressIndicator(color: Color(0xFF0891B2)),
                 ),
               );
             }

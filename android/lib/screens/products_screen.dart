@@ -67,7 +67,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       floatingActionButton: FloatingActionButton.extended(
-        backgroundColor: const Color(0xFF047857),
+        backgroundColor: const Color(0xFF0E7490),
         icon: const Icon(Icons.add, color: Colors.white),
         label: const Text('Tambah Obat', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
         onPressed: () async {
@@ -86,7 +86,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
             child: TextField(
               decoration: InputDecoration(
                 hintText: 'Cari obat...',
-                prefixIcon: const Icon(Icons.search, color: Color(0xFF059669)),
+                prefixIcon: const Icon(Icons.search, color: Color(0xFF0891B2)),
                 suffixIcon: _search.isNotEmpty
                     ? IconButton(
                         icon: const Icon(Icons.clear),
@@ -108,14 +108,14 @@ class _ProductsScreenState extends State<ProductsScreen> {
           // Products List
           Expanded(
             child: _isLoading
-                ? const Center(child: CircularProgressIndicator(color: Color(0xFF059669)))
+                ? const Center(child: CircularProgressIndicator(color: Color(0xFF0891B2)))
                 : _products.isEmpty
                     ? const Center(
                         child: Text('Tidak ada data obat', style: TextStyle(color: Color(0xFF64748B))),
                       )
                     : RefreshIndicator(
                         onRefresh: _loadProducts,
-                        color: const Color(0xFF059669),
+                        color: const Color(0xFF0891B2),
                         child: ListView.separated(
                           padding: const EdgeInsets.fromLTRB(16, 16, 16, 88),
                           itemCount: _products.length,
@@ -186,7 +186,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
                                         const SizedBox(height: 4),
                                         Text(
                                           currency.format(product.price),
-                                          style: const TextStyle(fontWeight: FontWeight.w900, color: Color(0xFF047857), fontSize: 13),
+                                          style: const TextStyle(fontWeight: FontWeight.w900, color: Color(0xFF0E7490), fontSize: 13),
                                         ),
                                       ],
                                     ),
@@ -196,7 +196,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
                                         IconButton(
                                           visualDensity: VisualDensity.compact,
                                           constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
-                                          icon: const Icon(Icons.edit, color: Color(0xFF059669), size: 20),
+                                          icon: const Icon(Icons.edit, color: Color(0xFF0891B2), size: 20),
                                           onPressed: () async {
                                             final res = await Navigator.of(context).push(
                                               MaterialPageRoute(builder: (_) => ProductFormScreen(product: product)),
