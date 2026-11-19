@@ -94,22 +94,36 @@ export default function OrderDetailPage() {
               })}
             </p>
           </div>
-          <span className="px-3 py-1 bg-emerald-100 text-emerald-800 rounded-full text-xs font-bold uppercase">
-            {order.status}
+          <span
+            className={`px-3 py-1 rounded-full text-xs font-bold uppercase ${
+              order.status === 'paid'
+                ? 'bg-emerald-100 text-emerald-800'
+                : order.status === 'pending'
+                ? 'bg-amber-100 text-amber-800'
+                : 'bg-slate-100 text-slate-700'
+            }`}
+          >
+            {order.status === 'pending' && (order.payment_method === 'pharmacy' || order.payment_method === 'bayar_di_apotek')
+              ? 'Bayar di Kasir (Apotek)'
+              : order.status}
           </span>
         </div>
 
-        {/* QR Code Section (if paid) */}
-        {order.status === 'paid' && (
+        {/* QR Code Section (for paid orders OR Bayar di Apotek) */}
+        {(order.status === 'paid' || (order.status === 'pending' && (order.payment_method === 'pharmacy' || order.payment_method === 'bayar_di_apotek'))) && (
           <div className="bg-brand-50/60 rounded-3xl border-2 border-dashed border-brand-300 p-6 text-center space-y-3">
-            <h3 className="font-bold text-brand-900 text-sm">QR Pengambilan Obat di Toko</h3>
+            <h3 className="font-bold text-brand-900 text-sm">
+              {order.status === 'paid' ? 'QR Pengambilan Obat di Toko' : 'QR Pesanan Bayar di Kasir'}
+            </h3>
             <p className="text-xs text-brand-700 max-w-sm mx-auto">
-              Perlihatkan kode QR di bawah ini ke kasir Apotek Santosa Farma untuk mengambil pesanan Anda:
+              {order.status === 'paid'
+                ? 'Perlihatkan kode QR di bawah ini ke kasir Apotek Santosa Farma untuk mengambil pesanan Anda yang sudah lunas:'
+                : 'Perlihatkan kode QR ini ke kasir Apotek Santosa Farma untuk pengecekan pesanan dan pembayaran di tempat (Tunai / QRIS):'}
             </p>
             <div className="p-4 bg-white rounded-2xl inline-block shadow-sm">
               <QRCodeSVG value={qrValue} size={180} level="H" includeMargin />
             </div>
-            <p className="text-[11px] font-mono text-slate-500">{order.qr_token}</p>
+            <p className="text-[11px] font-mono text-slate-500">{qrValue}</p>
           </div>
         )}
 

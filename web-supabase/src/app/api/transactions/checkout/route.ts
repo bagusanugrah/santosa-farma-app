@@ -32,21 +32,26 @@ export async function POST(req: Request) {
       );
     }
 
+    const body = await req.json();
+    const { items, payment_method } = body;
+
+    // payment_method can be 'pharmacy' (Bayar di Apotek) or 'midtrans'
+    const isPharmacyPickup = payment_method === 'pharmacy' || payment_method === 'bayar_di_apotek';
+
     const midClient = (storeSetting?.midtrans_client_key || '').trim();
     const midServer = (storeSetting?.midtrans_server_key || '').trim();
-    if (!midClient || !midServer || midClient.length < 15 || midServer.length < 15) {
+    const hasValidMidtrans = midClient.length >= 15 && midServer.length >= 15;
+
+    if (!isPharmacyPickup && !hasValidMidtrans) {
       return NextResponse.json(
         {
           status: 'error',
           message:
-            'Metode pembayaran online (Midtrans) belum dikonfigurasi secara valid oleh admin toko. Pemesanan web saat ini tidak dapat diproses.',
+            'Metode pembayaran online (Midtrans) belum dikonfigurasi secara valid. Silakan gunakan metode Bayar di Apotek.',
         },
         { status: 403 }
       );
     }
-
-    const body = await req.json();
-    const { items } = body;
 
     if (!items || !Array.isArray(items) || items.length === 0) {
       return NextResponse.json({ status: 'error', message: 'Keranjang belanja kosong.' }, { status: 422 });
@@ -115,6 +120,7 @@ export async function POST(req: Request) {
     const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
     const randomSuffix = Math.floor(1000 + Math.random() * 9000).toString();
     const invoiceNo = `INV-${dateStr}-${randomSuffix}`;
+    const qrToken = `SF-${dateStr}-${randomSuffix}`;
 
     // 4. Insert transaction
     const { data: newTrx, error: trxErr } = await supabaseAdmin
@@ -123,9 +129,10 @@ export async function POST(req: Request) {
         invoice_no: invoiceNo,
         channel: 'online',
         customer_id: customer.id,
-        payment_method: 'qris',
+        payment_method: isPharmacyPickup ? 'pharmacy' : 'qris',
         status: 'pending',
         total: grandTotal,
+        qr_token: qrToken,
       })
       .select()
       .single();
@@ -153,6 +160,23 @@ export async function POST(req: Request) {
 
     if (itemsErr) {
       console.error('Error inserting transaction items:', itemsErr);
+    }
+
+    // If customer chose "Bayar di Apotek", return immediately with the QR code and transaction
+    if (isPharmacyPickup) {
+      return NextResponse.json({
+        status: 'success',
+        message: 'Pesanan berhasil dibuat. Tunjukkan QR pesanan ke kasir Apotek Santosa Farma untuk pembayaran.',
+        data: {
+          transaction: {
+            ...newTrx,
+            qr_token: qrToken,
+            items: orderItems,
+          },
+          snap_token: null,
+          is_pharmacy_pickup: true,
+        },
+      });
     }
 
     // 6. Request Midtrans Snap Token

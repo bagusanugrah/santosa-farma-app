@@ -22,11 +22,13 @@ export default function CheckoutPage() {
   const {
     isOpen,
     onlineOrdersEnabled,
+    hasMidtrans,
     loading: statusLoading,
     midtransClientKey,
     midtransIsProduction,
   } = useStoreStatus();
 
+  const [paymentMethod, setPaymentMethod] = useState<'pharmacy' | 'midtrans'>('pharmacy');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [createdTrx, setCreatedTrx] = useState<any>(null);
@@ -137,11 +139,13 @@ export default function CheckoutPage() {
     setError('');
 
     try {
+      const selectedMethod = hasMidtrans ? paymentMethod : 'pharmacy';
       const payload = {
         items: items.map((i) => ({
           product_id: i.product.id,
           qty: i.qty,
         })),
+        payment_method: selectedMethod,
       };
 
       const res = await fetch(`${API_BASE_URL}/transactions/checkout`, {
@@ -162,6 +166,13 @@ export default function CheckoutPage() {
       const transaction = json.data.transaction;
       const snapToken = json.data.snap_token;
       setCreatedTrx(transaction);
+
+      // If customer chose Bayar di Apotek, immediately show the QR code modal
+      if (selectedMethod === 'pharmacy' || !snapToken) {
+        clearCart();
+        setShowQrModal(true);
+        return;
+      }
 
       // Trigger Midtrans Snap or Mock Simulator
       if (window.snap && snapToken && !snapToken.startsWith('mock-')) {
@@ -266,6 +277,96 @@ export default function CheckoutPage() {
             </div>
           </div>
 
+          {/* Payment Method Selector */}
+          <div className="bg-white rounded-2xl sm:rounded-3xl border border-slate-200 p-4 sm:p-6 shadow-sm space-y-3">
+            <h3 className="text-sm font-bold text-slate-900 flex items-center justify-between">
+              <span>Pilih Metode Pembayaran</span>
+              <span className="text-[11px] text-brand-600 font-semibold bg-brand-50 px-2.5 py-0.5 rounded-full border border-brand-100">
+                Fleksibel & Aman
+              </span>
+            </h3>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+              {/* Option 1: Bayar di Apotek */}
+              <div
+                onClick={() => setPaymentMethod('pharmacy')}
+                className={`cursor-pointer rounded-2xl p-4 border-2 transition relative flex flex-col justify-between ${
+                  paymentMethod === 'pharmacy'
+                    ? 'border-brand-600 bg-brand-50/40 shadow-xs ring-2 ring-brand-600/10'
+                    : 'border-slate-200 hover:border-slate-300 bg-white'
+                }`}
+              >
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="w-9 h-9 rounded-xl bg-brand-100 text-brand-700 flex items-center justify-center">
+                      <Store className="w-5 h-5" />
+                    </div>
+                    <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
+                      Rekomendasi
+                    </span>
+                  </div>
+                  <h4 className="font-bold text-slate-900 text-xs sm:text-sm">Bayar di Apotek (Kasir)</h4>
+                  <p className="text-[11px] text-slate-500 mt-1 leading-relaxed">
+                    Pesan obat lewat web, bayar langsung di kasir (Tunai / QRIS). Pesanan dapat dicek atau disesuaikan dengan kasir jika ada perubahan.
+                  </p>
+                </div>
+                <div className="mt-3 flex items-center space-x-1.5 text-[11px] font-bold text-brand-700">
+                  <div className={`w-3.5 h-3.5 rounded-full border flex items-center justify-center ${paymentMethod === 'pharmacy' ? 'border-brand-600 bg-brand-600' : 'border-slate-300'}`}>
+                    {paymentMethod === 'pharmacy' && <div className="w-1.5 h-1.5 bg-white rounded-full" />}
+                  </div>
+                  <span>{paymentMethod === 'pharmacy' ? 'Metode Terpilih' : 'Pilih Metode Ini'}</span>
+                </div>
+              </div>
+
+              {/* Option 2: Bayar Online via Midtrans */}
+              <div
+                onClick={() => {
+                  if (hasMidtrans) setPaymentMethod('midtrans');
+                }}
+                className={`rounded-2xl p-4 border-2 transition relative flex flex-col justify-between ${
+                  !hasMidtrans
+                    ? 'opacity-60 bg-slate-50 border-slate-200 cursor-not-allowed'
+                    : paymentMethod === 'midtrans'
+                    ? 'border-brand-600 bg-brand-50/40 shadow-xs ring-2 ring-brand-600/10 cursor-pointer'
+                    : 'border-slate-200 hover:border-slate-300 bg-white cursor-pointer'
+                }`}
+              >
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="w-9 h-9 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center">
+                      <CreditCard className="w-5 h-5" />
+                    </div>
+                    {!hasMidtrans && (
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-200 text-slate-600">
+                        Belum Aktif
+                      </span>
+                    )}
+                  </div>
+                  <h4 className="font-bold text-slate-900 text-xs sm:text-sm">Bayar Online Sekarang</h4>
+                  <p className="text-[11px] text-slate-500 mt-1 leading-relaxed">
+                    {hasMidtrans
+                      ? 'Bayar langsung dari HP via Midtrans Snap (QRIS, GoPay, ShopeePay, Virtual Account).'
+                      : 'Gateway Midtrans belum dikonfigurasi oleh apotek. Gunakan opsi Bayar di Apotek.'}
+                  </p>
+                </div>
+                <div className="mt-3 flex items-center space-x-1.5 text-[11px] font-bold text-slate-600">
+                  {hasMidtrans ? (
+                    <>
+                      <div className={`w-3.5 h-3.5 rounded-full border flex items-center justify-center ${paymentMethod === 'midtrans' ? 'border-brand-600 bg-brand-600' : 'border-slate-300'}`}>
+                        {paymentMethod === 'midtrans' && <div className="w-1.5 h-1.5 bg-white rounded-full" />}
+                      </div>
+                      <span className={paymentMethod === 'midtrans' ? 'text-brand-700' : 'text-slate-600'}>
+                        {paymentMethod === 'midtrans' ? 'Metode Terpilih' : 'Pilih Metode Ini'}
+                      </span>
+                    </>
+                  ) : (
+                    <span className="text-slate-400 text-[10px]">Hanya opsi Bayar di Kasir yang tersedia</span>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+
           {/* Pickup Information */}
           <div className="bg-brand-50/60 rounded-2xl sm:rounded-3xl border border-brand-200 p-4 sm:p-6">
             <div className="flex items-start space-x-3">
@@ -273,7 +374,7 @@ export default function CheckoutPage() {
               <div>
                 <h4 className="font-bold text-brand-900 text-sm">Metode Pengambilan di Toko</h4>
                 <p className="text-xs text-brand-800/90 mt-1 leading-relaxed">
-                  Setelah pembayaran selesai, Anda akan menerima <strong>Kode QR Pengambilan Pesanan</strong>. Tunjukkan kode QR tersebut langsung kepada kasir di Apotek Santosa Farma (Jl. Raya Jalancagak, Subang) saat mengambil obat.
+                  Setelah pesanan dibuat, Anda akan menerima <strong>Kode QR Pesanan</strong>. Tunjukkan kode QR tersebut langsung kepada kasir di Apotek Santosa Farma (Jl. Raya Jalancagak, Subang) saat mengambil obat.
                 </p>
               </div>
             </div>
@@ -309,7 +410,7 @@ export default function CheckoutPage() {
                 <span className="text-emerald-600 font-bold">GRATIS</span>
               </div>
               <div className="flex justify-between text-sm font-black text-slate-900 pt-2 border-t border-slate-100">
-                <span>Total Bayar</span>
+                <span>Total Estimasi</span>
                 <span className="text-brand-600 text-base">
                   Rp {totalPrice.toLocaleString('id-ID')}
                 </span>
@@ -320,7 +421,7 @@ export default function CheckoutPage() {
               <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-800 flex items-start space-x-2">
                 <AlertCircle className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
                 <span>
-                  Layanan pemesanan obat online saat ini nonaktif (gateway pembayaran Midtrans belum aktif atau pesanan web dimatikan oleh apotek).
+                  Layanan pemesanan obat online sedang dinonaktifkan sementara oleh kasir apotek.
                 </span>
               </div>
             )}
@@ -332,12 +433,14 @@ export default function CheckoutPage() {
             >
               <span>
                 {loading
-                  ? 'Menyiapkan Pembayaran...'
+                  ? 'Menyiapkan Pesanan...'
                   : !isOpen
                   ? 'Apotek Sedang Tutup'
                   : !onlineOrdersEnabled
                   ? 'Pemesanan Online Nonaktif'
-                  : 'Bayar Sekarang (Midtrans)'}
+                  : paymentMethod === 'pharmacy' || !hasMidtrans
+                  ? 'Pesan Sekarang (Bayar di Apotek)'
+                  : 'Bayar Sekarang (Midtrans Online)'}
               </span>
               <ArrowRight className="w-4 h-4" />
             </button>

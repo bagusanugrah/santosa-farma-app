@@ -51,6 +51,8 @@ class TransactionModel {
   bool get isPending => status == 'pending';
   bool get isPaid => status == 'paid';
   bool get isReadyForPickup => isOnline && status == 'paid';
+  bool get isPayAtPharmacy => isOnline && (paymentMethod == 'pharmacy' || paymentMethod == 'bayar_di_apotek');
+  bool get canBeProcessedAtCashier => isOnline && status == 'pending';
   bool get isCompleted => status == 'selesai' || status == 'diambil';
 
   factory TransactionModel.fromMap(Map<String, dynamic> map, {List<TransactionItem>? itemsList}) {

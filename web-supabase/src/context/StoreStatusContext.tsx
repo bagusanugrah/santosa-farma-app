@@ -8,6 +8,7 @@ interface StoreStatusContextType {
   status: StoreStatus;
   isOpen: boolean;
   onlineOrdersEnabled: boolean;
+  hasMidtrans: boolean;
   loading: boolean;
   midtransClientKey: string;
   midtransIsProduction: boolean;
@@ -19,6 +20,7 @@ const defaultStatus: StoreStatus = {
   store_status: 'buka',
   online_orders_enabled: false,
   is_online_active: false,
+  has_midtrans: (process.env.NEXT_PUBLIC_MIDTRANS_CLIENT_KEY || '').length >= 15,
   midtrans_client_key: process.env.NEXT_PUBLIC_MIDTRANS_CLIENT_KEY || '',
   midtrans_is_production: false,
 };
@@ -27,6 +29,7 @@ const StoreStatusContext = createContext<StoreStatusContextType>({
   status: defaultStatus,
   isOpen: true,
   onlineOrdersEnabled: false,
+  hasMidtrans: false,
   loading: true,
   midtransClientKey: process.env.NEXT_PUBLIC_MIDTRANS_CLIENT_KEY || '',
   midtransIsProduction: false,
@@ -63,13 +66,14 @@ export const StoreStatusProvider: React.FC<{ children: React.ReactNode }> = ({ c
             setStatus((prev) => {
               const clientKey = (payload.new.midtrans_client_key ?? prev.midtrans_client_key ?? '').trim();
               const hasMidtrans = clientKey.length >= 15;
-              const onlineOrders = Boolean(payload.new.online_orders_enabled) && hasMidtrans;
+              const onlineOrders = Boolean(payload.new.online_orders_enabled);
 
               return {
                 is_open: isOpen,
                 store_status: isOpen ? 'buka' : 'tutup',
                 online_orders_enabled: onlineOrders,
                 is_online_active: isOpen && onlineOrders,
+                has_midtrans: hasMidtrans,
                 last_opened_at: payload.new.last_opened_at,
                 last_closed_at: payload.new.last_closed_at,
                 midtrans_client_key: clientKey,
@@ -109,6 +113,7 @@ export const StoreStatusProvider: React.FC<{ children: React.ReactNode }> = ({ c
         status,
         isOpen: status.is_open,
         onlineOrdersEnabled: status.online_orders_enabled,
+        hasMidtrans: Boolean(status.has_midtrans ?? ((status.midtrans_client_key || '').length >= 15)),
         loading,
         midtransClientKey:
           status.midtrans_client_key || process.env.NEXT_PUBLIC_MIDTRANS_CLIENT_KEY || '',

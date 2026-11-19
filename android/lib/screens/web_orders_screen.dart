@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../models/transaction.dart';
 import '../providers/web_orders_provider.dart';
+import '../widgets/process_web_order_dialog.dart';
 import '../widgets/receipt_dialog.dart';
 import 'qr_scanner_screen.dart';
 
@@ -33,42 +34,48 @@ class _WebOrdersScreenState extends State<WebOrdersScreen> with SingleTickerProv
 
   List<TransactionModel> _filterOrders(List<TransactionModel> allOrders, int tabIndex) {
     switch (tabIndex) {
-      case 1: // Siap Diambil
-        return allOrders.where((o) => o.status == 'paid').toList();
-      case 2: // Menunggu Bayar
+      case 1: // Bayar di Apotek
         return allOrders.where((o) => o.status == 'pending').toList();
-      case 3: // Sudah Diambil
+      case 2: // Siap Diambil (Lunas)
+        return allOrders.where((o) => o.status == 'paid').toList();
+      case 3: // Sudah Diambil / Selesai
         return allOrders.where((o) => o.status == 'diambil' || o.status == 'selesai').toList();
       default:
         return allOrders;
     }
   }
 
-  Widget _buildStatusBadge(String status) {
+  Widget _buildStatusBadge(TransactionModel order) {
     Color bg;
     Color text;
     String label;
 
-    switch (status) {
+    switch (order.status) {
       case 'paid':
         bg = const Color(0xFFDCFCE7);
         text = const Color(0xFF15803D);
         label = 'Siap Diambil di Toko (LUNAS)';
         break;
       case 'diambil':
+      case 'selesai':
         bg = const Color(0xFFEFF6FF);
         text = const Color(0xFF1D4ED8);
-        label = 'Sudah Diambil';
+        label = 'Sudah Selesai';
         break;
       case 'pending':
         bg = const Color(0xFFFEF3C7);
         text = const Color(0xFFB45309);
-        label = 'Menunggu Pembayaran';
+        label = order.isPayAtPharmacy ? 'Bayar di Kasir (Apotek)' : 'Menunggu Bayar Online';
+        break;
+      case 'dibatalkan':
+        bg = const Color(0xFFFEE2E2);
+        text = const Color(0xFFDC2626);
+        label = 'Dibatalkan';
         break;
       default:
         bg = const Color(0xFFF1F5F9);
         text = const Color(0xFF475569);
-        label = status.toUpperCase();
+        label = order.status.toUpperCase();
     }
 
     return Container(
@@ -134,9 +141,9 @@ class _WebOrdersScreenState extends State<WebOrdersScreen> with SingleTickerProv
             labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
             tabs: [
               const Tab(text: 'Semua'),
+              Tab(text: 'Bayar di Apotek (${webOrdersProvider.orders.where((o) => o.status == 'pending').length})'),
               Tab(text: 'Siap Diambil (${webOrdersProvider.pendingPickupCount})'),
-              const Tab(text: 'Menunggu Bayar'),
-              const Tab(text: 'Sudah Diambil'),
+              const Tab(text: 'Sudah Selesai'),
             ],
           ),
         ),
@@ -223,7 +230,7 @@ class _WebOrdersScreenState extends State<WebOrdersScreen> with SingleTickerProv
                                         ),
                                       ),
                                       const SizedBox(width: 8),
-                                      _buildStatusBadge(order.status),
+                                      _buildStatusBadge(order),
                                     ],
                                   ),
                                   const Divider(height: 20),
@@ -323,6 +330,18 @@ class _WebOrdersScreenState extends State<WebOrdersScreen> with SingleTickerProv
                                       Row(
                                         mainAxisSize: MainAxisSize.min,
                                         children: [
+                                          if (order.status == 'pending')
+                                            FilledButton.icon(
+                                              icon: const Icon(Icons.point_of_sale, size: 16),
+                                              label: const Text('Edit & Bayar di Kasir'),
+                                              style: FilledButton.styleFrom(backgroundColor: const Color(0xFF0891B2)),
+                                              onPressed: () {
+                                                showDialog(
+                                                  context: context,
+                                                  builder: (_) => ProcessWebOrderDialog(order: order),
+                                                );
+                                              },
+                                            ),
                                           if (order.status == 'paid')
                                             FilledButton.icon(
                                               icon: const Icon(Icons.handshake, size: 16),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:qr_flutter/qr_flutter.dart';
+import '../models/transaction.dart';
 import '../providers/auth_provider.dart';
 import '../providers/pos_provider.dart';
 import '../providers/store_provider.dart';
@@ -10,8 +11,18 @@ import 'receipt_dialog.dart';
 
 class PaymentDialog extends StatefulWidget {
   final double grandTotal;
+  final Future<TransactionModel> Function(
+    String method,
+    double amountPaid,
+    double changeAmount,
+    int? cashierId,
+  )? onCustomCheckout;
 
-  const PaymentDialog({super.key, required this.grandTotal});
+  const PaymentDialog({
+    super.key,
+    required this.grandTotal,
+    this.onCustomCheckout,
+  });
 
   @override
   State<PaymentDialog> createState() => _PaymentDialogState();
@@ -72,12 +83,22 @@ class _PaymentDialogState extends State<PaymentDialog> with SingleTickerProvider
     final authProvider = context.read<AuthProvider>();
 
     try {
-      final trx = await posProvider.checkout(
-        paymentMethod: method,
-        amountPaid: method == 'tunai' ? _cashAmount : widget.grandTotal,
-        changeAmount: method == 'tunai' ? changeAmount : 0.0,
-        cashierId: authProvider.currentUser?.id,
-      );
+      final TransactionModel trx;
+      if (widget.onCustomCheckout != null) {
+        trx = await widget.onCustomCheckout!(
+          method,
+          method == 'tunai' ? _cashAmount : widget.grandTotal,
+          method == 'tunai' ? changeAmount : 0.0,
+          authProvider.currentUser?.id,
+        );
+      } else {
+        trx = await posProvider.checkout(
+          paymentMethod: method,
+          amountPaid: method == 'tunai' ? _cashAmount : widget.grandTotal,
+          changeAmount: method == 'tunai' ? changeAmount : 0.0,
+          cashierId: authProvider.currentUser?.id,
+        );
+      }
 
       if (mounted) {
         Navigator.of(context).pop(); // close payment dialog

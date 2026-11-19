@@ -330,6 +330,24 @@ class SupabaseService {
     return (res as List).map((t) => TransactionModel.fromMap(t)).toList();
   }
 
+  Future<TransactionModel?> findOrderByQrOrInvoice(String qrTokenOrInvoice) async {
+    final token = qrTokenOrInvoice.trim();
+    final query = client
+        .from('transactions')
+        .select('*, transaction_items(*), customer:customers(name, phone)')
+        .eq('channel', 'online');
+
+    dynamic res;
+    if (token.startsWith('INV-')) {
+      res = await query.eq('invoice_no', token).maybeSingle();
+    } else {
+      res = await query.eq('qr_token', token).maybeSingle();
+    }
+
+    if (res == null) return null;
+    return TransactionModel.fromMap(res);
+  }
+
   Future<TransactionModel?> verifyAndPickupOrder(String qrTokenOrInvoice) async {
     final token = qrTokenOrInvoice.trim();
     final query = client
@@ -365,6 +383,82 @@ class SupabaseService {
         .single();
 
     return TransactionModel.fromMap(updated);
+  }
+
+  /// Finalize web order at POS cashier (with edited items, stock decrement, and payment)
+  Future<TransactionModel> completeWebOrderAtPos({
+    required int transactionId,
+    required List<Map<String, dynamic>> items, // product, qty, price, subtotal
+    required double total,
+    required String paymentMethod, // 'tunai' or 'qris'
+    double? amountPaid,
+    double? changeAmount,
+    int? cashierId,
+  }) async {
+    final now = DateTime.now();
+
+    // 1. Delete previous transaction_items for this web order
+    await client.from('transaction_items').delete().eq('transaction_id', transactionId);
+
+    // 2. Insert new transaction_items and decrement product stocks
+    final List<TransactionItem> insertedItems = [];
+    for (final item in items) {
+      final Product prod = item['product'];
+      final int qty = item['qty'];
+      final double price = (item['price'] as num).toDouble();
+      final double subtotal = (item['subtotal'] as num).toDouble();
+
+      final itemRes = await client
+          .from('transaction_items')
+          .insert({
+            'transaction_id': transactionId,
+            'product_id': prod.id,
+            'product_name': prod.name,
+            'qty': qty,
+            'price': price,
+            'subtotal': subtotal,
+          })
+          .select()
+          .single();
+
+      insertedItems.add(TransactionItem.fromMap(itemRes));
+
+      // Decrement stock
+      final newStock = prod.stock >= qty ? prod.stock - qty : 0;
+      await client.from('products').update({'stock': newStock}).eq('id', prod.id);
+    }
+
+    // 3. Update transaction record
+    final updateData = {
+      'total': total,
+      'payment_method': paymentMethod,
+      'amount_paid': amountPaid ?? total,
+      'change_amount': changeAmount ?? 0,
+      'cashier_id': cashierId,
+      'status': 'selesai',
+      'paid_at': now.toIso8601String(),
+      'picked_up_at': now.toIso8601String(),
+      'updated_at': now.toIso8601String(),
+    };
+
+    final updatedTrx = await client
+        .from('transactions')
+        .update(updateData)
+        .eq('id', transactionId)
+        .select('*, customer:customers(name, phone)')
+        .single();
+
+    return TransactionModel.fromMap(updatedTrx, itemsList: insertedItems);
+  }
+
+  Future<void> cancelWebOrder(int transactionId) async {
+    await client
+        .from('transactions')
+        .update({
+          'status': 'dibatalkan',
+          'updated_at': DateTime.now().toIso8601String(),
+        })
+        .eq('id', transactionId);
   }
 
   // ==========================================

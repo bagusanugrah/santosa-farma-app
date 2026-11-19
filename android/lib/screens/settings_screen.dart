@@ -478,30 +478,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         contentPadding: EdgeInsets.zero,
                         title: const Text('Fitur Transaksi di Web Pelanggan', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
                         subtitle: Text(
-                          !store.isMidtransValid
-                              ? 'Terkunci: Kredensial Midtrans belum diisi atau belum valid. Lengkapi di bagian Integrasi agar transaksi web dapat diaktifkan.'
-                              : (store.onlineOrdersEnabled
-                                  ? 'Pelanggan dapat checkout dan memesan obat via website'
-                                  : 'Transaksi online dinonaktifkan sementara (pelanggan hanya bisa melihat katalog)'),
+                          store.onlineOrdersEnabled
+                              ? (store.isMidtransValid
+                                  ? 'Transaksi web aktif (Metode: Midtrans Online & Bayar di Apotek)'
+                                  : 'Transaksi web aktif (Metode: Bayar di Apotek, Midtrans belum diisi)')
+                              : 'Transaksi web dinonaktifkan sementara (pelanggan hanya bisa melihat katalog)',
                           style: TextStyle(
                             fontSize: 12,
-                            color: !store.isMidtransValid
-                                ? Colors.red[700]
-                                : (store.onlineOrdersEnabled ? const Color(0xFF2563EB) : Colors.amber[800]),
+                            color: store.onlineOrdersEnabled
+                                ? (store.isMidtransValid ? const Color(0xFF2563EB) : const Color(0xFF0891B2))
+                                : Colors.amber[800],
                           ),
                         ),
                         value: store.onlineOrdersEnabled,
-                        activeColor: const Color(0xFF2563EB),
-                        onChanged: store.isMidtransValid
-                            ? (val) => store.toggleOnlineOrders(val)
-                            : (val) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text('Pemesanan web terkunci sebelum Kredensial Midtrans valid.'),
-                                    backgroundColor: Colors.red,
-                                  ),
-                                );
-                              },
+                        activeColor: const Color(0xFF0891B2),
+                        onChanged: (val) => store.toggleOnlineOrders(val),
                       ),
                     ],
                   ),

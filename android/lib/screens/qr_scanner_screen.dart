@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:provider/provider.dart';
 import '../providers/web_orders_provider.dart';
+import '../services/supabase_service.dart';
+import '../widgets/process_web_order_dialog.dart';
 import '../widgets/receipt_dialog.dart';
 
 class QrScannerScreen extends StatefulWidget {
@@ -29,29 +31,63 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
     if (_isProcessing) return;
     setState(() => _isProcessing = true);
 
-    final webOrders = context.read<WebOrdersProvider>();
     final trimmed = rawCode.trim();
 
     try {
-      final trx = await webOrders.verifyPickup(trimmed);
-      if (trx != null && mounted) {
-        Navigator.of(context).pop(); // close scanner screen
+      final trx = await SupabaseService.instance.findOrderByQrOrInvoice(trimmed);
+      if (trx == null) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Kode QR atau Invoice tidak ditemukan di sistem.'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+        return;
+      }
+
+      if (!mounted) return;
+
+      // 1. If order is already completed/picked up
+      if (trx.status == 'diambil' || trx.status == 'selesai') {
+        Navigator.of(context).pop();
         showDialog(
           context: context,
           builder: (_) => ReceiptDialog(transaction: trx),
         );
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Pesanan ${trx.invoiceNo} berhasil diserah-terimakan!'),
+            content: Text('Pesanan ${trx.invoiceNo} sudah selesai diambil sebelumnya.'),
             backgroundColor: const Color(0xFF0891B2),
           ),
         );
-      } else {
-        if (mounted) {
+        return;
+      }
+
+      // 2. If order is PENDING (Bayar di Apotek) -> Open ProcessWebOrderDialog for review & edit!
+      if (trx.status == 'pending') {
+        Navigator.of(context).pop();
+        showDialog(
+          context: context,
+          builder: (_) => ProcessWebOrderDialog(order: trx),
+        );
+        return;
+      }
+
+      // 3. If order is PAID via Midtrans -> Handover confirmation
+      if (trx.status == 'paid') {
+        final updated = await context.read<WebOrdersProvider>().verifyPickup(trimmed);
+        if (updated != null && mounted) {
+          Navigator.of(context).pop();
+          showDialog(
+            context: context,
+            builder: (_) => ReceiptDialog(transaction: updated),
+          );
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Kode QR atau Invoice tidak ditemukan atau belum lunas.'),
-              backgroundColor: Colors.red,
+            SnackBar(
+              content: Text('Pesanan online ${updated.invoiceNo} (LUNAS) berhasil diserah-terimakan!'),
+              backgroundColor: const Color(0xFF0891B2),
             ),
           );
         }

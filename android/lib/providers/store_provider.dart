@@ -13,7 +13,7 @@ class StoreProvider extends ChangeNotifier {
   StoreSetting get setting => _setting;
   bool get isOpen => _setting.isOpen;
   bool get onlineOrdersEnabled => _setting.onlineOrdersEnabled;
-  bool get isOnlineActive => _setting.isOpen && _setting.onlineOrdersEnabled && _isMidtransValid;
+  bool get isOnlineActive => _setting.isOpen && _setting.onlineOrdersEnabled;
   bool get isLoading => _isLoading;
   bool get isMidtransValid => _isMidtransValid;
   bool get isValidatingMidtrans => _isValidatingMidtrans;
@@ -33,14 +33,6 @@ class StoreProvider extends ChangeNotifier {
   Future<void> _validateAndSyncMidtrans() async {
     if (!_setting.hasMidtransConfig) {
       _isMidtransValid = false;
-      // If Midtrans is not configured, automatically force disable online orders
-      if (_setting.onlineOrdersEnabled) {
-        _setting = _setting.copyWith(onlineOrdersEnabled: false);
-        await SupabaseService.instance.updateStoreStatus(
-          isOpen: _setting.isOpen,
-          onlineOrdersEnabled: false,
-        );
-      }
       return;
     }
 
@@ -52,15 +44,6 @@ class StoreProvider extends ChangeNotifier {
     );
     _isMidtransValid = valid;
     _isValidatingMidtrans = false;
-
-    // If Midtrans credentials are invalid, force disable online orders
-    if (!valid && _setting.onlineOrdersEnabled) {
-      _setting = _setting.copyWith(onlineOrdersEnabled: false);
-      await SupabaseService.instance.updateStoreStatus(
-        isOpen: _setting.isOpen,
-        onlineOrdersEnabled: false,
-      );
-    }
   }
 
   void _subscribeRealtime() {
@@ -95,12 +78,8 @@ class StoreProvider extends ChangeNotifier {
     );
   }
 
-  /// Toggle online orders. Returns true if successfully updated, or false if rejected due to invalid Midtrans.
+  /// Toggle online orders (Customer can order via web, with either Bayar di Apotek or Midtrans)
   Future<bool> toggleOnlineOrders(bool val) async {
-    if (val && !_isMidtransValid) {
-      // Reject activation if Midtrans credentials are not valid!
-      return false;
-    }
     _setting = _setting.copyWith(onlineOrdersEnabled: val);
     notifyListeners();
     await SupabaseService.instance.updateStoreStatus(

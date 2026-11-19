@@ -60,13 +60,13 @@ export interface TransactionItem {
 export interface Transaction {
   id: number;
   invoice_no: string;
-  channel: 'toko' | 'online';
-  payment_method: 'tunai' | 'qris' | 'kartu' | 'va';
+  channel: 'toko' | 'online' | string;
+  payment_method: 'tunai' | 'qris' | 'kartu' | 'va' | 'pharmacy' | 'bayar_di_apotek' | string;
   midtrans_order_id: string | null;
   midtrans_snap_token: string | null;
   midtrans_qris_url: string | null;
   midtrans_va_number: string | null;
-  status: 'pending' | 'paid' | 'diambil' | 'selesai' | 'expired' | 'gagal';
+  status: 'pending' | 'paid' | 'diambil' | 'selesai' | 'expired' | 'gagal' | string;
   total: number;
   qr_token: string | null;
   paid_at: string | null;
@@ -80,6 +80,7 @@ export interface StoreStatus {
   store_status: string;
   online_orders_enabled: boolean;
   is_online_active: boolean;
+  has_midtrans?: boolean;
   last_opened_at?: string | null;
   last_closed_at?: string | null;
   midtrans_client_key?: string;
@@ -98,12 +99,14 @@ export async function fetchStoreStatus(): Promise<StoreStatus> {
 
     if (error || !data) {
       console.warn('Failed to load store settings from Supabase, using default:', error);
+      const defaultClientKey = process.env.NEXT_PUBLIC_MIDTRANS_CLIENT_KEY || '';
       return {
         is_open: true,
         store_status: 'buka',
         online_orders_enabled: false,
         is_online_active: false,
-        midtrans_client_key: process.env.NEXT_PUBLIC_MIDTRANS_CLIENT_KEY || '',
+        has_midtrans: defaultClientKey.length >= 15,
+        midtrans_client_key: defaultClientKey,
         midtrans_is_production: process.env.NEXT_PUBLIC_MIDTRANS_IS_PRODUCTION === 'true',
       };
     }
@@ -111,13 +114,14 @@ export async function fetchStoreStatus(): Promise<StoreStatus> {
     const isOpen = Boolean(data.is_open);
     const clientKey = (data.midtrans_client_key || '').trim();
     const hasValidMidtrans = clientKey.length >= 15;
-    const onlineOrdersEnabled = Boolean(data.online_orders_enabled) && hasValidMidtrans;
+    const onlineOrdersEnabled = Boolean(data.online_orders_enabled);
 
     return {
       is_open: isOpen,
       store_status: isOpen ? 'buka' : 'tutup',
       online_orders_enabled: onlineOrdersEnabled,
       is_online_active: isOpen && onlineOrdersEnabled,
+      has_midtrans: hasValidMidtrans,
       last_opened_at: data.last_opened_at,
       last_closed_at: data.last_closed_at,
       midtrans_client_key: clientKey,
@@ -130,6 +134,7 @@ export async function fetchStoreStatus(): Promise<StoreStatus> {
       store_status: 'tutup',
       online_orders_enabled: false,
       is_online_active: false,
+      has_midtrans: false,
       midtrans_client_key: process.env.NEXT_PUBLIC_MIDTRANS_CLIENT_KEY || '',
       midtrans_is_production: false,
     };

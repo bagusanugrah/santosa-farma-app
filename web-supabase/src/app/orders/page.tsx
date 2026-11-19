@@ -89,8 +89,8 @@ export default function MyOrdersPage() {
     return order.status === activeTab;
   });
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
+  const getStatusBadge = (order: any) => {
+    switch (order.status) {
       case 'paid':
         return (
           <span className="px-3 py-1 bg-emerald-100 text-emerald-800 rounded-full text-xs font-bold border border-emerald-200">
@@ -106,13 +106,15 @@ export default function MyOrdersPage() {
       case 'pending':
         return (
           <span className="px-3 py-1 bg-amber-100 text-amber-800 rounded-full text-xs font-bold border border-amber-200">
-            Menunggu Pembayaran
+            {order.payment_method === 'pharmacy' || order.payment_method === 'bayar_di_apotek'
+              ? 'Bayar di Kasir (Apotek)'
+              : 'Menunggu Pembayaran'}
           </span>
         );
       default:
         return (
           <span className="px-3 py-1 bg-slate-100 text-slate-700 rounded-full text-xs font-bold">
-            {status}
+            {order.status}
           </span>
         );
     }
@@ -191,7 +193,7 @@ export default function MyOrdersPage() {
                     })}
                   </span>
                 </div>
-                <div>{getStatusBadge(order.status)}</div>
+                <div>{getStatusBadge(order)}</div>
               </div>
 
               {/* Items */}
@@ -218,7 +220,20 @@ export default function MyOrdersPage() {
                 </div>
 
                 <div className="flex items-center space-x-2 w-full sm:w-auto">
-                  {order.status === 'pending' && (
+                  {order.status === 'pending' && (order.payment_method === 'pharmacy' || order.payment_method === 'bayar_di_apotek') && (
+                    <button
+                      onClick={() => {
+                        setSelectedTrx(order);
+                        setShowQrModal(true);
+                      }}
+                      className="w-full sm:w-auto justify-center px-4 py-2.5 bg-brand-600 hover:bg-brand-700 text-white font-bold text-xs rounded-xl shadow-md flex items-center space-x-1.5 transition"
+                    >
+                      <QrCode className="w-4 h-4" />
+                      <span>QR Pesanan Kasir</span>
+                    </button>
+                  )}
+
+                  {order.status === 'pending' && order.payment_method !== 'pharmacy' && order.payment_method !== 'bayar_di_apotek' && (
                     <button
                       onClick={() => handleVerifyPayment(order.invoice_no)}
                       disabled={verifyingInvoice === order.invoice_no}
