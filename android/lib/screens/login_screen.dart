@@ -10,8 +10,8 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  final _usernameController = TextEditingController(text: 'kasir');
-  final _passwordController = TextEditingController(text: 'password123');
+  final _usernameController = TextEditingController();
+  final _passwordController = TextEditingController();
   bool _obscurePassword = true;
   bool _isLoading = false;
   String? _errorMessage;
@@ -174,23 +174,6 @@ class _LoginScreenState extends State<LoginScreen> {
                       child: _isLoading
                           ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
                           : const Text('Masuk Aplikasi Kasir', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                    ),
-                    const SizedBox(height: 20),
-
-                    // Hint
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFF1F5F9),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: const Column(
-                        children: [
-                          Text('Akun Bawaan Apotek:', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF475569))),
-                          SizedBox(height: 2),
-                          Text('Username: kasir atau admin | Password: password123', style: TextStyle(fontSize: 11, color: Color(0xFF64748B))),
-                        ],
-                      ),
                     ),
                   ],
                 ),

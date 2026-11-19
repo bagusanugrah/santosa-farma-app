@@ -1,6 +1,5 @@
 # Dependencies
 node_modules/
-vendor/
 .pnp
 .pnp.js
 
@@ -16,46 +15,29 @@ vendor/
 # Next.js Build Outputs
 .next/
 out/
-build/
 dist/
 
-# Android / Expo
-.expo/
+# Android / Flutter
+.flutter-plugins
+.flutter-plugins-dependencies
+.dart_tool/
+.packages
+android/build/
+android/android/.gradle/
+android/android/app/build/
+android/android/local.properties
 *.jks
+*.keystore
 *.p8
 *.p12
 *.key
 *.mobileprovision
-*.orig.*
-
-# Laravel Storage & Database
-backend/storage/*.key
-backend/storage/app/public/*
-!backend/storage/app/public/.gitignore
-backend/storage/framework/cache/*
-!backend/storage/framework/cache/.gitignore
-backend/storage/framework/sessions/*
-!backend/storage/framework/sessions/.gitignore
-backend/storage/framework/views/*
-!backend/storage/framework/views/.gitignore
-backend/storage/logs/*
-!backend/storage/logs/.gitignore
-backend/public/storage
-backend/database/database.sqlite
-*.sqlite
-*.sqlite-journal
 
 # Logs & Cache
 *.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-.phpunit.result.cache
-.phpunit.cache
-
-# Local tools & extension dirs
-.php_ext/
-bin/
 
 # System and IDE
 .DS_Store
