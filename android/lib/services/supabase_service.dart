@@ -18,6 +18,14 @@ class SupabaseService {
 
   // Initialize Supabase in main.dart
   static Future<void> initialize() async {
+    if (!SupabaseConfig.isConfigured) {
+      throw StateError(
+        'Kredensial Supabase belum dikonfigurasi!\n'
+        'Jalankan aplikasi dengan flag:\n'
+        'flutter run --dart-define-from-file=.env\n'
+        'atau salin file .env.example menjadi .env di dalam folder android/',
+      );
+    }
     await Supabase.initialize(
       url: SupabaseConfig.url,
       publishableKey: SupabaseConfig.publishableKey,

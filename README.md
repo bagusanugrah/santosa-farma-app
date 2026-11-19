@@ -120,15 +120,31 @@ apotek-santosa-farma/
    flutter pub get
    ```
 
-2. **Jalankan Aplikasi (Mode Debug)**:
+2. **Konfigurasi Environment (`.env`)**:
+   Salin template `.env.example` menjadi `.env` di dalam folder `android/`:
+   ```bash
+   cp .env.example .env
+   ```
+   > [!IMPORTANT]
+   > File `.env` ini **otomatis diabaikan oleh Git** (`.gitignore`) sehingga kredensial Supabase Anda tidak akan bocor ke GitHub.
+
+   Variabel yang wajib diisi di dalam `android/.env`:
+   | Variabel | Deskripsi | Contoh Nilai |
+   |---|---|---|
+   | `SUPABASE_URL` | URL project Supabase Cloud Anda | `https://your-project.supabase.co` |
+   | `SUPABASE_ANON_KEY` | Supabase Anon / Publishable Key (aman untuk client mobile) | `sb_publishable_...` atau `eyJhbGciOi...` |
+   | `SUPABASE_PRODUCTS_BUCKET` | *(Opsional)* Nama bucket storage untuk foto obat | `products` |
+
+3. **Jalankan Aplikasi (Mode Debug)**:
    Sambungkan HP Android atau jalankan Android Emulator:
    ```bash
-   flutter run
+   flutter run --dart-define-from-file=.env
    ```
+   *(Jika menggunakan VS Code, cukup tekan **F5** atau menu **Run & Debug** -> pilih `Santosa Farma POS (Android)`, flag `--dart-define-from-file` sudah otomatis dikonfigurasi).*
 
-3. **Build APK Rilis (Production)**:
+4. **Build APK Rilis (Production)**:
    ```bash
-   flutter build apk --release
+   flutter build apk --release --dart-define-from-file=.env
    ```
    File APK hasil kompilasi akan berada di:
    `android/build/app/outputs/flutter-apk/app-release.apk`

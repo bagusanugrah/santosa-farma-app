@@ -1,7 +1,22 @@
 class SupabaseConfig {
-  static const String url = 'https://nykoitxkyyhwvtrndyrb.supabase.co';
-  static const String publishableKey = 'sb_publishable_c2EG8EOdDmUiPDZkd1ymXg_nW5DIP-M';
-  static const String productsBucket = 'products';
+  static const String url = String.fromEnvironment(
+    'SUPABASE_URL',
+    defaultValue: '',
+  );
+
+  static const String publishableKey = String.fromEnvironment(
+    'SUPABASE_ANON_KEY',
+    defaultValue: '',
+  );
+
+  static const String productsBucket = String.fromEnvironment(
+    'SUPABASE_PRODUCTS_BUCKET',
+    defaultValue: 'products',
+  );
+
+  /// Memeriksa apakah kredensial Supabase sudah terisi saat build/run
+  static bool get isConfigured =>
+      url.trim().isNotEmpty && publishableKey.trim().isNotEmpty;
 
   static String getProductImageUrl(String? path) {
     if (path == null || path.isEmpty) return '';
