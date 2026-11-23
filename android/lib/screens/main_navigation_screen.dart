@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../providers/auth_provider.dart';
 import '../widgets/adaptive_scaffold.dart';
 import 'pos_screen.dart';
 import 'web_orders_screen.dart';
@@ -15,34 +17,61 @@ class MainNavigationScreen extends StatefulWidget {
 
 class _MainNavigationScreenState extends State<MainNavigationScreen> {
   int _currentIndex = 0;
+  bool? _lastIsSuperAdmin;
 
-  final List<String> _titles = [
-    'Kasir POS',
-    'Pesanan Web Pelanggan',
-    'Katalog & Stok Obat',
-    'Laporan Penjualan',
-    'Pengaturan Kasir & Apotek',
+  // Layar & Judul untuk Super Admin (Manajemen Apotek)
+  final List<String> _adminTitles = const [
+    'Katalog & Kelola Obat',
+    'Laporan Penjualan (Read-Only)',
+    'Pengaturan Apotek & Sistem',
   ];
 
-  final List<Widget> _screens = const [
-    PosScreen(),
-    WebOrdersScreen(),
+  final List<Widget> _adminScreens = const [
     ProductsScreen(),
     ReportsScreen(),
     SettingsScreen(),
   ];
 
+  // Layar & Judul untuk Kasir Toko (Pelayanan Transaksi)
+  final List<String> _kasirTitles = const [
+    'Kasir POS Apotek',
+    'Pesanan Web Pelanggan',
+    'Pengaturan & Akun Kasir',
+  ];
+
+  final List<Widget> _kasirScreens = const [
+    PosScreen(),
+    WebOrdersScreen(),
+    SettingsScreen(),
+  ];
+
   @override
   Widget build(BuildContext context) {
+    final auth = context.watch<AuthProvider>();
+    final isSuperAdmin = auth.currentUser?.isSuperAdmin == true;
+
+    // Reset index jika berganti role user saat logout/login
+    if (_lastIsSuperAdmin != null && _lastIsSuperAdmin != isSuperAdmin) {
+      _currentIndex = 0;
+    }
+    _lastIsSuperAdmin = isSuperAdmin;
+
+    final screens = isSuperAdmin ? _adminScreens : _kasirScreens;
+    final titles = isSuperAdmin ? _adminTitles : _kasirTitles;
+
+    if (_currentIndex >= screens.length) {
+      _currentIndex = 0;
+    }
+
     return AdaptiveScaffold(
       currentIndex: _currentIndex,
       onNavigationChanged: (index) {
         setState(() => _currentIndex = index);
       },
-      title: _titles[_currentIndex],
+      title: titles[_currentIndex],
       body: IndexedStack(
         index: _currentIndex,
-        children: _screens,
+        children: screens,
       ),
     );
   }

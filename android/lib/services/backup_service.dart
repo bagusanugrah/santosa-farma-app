@@ -28,7 +28,7 @@ class BackupService {
 
     final dir = await getApplicationDocumentsDirectory();
     final zipFile = File('${dir.path}/backup_santosa_farma_$dateStr.zip');
-    await zipFile.writeAsBytes(zipBytes);
+    await zipFile.writeAsBytes(zipBytes ?? []);
 
     return zipFile;
   }

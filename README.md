@@ -30,20 +30,21 @@ apotek-santosa-farma/
 │   └── package.json
 │
 ├── supabase_schema.sql                         # Skema lengkap PostgreSQL & RLS Supabase
-└── supabase_migration_integration_settings.sql # Migrasi store_settings (Midtrans & Fonnte)
+├── supabase_migration_integration_settings.sql # Migrasi store_settings (Midtrans & Fonnte)
+└── supabase_migration_storage_rls.sql          # Migrasi kebijakan RLS upload storage 'products'
 ```
 
 ---
 
-## 🔐 Kredensial Akun Default
+## 🔐 Pemisahan Hak Akses & Kredensial Default
 
 > [!IMPORTANT]
-> Demi keamanan kasir fisik, kredensial login **tidak ditampilkan di layar aplikasi**. Gunakan kredensial default berikut untuk login awal:
+> Demi keamanan kasir fisik, kredensial login **tidak ditampilkan di layar aplikasi**. Hak akses antara **Super Admin** dan **Kasir Toko** dipisahkan secara tegas:
 
-| Tipe Akun | Role | Username / Kontak | Password Default | Keterangan |
+| Tipe Akun | Role | Username / Kontak | Password Default | Hak Akses & Ruang Lingkup |
 |---|---|---|---|---|
-| **Super Admin** | `super_admin` | `admin` | `password123` | Akses penuh: Integrasi Gateway (Midtrans/Fonnte), Manajemen Produk, Laporan Transaksi, & Backup Data |
-| **Kasir Toko** | `admin_kasir` | `kasir` | `password123` | Akses kasir: Transaksi POS (Tunai/QRIS), Proses & Edit Pesanan Web, Scan QR Pengambilan Obat |
+| **Super Admin** | `super_admin` | `admin` | `password123` | **Manajemen Apotek**: Mengelola katalog obat (tambah/edit/hapus/upload foto), memantau Laporan Penjualan (Read-Only) seluruh kanal, Integrasi Gateway (Midtrans/WhatsApp), dan Cadangan Data (Backup/Restore). |
+| **Kasir Toko** | `admin_kasir` | `kasir` | `password123` | **Pelayanan Transaksi**: Transaksi Kasir POS (Tunai/QRIS), Proses & Edit Pesanan Web Pelanggan, Scan QR Pengambilan Obat, dan Cetak Struk PDF. *(Menu Kelola Obat & Laporan Keuangan disembunyikan)* |
 | **Customer Web** | `customer` | `081234567890` / `siti@example.com` | `password123` | Pelanggan web dapat mendaftar/login mandiri dengan verifikasi OTP WhatsApp / Email |
 
 ---
@@ -151,16 +152,16 @@ apotek-santosa-farma/
 
 ---
 
-## 🗄️ Setup Database Supabase
+## 🗄️ Setup Database & Storage Supabase
 
 1. Buka project dashboard di [Supabase](https://supabase.com).
 2. Jalankan perintah SQL dari file `supabase_schema.sql` pada menu **SQL Editor**.
-3. Jalankan migrasi tambahan dari file `supabase_migration_integration_settings.sql`.
-4. Pastikan fitur **Supabase Realtime** aktif untuk tabel:
+3. Jalankan migrasi tambahan pengaturan dari file `supabase_migration_integration_settings.sql`.
+4. Jalankan migrasi storage dari file `supabase_migration_storage_rls.sql` untuk mengaktifkan izin upload/baca gambar obat pada bucket `products`.
+5. Pastikan fitur **Supabase Realtime** aktif untuk tabel:
    - `public.transactions`
    - `public.store_settings`
    - `public.products`
-5. Atur bucket storage publik dengan nama `products` untuk upload gambar obat.
 
 ---
 

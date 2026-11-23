@@ -60,6 +60,23 @@ class _ReportsScreenState extends State<ReportsScreen> {
   Widget build(BuildContext context) {
     return Column(
       children: [
+        // Read-only indicator banner
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          color: const Color(0xFFEFF6FF),
+          child: const Row(
+            children: [
+              Icon(Icons.visibility_outlined, size: 16, color: Color(0xFF2563EB)),
+              SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Mode Pantau Admin (Read-Only): Seluruh data transaksi tercatat permanen. Ketuk transaksi untuk melihat detail & unduh/cetak struk PDF.',
+                  style: TextStyle(fontSize: 11, color: Color(0xFF1E40AF), fontWeight: FontWeight.w500),
+                ),
+              ),
+            ],
+          ),
+        ),
         // Range Filter Buttons
         Container(
           color: Colors.white,

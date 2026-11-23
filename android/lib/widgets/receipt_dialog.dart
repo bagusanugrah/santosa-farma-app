@@ -171,14 +171,22 @@ class ReceiptDialog extends StatelessWidget {
       ),
       actions: [
         OutlinedButton.icon(
-          icon: const Icon(Icons.print, size: 18),
-          label: const Text('Cetak / Bagikan Struk'),
+          icon: const Icon(Icons.share, size: 18),
+          label: const Text('Bagikan PDF'),
           onPressed: () {
-            PrinterService.instance.shareReceipt(transaction);
+            PrinterService.instance.shareReceiptPdf(transaction);
           },
         ),
-        FilledButton(
-          child: const Text('Selesai'),
+        FilledButton.icon(
+          style: FilledButton.styleFrom(backgroundColor: const Color(0xFF0891B2)),
+          icon: const Icon(Icons.picture_as_pdf, size: 18),
+          label: const Text('Cetak / Simpan PDF'),
+          onPressed: () {
+            PrinterService.instance.printReceipt(transaction);
+          },
+        ),
+        TextButton(
+          child: const Text('Tutup', style: TextStyle(color: Color(0xFF64748B))),
           onPressed: () => Navigator.of(context).pop(),
         ),
       ],

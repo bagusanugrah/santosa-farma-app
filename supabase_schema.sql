@@ -212,3 +212,30 @@ VALUES
     ('Imboost Force Tablet Strip (10 Kaplet)', 'Daya Tahan Tubuh', 85000, 30, 'Suplemen imunomodulator dengan Echinacea purpurea.'),
     ('Minyak Kayu Putih Cap Lang 60ml', 'Minyak Angin', 24000, 60, 'Meredakan perut kembung, masuk angin, dan menghangatkan tubuh.')
 ON CONFLICT DO NOTHING;
+
+-- ============================================================
+-- 6. STORAGE BUCKET & RLS POLICIES ('products')
+-- ============================================================
+INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+VALUES (
+    'products',
+    'products',
+    true,
+    5242880,
+    ARRAY['image/jpeg', 'image/png', 'image/webp', 'image/jpg', 'image/gif']
+)
+ON CONFLICT (id) DO UPDATE 
+SET public = true,
+    file_size_limit = 5242880;
+
+ALTER TABLE storage.objects ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Public View Products Storage" ON storage.objects;
+DROP POLICY IF EXISTS "Public Insert Products Storage" ON storage.objects;
+DROP POLICY IF EXISTS "Public Update Products Storage" ON storage.objects;
+DROP POLICY IF EXISTS "Public Delete Products Storage" ON storage.objects;
+
+CREATE POLICY "Public View Products Storage" ON storage.objects FOR SELECT TO public USING (bucket_id = 'products');
+CREATE POLICY "Public Insert Products Storage" ON storage.objects FOR INSERT TO public WITH CHECK (bucket_id = 'products');
+CREATE POLICY "Public Update Products Storage" ON storage.objects FOR UPDATE TO public USING (bucket_id = 'products');
+CREATE POLICY "Public Delete Products Storage" ON storage.objects FOR DELETE TO public USING (bucket_id = 'products');

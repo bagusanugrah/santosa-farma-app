@@ -244,20 +244,29 @@ class SupabaseService {
   }
 
   Future<String?> uploadProductImage({File? file, Uint8List? bytes, String? fileName}) async {
-    try {
-      final ext = fileName?.split('.').last ?? 'jpg';
-      final uniqueName = '${DateTime.now().millisecondsSinceEpoch}_${md5.convert(utf8.encode(DateTime.now().toIso8601String())).toString().substring(0, 6)}.$ext';
+    final ext = fileName?.split('.').last ?? 'jpg';
+    final uniqueName = '${DateTime.now().millisecondsSinceEpoch}_${md5.convert(utf8.encode(DateTime.now().toIso8601String())).toString().substring(0, 6)}.$ext';
 
+    try {
       if (file != null) {
-        await client.storage.from(SupabaseConfig.productsBucket).upload(uniqueName, file);
+        await client.storage.from(SupabaseConfig.productsBucket).upload(
+          uniqueName,
+          file,
+          fileOptions: const FileOptions(cacheControl: '3600', upsert: true),
+        );
       } else if (bytes != null) {
-        await client.storage.from(SupabaseConfig.productsBucket).uploadBinary(uniqueName, bytes);
+        await client.storage.from(SupabaseConfig.productsBucket).uploadBinary(
+          uniqueName,
+          bytes,
+          fileOptions: const FileOptions(cacheControl: '3600', upsert: true),
+        );
       }
 
       return uniqueName;
     } catch (e) {
-      // Upload error fallback
-      return null;
+      // ignore: avoid_print
+      print('[Supabase Storage Upload Error]: $e');
+      rethrow;
     }
   }
 

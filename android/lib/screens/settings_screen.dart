@@ -757,72 +757,75 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 const SizedBox(height: 16),
               ],
 
-              // Data Management (Backup, Restore, Reset)
-              Card(
-                child: Padding(
-                  padding: EdgeInsets.all(isCompact ? 16 : 20),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text('Cadangan & Pemulihan Data', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 15)),
-                      const SizedBox(height: 4),
-                      const Text(
-                        'Amankan database transaksi, produk, dan pengaturan ke file ZIP atau simpan ke Google Drive.',
-                        style: TextStyle(fontSize: 12, color: Color(0xFF64748B)),
-                      ),
-                      const Divider(height: 24),
-                      _buildDataActionTile(
-                        isCompact: isCompact,
-                        icon: Icons.cloud_upload_outlined,
-                        iconColor: const Color(0xFF0891B2),
-                        iconBg: const Color(0xFFECFEFF),
-                        title: 'Cadangkan Database (ZIP / Drive)',
-                        subtitle: 'Export seluruh data ke file ZIP dan bagikan ke Drive atau WhatsApp',
-                        actionButton: FilledButton.icon(
-                          icon: _isBackingUp
-                              ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                              : const Icon(Icons.download, size: 16),
-                          label: const Text('Backup'),
-                          onPressed: _isBackingUp ? null : _handleBackup,
+              // Data Management (Backup, Restore, Reset) - Khusus Super Admin
+              if (isSuperAdmin) ...[
+                Card(
+                  child: Padding(
+                    padding: EdgeInsets.all(isCompact ? 16 : 20),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text('Cadangan & Pemulihan Data', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 15)),
+                        const SizedBox(height: 4),
+                        const Text(
+                          'Amankan database transaksi, produk, dan pengaturan ke file ZIP atau simpan ke Google Drive.',
+                          style: TextStyle(fontSize: 12, color: Color(0xFF64748B)),
                         ),
-                      ),
-                      const Divider(height: 24),
-                      _buildDataActionTile(
-                        isCompact: isCompact,
-                        icon: Icons.settings_backup_restore,
-                        iconColor: const Color(0xFF2563EB),
-                        iconBg: const Color(0xFFEFF6FF),
-                        title: 'Pulihkan Data dari Backup',
-                        subtitle: 'Pilih file ZIP atau JSON backup yang pernah Anda simpan',
-                        actionButton: OutlinedButton.icon(
-                          icon: _isRestoring
-                              ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2))
-                              : const Icon(Icons.folder_open, size: 16),
-                          label: const Text('Restore'),
-                          onPressed: _isRestoring ? null : _handleRestore,
+                        const Divider(height: 24),
+                        _buildDataActionTile(
+                          isCompact: isCompact,
+                          icon: Icons.cloud_upload_outlined,
+                          iconColor: const Color(0xFF0891B2),
+                          iconBg: const Color(0xFFECFEFF),
+                          title: 'Cadangkan Database (ZIP / Drive)',
+                          subtitle: 'Export seluruh data ke file ZIP dan bagikan ke Drive atau WhatsApp',
+                          actionButton: FilledButton.icon(
+                            icon: _isBackingUp
+                                ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                                : const Icon(Icons.download, size: 16),
+                            label: const Text('Backup'),
+                            onPressed: _isBackingUp ? null : _handleBackup,
+                          ),
                         ),
-                      ),
-                      const Divider(height: 24),
-                      _buildDataActionTile(
-                        isCompact: isCompact,
-                        icon: Icons.delete_forever,
-                        iconColor: Colors.red,
-                        iconBg: const Color(0xFFFEF2F2),
-                        title: 'Reset Pabrik (Factory Reset)',
-                        titleColor: Colors.red,
-                        subtitle: 'Hapus seluruh transaksi dan kembalikan stok obat ke data awal',
-                        actionButton: FilledButton(
-                          style: FilledButton.styleFrom(backgroundColor: Colors.red),
-                          onPressed: _isResetting ? null : _handleFactoryReset,
-                          child: _isResetting
-                              ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                              : const Text('Reset'),
+                        const Divider(height: 24),
+                        _buildDataActionTile(
+                          isCompact: isCompact,
+                          icon: Icons.settings_backup_restore,
+                          iconColor: const Color(0xFF2563EB),
+                          iconBg: const Color(0xFFEFF6FF),
+                          title: 'Pulihkan Data dari Backup',
+                          subtitle: 'Pilih file ZIP atau JSON backup yang pernah Anda simpan',
+                          actionButton: OutlinedButton.icon(
+                            icon: _isRestoring
+                                ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2))
+                                : const Icon(Icons.folder_open, size: 16),
+                            label: const Text('Restore'),
+                            onPressed: _isRestoring ? null : _handleRestore,
+                          ),
                         ),
-                      ),
-                    ],
+                        const Divider(height: 24),
+                        _buildDataActionTile(
+                          isCompact: isCompact,
+                          icon: Icons.delete_forever,
+                          iconColor: Colors.red,
+                          iconBg: const Color(0xFFFEF2F2),
+                          title: 'Reset Pabrik (Factory Reset)',
+                          titleColor: Colors.red,
+                          subtitle: 'Hapus seluruh transaksi dan kembalikan stok obat ke data awal',
+                          actionButton: FilledButton(
+                            style: FilledButton.styleFrom(backgroundColor: Colors.red),
+                            onPressed: _isResetting ? null : _handleFactoryReset,
+                            child: _isResetting
+                                ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                                : const Text('Reset'),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-              ),
+                const SizedBox(height: 16),
+              ],
               const SizedBox(height: 24),
 
               // App Version Info
