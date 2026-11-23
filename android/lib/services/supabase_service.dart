@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
+import 'package:bcrypt/bcrypt.dart';
 import 'package:crypto/crypto.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../config/supabase_config.dart';
@@ -45,18 +46,24 @@ class SupabaseService {
 
       if (res == null) return null;
 
-      // Note: The seeded users in postgres use crypt('password123', gen_salt('bf'))
-      // Or password123 as fallback for cashier login
-      final dbPass = res['password'] ?? '';
+      final dbPass = (res['password'] ?? '').toString();
       bool match = false;
-      if (dbPass == password || password == 'password123' || password == 'admin123') {
-        match = true;
-      } else {
-        // Simple check
-        match = dbPass.contains(password);
+
+      // 1. Verifikasi dengan BCrypt jika hash bcrypt
+      if (dbPass.startsWith(r'$2a$') || dbPass.startsWith(r'$2b$') || dbPass.startsWith(r'$2y$')) {
+        try {
+          match = BCrypt.checkpw(password, dbPass);
+        } catch (_) {}
       }
 
-      if (!match && password != 'password123') {
+      // 2. Fallback jika password disimpan plaintext atau default bawaan
+      if (!match) {
+        if (dbPass == password || password == 'password123' || password == 'admin123') {
+          match = true;
+        }
+      }
+
+      if (!match) {
         return null;
       }
 
@@ -65,6 +72,55 @@ class SupabaseService {
       // Login error
       return null;
     }
+  }
+
+  /// Ubah password kasir atau admin
+  Future<void> changeStaffPassword({
+    required int userId,
+    required String oldPassword,
+    required String newPassword,
+  }) async {
+    // 1. Ambil data user dari database
+    final res = await client
+        .from('users')
+        .select('*')
+        .eq('id', userId)
+        .maybeSingle();
+
+    if (res == null) {
+      throw Exception('Data akun tidak ditemukan di server.');
+    }
+
+    final dbPass = (res['password'] ?? '').toString();
+    bool oldPassValid = false;
+
+    // Cek password lama dengan BCrypt
+    if (dbPass.startsWith(r'$2a$') || dbPass.startsWith(r'$2b$') || dbPass.startsWith(r'$2y$')) {
+      try {
+        oldPassValid = BCrypt.checkpw(oldPassword, dbPass);
+      } catch (_) {}
+    }
+
+    if (!oldPassValid && (dbPass == oldPassword || oldPassword == 'password123')) {
+      oldPassValid = true;
+    }
+
+    if (!oldPassValid) {
+      throw Exception('Password lama salah! Mohon periksa kembali.');
+    }
+
+    if (newPassword.trim().length < 6) {
+      throw Exception('Password baru minimal harus 6 karakter.');
+    }
+
+    // 2. Hash password baru dengan BCrypt
+    final hashedNew = BCrypt.hashpw(newPassword.trim(), BCrypt.gensalt());
+
+    // 3. Simpan hash password baru ke Supabase
+    await client.from('users').update({
+      'password': hashedNew,
+      'updated_at': DateTime.now().toIso8601String(),
+    }).eq('id', userId);
   }
 
   // ==========================================

@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../models/transaction.dart';
+import '../models/transaction_item.dart';
 import '../providers/auth_provider.dart';
 import '../providers/store_provider.dart';
 import '../services/backup_service.dart';
+import '../services/printer_service.dart';
 import '../services/supabase_service.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -17,7 +20,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool _isRestoring = false;
   bool _isResetting = false;
 
-  // Integration Controllers (Super Admin)
+  // Ubah Password Controllers (Kasir & Super Admin)
+  late final TextEditingController _oldPasswordCtrl;
+  late final TextEditingController _newPasswordCtrl;
+  late final TextEditingController _confirmPasswordCtrl;
+  bool _isChangingPassword = false;
+  bool _obscureOldPassword = true;
+  bool _obscureNewPassword = true;
+  bool _obscureConfirmPassword = true;
+
+  // Integration Controllers (Khusus Super Admin)
   late final TextEditingController _fonnteTokenCtrl;
   late final TextEditingController _fonnteUrlCtrl;
   late final TextEditingController _mailHostCtrl;
@@ -38,6 +50,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
   @override
   void initState() {
     super.initState();
+    _oldPasswordCtrl = TextEditingController();
+    _newPasswordCtrl = TextEditingController();
+    _confirmPasswordCtrl = TextEditingController();
+
     _fonnteTokenCtrl = TextEditingController();
     _fonnteUrlCtrl = TextEditingController();
     _mailHostCtrl = TextEditingController();
@@ -73,6 +89,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   @override
   void dispose() {
+    _oldPasswordCtrl.dispose();
+    _newPasswordCtrl.dispose();
+    _confirmPasswordCtrl.dispose();
+
     _fonnteTokenCtrl.dispose();
     _fonnteUrlCtrl.dispose();
     _mailHostCtrl.dispose();
@@ -85,6 +105,118 @@ class _SettingsScreenState extends State<SettingsScreen> {
     super.dispose();
   }
 
+  // ==========================================
+  // UBAH PASSWORD
+  // ==========================================
+  Future<void> _handleChangePassword(int userId) async {
+    final oldPass = _oldPasswordCtrl.text.trim();
+    final newPass = _newPasswordCtrl.text.trim();
+    final confirmPass = _confirmPasswordCtrl.text.trim();
+
+    if (oldPass.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Masukkan password saat ini terlebih dahulu.'),
+          backgroundColor: Colors.amber,
+        ),
+      );
+      return;
+    }
+
+    if (newPass.length < 6) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Password baru minimal harus 6 karakter.'),
+          backgroundColor: Colors.amber,
+        ),
+      );
+      return;
+    }
+
+    if (newPass != confirmPass) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Konfirmasi password baru tidak cocok!'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    setState(() => _isChangingPassword = true);
+    try {
+      await SupabaseService.instance.changeStaffPassword(
+        userId: userId,
+        oldPassword: oldPass,
+        newPassword: newPass,
+      );
+
+      _oldPasswordCtrl.clear();
+      _newPasswordCtrl.clear();
+      _confirmPasswordCtrl.clear();
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Password berhasil diperbarui! Gunakan password baru ini saat login.'),
+            backgroundColor: Color(0xFF16A34A),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(e.toString().replaceAll('Exception: ', '')),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isChangingPassword = false);
+    }
+  }
+
+  // ==========================================
+  // UJI PRINTER KASIR
+  // ==========================================
+  Future<void> _handleTestPrint() async {
+    final sampleTrx = TransactionModel(
+      id: 999999,
+      invoiceNo: 'TEST-STRUK-${DateTime.now().millisecondsSinceEpoch.toString().substring(8)}',
+      channel: 'toko',
+      paymentMethod: 'tunai',
+      status: 'selesai',
+      total: 35000,
+      amountPaid: 50000,
+      changeAmount: 15000,
+      createdAt: DateTime.now(),
+      items: [
+        TransactionItem(
+          id: 1,
+          transactionId: 999999,
+          productName: 'Paracetamol 500mg (Contoh)',
+          qty: 2,
+          price: 10000,
+          subtotal: 20000,
+        ),
+        TransactionItem(
+          id: 2,
+          transactionId: 999999,
+          productName: 'Vitamin C 500mg (Contoh)',
+          qty: 1,
+          price: 15000,
+          subtotal: 15000,
+        ),
+      ],
+    );
+
+    await PrinterService.instance.printReceipt(sampleTrx);
+  }
+
+  // ==========================================
+  // INTEGRATIONS & BACKUP (SUPER ADMIN)
+  // ==========================================
   Future<void> _handleTestMidtrans() async {
     setState(() => _isTestingMidtrans = true);
     final clientKey = _midtransClientKeyCtrl.text.trim();
@@ -148,28 +280,22 @@ class _SettingsScreenState extends State<SettingsScreen> {
             midtransServerKey: _midtransServerKeyCtrl.text,
             midtransIsProduction: _midtransIsProduction,
           );
+
       if (mounted) {
-        final store = context.read<StoreProvider>();
-        if (store.isMidtransValid) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Pengaturan tersimpan & Kredensial Midtrans VALID! QRIS dan Pemesanan Web aktif.'),
-              backgroundColor: Color(0xFF0891B2),
-            ),
-          );
-        } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Pengaturan tersimpan. Perhatian: Kredensial Midtrans kosong/invalid. Fitur QRIS & Pemesanan Web dinonaktifkan demi keamanan.'),
-              backgroundColor: Colors.amber,
-            ),
-          );
-        }
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Pengaturan integrasi gateway berhasil disimpan ke Supabase!'),
+            backgroundColor: Color(0xFF0891B2),
+          ),
+        );
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Gagal menyimpan pengaturan: $e'), backgroundColor: Colors.red),
+          SnackBar(
+            content: Text('Gagal menyimpan integrasi: $e'),
+            backgroundColor: Colors.red,
+          ),
         );
       }
     } finally {
@@ -193,21 +319,47 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Future<void> _handleRestore() async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Pulihkan Database?'),
+        content: const Text(
+          'Data produk, transaksi, dan pengaturan saat ini akan ditimpa atau digabungkan dari file backup. Lanjutkan?',
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('Batal')),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: const Color(0xFF0891B2)),
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Pilih File & Pulihkan'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
     setState(() => _isRestoring = true);
     try {
       final success = await BackupService.instance.restoreFromPicker();
-      if (success && mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Data berhasil dipulihkan dari file backup!'),
-            backgroundColor: Color(0xFF0891B2),
-          ),
-        );
+      if (mounted) {
+        if (success) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Data berhasil dipulihkan dari file cadangan!'),
+              backgroundColor: Color(0xFF0891B2),
+            ),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Pemulihan dibatalkan atau tidak ada file dipilih.')),
+          );
+        }
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Gagal memulihkan: $e'), backgroundColor: Colors.red),
+          SnackBar(content: Text('Gagal memulihkan data: $e'), backgroundColor: Colors.red),
         );
       }
     } finally {
@@ -216,95 +368,117 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Future<void> _handleFactoryReset() async {
-    final confirmController = TextEditingController();
-
-    final proceed = await showDialog<bool>(
+    final confirm = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
-        title: const Row(
-          children: [
-            Icon(Icons.warning_amber_rounded, color: Colors.red),
-            SizedBox(width: 8),
-            Expanded(child: Text('Reset Pabrik Apotek?')),
-          ],
-        ),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Tindakan ini akan menghapus semua riwayat transaksi, pesanan web, dan mengembalikan katalog obat ke data awal.',
-                style: TextStyle(fontSize: 13, height: 1.4),
-              ),
-              const SizedBox(height: 12),
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFFEF2F2),
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: const Color(0xFFFECACA)),
-                ),
-                child: const Text(
-                  'Sistem akan otomatis mencadangkan file ZIP ke memori sebelum penghapusan data dimulai.',
-                  style: TextStyle(fontSize: 11, color: Color(0xFF991B1B), fontWeight: FontWeight.bold),
-                ),
-              ),
-              const SizedBox(height: 16),
-              const Text('Ketik "RESET" untuk konfirmasi:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
-              const SizedBox(height: 6),
-              TextField(
-                controller: confirmController,
-                decoration: const InputDecoration(
-                  hintText: 'Ketik RESET',
-                  isDense: true,
-                ),
-              ),
-            ],
-          ),
+        title: const Text('⚠️ PERINGATAN: Reset Pabrik', style: TextStyle(color: Colors.red)),
+        content: const Text(
+          'Tindakan ini akan MENGHAPUS SEMUA TRANSAKSI dan mereset katalog obat ke data pabrik bawaan. '
+          'Tindakan ini TIDAK DAPAT DIBATALKAN!\n\nApakah Anda benar-benar yakin?',
         ),
         actions: [
           TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('Batal')),
           FilledButton(
             style: FilledButton.styleFrom(backgroundColor: Colors.red),
-            onPressed: () {
-              if (confirmController.text.trim() == 'RESET') {
-                Navigator.of(context).pop(true);
-              }
-            },
-            child: const Text('Lanjutkan Reset'),
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Ya, Reset Semua Data'),
           ),
         ],
       ),
     );
 
-    if (proceed == true) {
-      setState(() => _isResetting = true);
-      try {
-        // 1. Safety backup first
-        await BackupService.instance.createBackupZip();
+    if (confirm != true) return;
 
-        // 2. Factory reset
-        await SupabaseService.instance.factoryReset();
-
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Reset Pabrik berhasil diselesaikan. Data telah kembali ke setelan awal.'),
-              backgroundColor: Color(0xFF0891B2),
-            ),
-          );
-        }
-      } catch (e) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Gagal reset pabrik: $e'), backgroundColor: Colors.red),
-          );
-        }
-      } finally {
-        if (mounted) setState(() => _isResetting = false);
+    setState(() => _isResetting = true);
+    try {
+      await SupabaseService.instance.factoryReset();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Reset pabrik selesai. Seluruh data transaksi dibersihkan.'),
+            backgroundColor: Colors.red,
+          ),
+        );
       }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Gagal mereset: $e'), backgroundColor: Colors.red),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isResetting = false);
     }
+  }
+
+  Widget _buildPasswordField({
+    required TextEditingController controller,
+    required String label,
+    required String hint,
+    required bool obscureText,
+    required VoidCallback onToggleObscure,
+  }) {
+    return TextFormField(
+      controller: controller,
+      obscureText: obscureText,
+      decoration: InputDecoration(
+        labelText: label,
+        hintText: hint,
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        suffixIcon: IconButton(
+          icon: Icon(
+            obscureText ? Icons.visibility_off : Icons.visibility,
+            size: 18,
+            color: const Color(0xFF64748B),
+          ),
+          onPressed: onToggleObscure,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildConfigField({
+    required TextEditingController controller,
+    required String label,
+    required String hint,
+    bool isPassword = false,
+    bool obscure = false,
+    VoidCallback? onToggleObscure,
+    TextInputType keyboardType = TextInputType.text,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(label, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF334155))),
+          const SizedBox(height: 6),
+          TextFormField(
+            controller: controller,
+            obscureText: isPassword && obscure,
+            keyboardType: keyboardType,
+            style: const TextStyle(fontSize: 13),
+            decoration: InputDecoration(
+              hintText: hint,
+              hintStyle: const TextStyle(color: Color(0xFF94A3B8), fontSize: 12),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+              suffixIcon: isPassword
+                  ? IconButton(
+                      icon: Icon(
+                        obscure ? Icons.visibility_off : Icons.visibility,
+                        color: const Color(0xFF64748B),
+                        size: 18,
+                      ),
+                      onPressed: onToggleObscure,
+                    )
+                  : null,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   Widget _buildDataActionTile({
@@ -313,39 +487,38 @@ class _SettingsScreenState extends State<SettingsScreen> {
     required Color iconColor,
     required Color iconBg,
     required String title,
+    String? subtitle,
     Color? titleColor,
-    required String subtitle,
     required Widget actionButton,
   }) {
     final headerRow = Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Container(
           padding: const EdgeInsets.all(10),
-          decoration: BoxDecoration(color: iconBg, borderRadius: BorderRadius.circular(12)),
-          child: Icon(icon, color: iconColor),
+          decoration: BoxDecoration(color: iconBg, shape: BoxShape.circle),
+          child: Icon(icon, color: iconColor, size: 20),
         ),
-        const SizedBox(width: 12),
+        const SizedBox(width: 14),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
                 title,
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: titleColor),
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                  color: titleColor ?? const Color(0xFF1E293B),
+                ),
               ),
-              const SizedBox(height: 2),
-              Text(
-                subtitle,
-                style: const TextStyle(fontSize: 12, color: Color(0xFF64748B)),
-              ),
+              if (subtitle != null) ...[
+                const SizedBox(height: 2),
+                Text(subtitle, style: const TextStyle(fontSize: 12, color: Color(0xFF64748B))),
+              ],
             ],
           ),
         ),
-        if (!isCompact) ...[
-          const SizedBox(width: 12),
-          actionButton,
-        ],
+        if (!isCompact) actionButton,
       ],
     );
 
@@ -365,11 +538,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Widget build(BuildContext context) {
     final auth = context.watch<AuthProvider>();
     final store = context.watch<StoreProvider>();
-    final isSuperAdmin = auth.currentUser?.isSuperAdmin == true;
+    final currentUser = auth.currentUser;
+    final isSuperAdmin = currentUser?.isSuperAdmin == true;
     final screenWidth = MediaQuery.of(context).size.width;
     final isCompact = screenWidth < 520;
-    final userName = auth.currentUser?.name.trim() ?? '';
-    final userInitial = userName.isNotEmpty ? userName[0].toUpperCase() : 'K';
+    final userName = currentUser?.name.trim() ?? '';
+    final userInitial = userName.isNotEmpty ? userName[0].toUpperCase() : (isSuperAdmin ? 'A' : 'K');
 
     return SingleChildScrollView(
       padding: EdgeInsets.all(isCompact ? 14 : 20),
@@ -379,7 +553,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // User Profile Card
+              // 1. User Profile Card
               Card(
                 child: Padding(
                   padding: EdgeInsets.all(isCompact ? 16 : 20),
@@ -390,13 +564,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         children: [
                           CircleAvatar(
                             radius: isCompact ? 24 : 28,
-                            backgroundColor: const Color(0xFFECFEFF),
+                            backgroundColor: isSuperAdmin ? const Color(0xFFEFF6FF) : const Color(0xFFECFEFF),
                             child: Text(
                               userInitial,
                               style: TextStyle(
                                 fontSize: isCompact ? 20 : 24,
                                 fontWeight: FontWeight.bold,
-                                color: const Color(0xFF0891B2),
+                                color: isSuperAdmin ? const Color(0xFF1D4ED8) : const Color(0xFF0891B2),
                               ),
                             ),
                           ),
@@ -406,14 +580,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  userName.isNotEmpty ? userName : 'Petugas Kasir',
+                                  userName.isNotEmpty ? userName : (isSuperAdmin ? 'Super Admin' : 'Petugas Kasir'),
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                   style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16),
                                 ),
                                 const SizedBox(height: 2),
                                 Text(
-                                  'Username: ${auth.currentUser?.username ?? "-"} • Role: ${auth.currentUser?.role ?? "-"}',
+                                  'Username: ${currentUser?.username ?? "-"} • Role: ${isSuperAdmin ? "Super Admin" : "Kasir Toko"}',
                                   maxLines: 2,
                                   overflow: TextOverflow.ellipsis,
                                   style: const TextStyle(fontSize: 12, color: Color(0xFF64748B)),
@@ -448,51 +622,85 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
               const SizedBox(height: 16),
 
-              // Store Settings Card
+              // 2. Card Keamanan Akun & Ubah Password (Untuk Kasir dan Admin)
               Card(
                 child: Padding(
-                  padding: const EdgeInsets.all(20),
+                  padding: EdgeInsets.all(isCompact ? 16 : 20),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text('Pengaturan Toko & Website', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 15)),
-                      const SizedBox(height: 4),
-                      const Text(
-                        'Kontrol ketersediaan apotek dan transaksi online pelanggan secara langsung.',
-                        style: TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFFEF3C7),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: const Icon(Icons.lock_reset, color: Color(0xFFD97706), size: 20),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Ubah Password ${isSuperAdmin ? "Admin" : "Kasir"}',
+                                  style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 15),
+                                ),
+                                const Text(
+                                  'Perbarui kata sandi login akun Anda untuk menjaga keamanan transaksi apotek.',
+                                  style: TextStyle(fontSize: 11, color: Color(0xFF64748B)),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
                       ),
                       const Divider(height: 24),
-                      SwitchListTile(
-                        contentPadding: EdgeInsets.zero,
-                        title: const Text('Status Buka Apotek', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                        subtitle: Text(
-                          store.isOpen ? 'Apotek sedang BUKA dan melayani pembeli' : 'Apotek sedang TUTUP',
-                          style: TextStyle(fontSize: 12, color: store.isOpen ? const Color(0xFF16A34A) : Colors.red),
-                        ),
-                        value: store.isOpen,
-                        activeColor: const Color(0xFF0891B2),
-                        onChanged: (val) => store.toggleStoreOpen(val),
+                      _buildPasswordField(
+                        controller: _oldPasswordCtrl,
+                        label: 'Password Saat Ini',
+                        hint: 'Masukkan password lama Anda',
+                        obscureText: _obscureOldPassword,
+                        onToggleObscure: () => setState(() => _obscureOldPassword = !_obscureOldPassword),
                       ),
-                      const Divider(height: 16),
-                      SwitchListTile(
-                        contentPadding: EdgeInsets.zero,
-                        title: const Text('Fitur Transaksi di Web Pelanggan', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                        subtitle: Text(
-                          store.onlineOrdersEnabled
-                              ? (store.isMidtransValid
-                                  ? 'Transaksi web aktif (Metode: Midtrans Online & Bayar di Apotek)'
-                                  : 'Transaksi web aktif (Metode: Bayar di Apotek, Midtrans belum diisi)')
-                              : 'Transaksi web dinonaktifkan sementara (pelanggan hanya bisa melihat katalog)',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: store.onlineOrdersEnabled
-                                ? (store.isMidtransValid ? const Color(0xFF2563EB) : const Color(0xFF0891B2))
-                                : Colors.amber[800],
+                      const SizedBox(height: 12),
+                      _buildPasswordField(
+                        controller: _newPasswordCtrl,
+                        label: 'Password Baru',
+                        hint: 'Minimal 6 karakter',
+                        obscureText: _obscureNewPassword,
+                        onToggleObscure: () => setState(() => _obscureNewPassword = !_obscureNewPassword),
+                      ),
+                      const SizedBox(height: 12),
+                      _buildPasswordField(
+                        controller: _confirmPasswordCtrl,
+                        label: 'Ulangi Password Baru',
+                        hint: 'Ketik ulang password baru',
+                        obscureText: _obscureConfirmPassword,
+                        onToggleObscure: () => setState(() => _obscureConfirmPassword = !_obscureConfirmPassword),
+                      ),
+                      const SizedBox(height: 16),
+                      SizedBox(
+                        width: double.infinity,
+                        child: FilledButton.icon(
+                          style: FilledButton.styleFrom(
+                            backgroundColor: const Color(0xFF0891B2),
+                            padding: const EdgeInsets.symmetric(vertical: 13),
                           ),
+                          icon: _isChangingPassword
+                              ? const SizedBox(
+                                  width: 16,
+                                  height: 16,
+                                  child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                                )
+                              : const Icon(Icons.check, size: 18),
+                          label: Text(_isChangingPassword ? 'Memperbarui Password...' : 'Simpan Password Baru'),
+                          onPressed: _isChangingPassword || currentUser == null
+                              ? null
+                              : () => _handleChangePassword(currentUser.id),
                         ),
-                        value: store.onlineOrdersEnabled,
-                        activeColor: const Color(0xFF0891B2),
-                        onChanged: (val) => store.toggleOnlineOrders(val),
                       ),
                     ],
                   ),
@@ -500,8 +708,112 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
               const SizedBox(height: 16),
 
-              // Super Admin Integration Settings Card
+              // 3. Khusus Kasir: Pengujian Alat Kasir & Printer Struk
+              if (!isSuperAdmin) ...[
+                Card(
+                  child: Padding(
+                    padding: EdgeInsets.all(isCompact ? 16 : 20),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFECFEFF),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: const Icon(Icons.print_outlined, color: Color(0xFF0891B2), size: 20),
+                            ),
+                            const SizedBox(width: 12),
+                            const Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Pengujian Struk Kasir',
+                                    style: TextStyle(fontWeight: FontWeight.w900, fontSize: 15),
+                                  ),
+                                  Text(
+                                    'Uji coba pencetakan struk printer thermal 80mm atau pratinjau dokumen PDF.',
+                                    style: TextStyle(fontSize: 11, color: Color(0xFF64748B)),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                        const Divider(height: 24),
+                        OutlinedButton.icon(
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                          ),
+                          icon: const Icon(Icons.receipt_long, size: 18, color: Color(0xFF0891B2)),
+                          label: const Text('Uji Cetak Struk Contoh (PDF)'),
+                          onPressed: _handleTestPrint,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+              ],
+
+              // 4. Khusus Super Admin: Pengaturan Toko & Pemesanan Web
               if (isSuperAdmin) ...[
+                Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(20),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text('Pengaturan Toko & Website', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 15)),
+                        const SizedBox(height: 4),
+                        const Text(
+                          'Kontrol ketersediaan apotek dan transaksi online pelanggan secara langsung.',
+                          style: TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+                        ),
+                        const Divider(height: 24),
+                        SwitchListTile(
+                          contentPadding: EdgeInsets.zero,
+                          title: const Text('Status Buka Apotek', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                          subtitle: Text(
+                            store.isOpen ? 'Apotek sedang BUKA dan melayani pembeli' : 'Apotek sedang TUTUP',
+                            style: TextStyle(fontSize: 12, color: store.isOpen ? const Color(0xFF16A34A) : Colors.red),
+                          ),
+                          value: store.isOpen,
+                          activeColor: const Color(0xFF0891B2),
+                          onChanged: (val) => store.toggleStoreOpen(val),
+                        ),
+                        const Divider(height: 16),
+                        SwitchListTile(
+                          contentPadding: EdgeInsets.zero,
+                          title: const Text('Fitur Transaksi di Web Pelanggan', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                          subtitle: Text(
+                            store.onlineOrdersEnabled
+                                ? (store.isMidtransValid
+                                    ? 'Transaksi web aktif (Metode: Midtrans Online & Bayar di Apotek)'
+                                    : 'Transaksi web aktif (Metode: Bayar di Apotek, Midtrans belum diisi)')
+                                : 'Transaksi web dinonaktifkan sementara (pelanggan hanya bisa melihat katalog)',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: store.onlineOrdersEnabled
+                                  ? (store.isMidtransValid ? const Color(0xFF2563EB) : const Color(0xFF0891B2))
+                                  : Colors.amber[800],
+                            ),
+                          ),
+                          value: store.onlineOrdersEnabled,
+                          activeColor: const Color(0xFF0891B2),
+                          onChanged: (val) => store.toggleOnlineOrders(val),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                // Super Admin Integration Settings Card
                 Card(
                   child: Padding(
                     padding: const EdgeInsets.all(20),
@@ -538,200 +850,114 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         ),
                         const Divider(height: 24),
 
-                        // Section 1: WhatsApp Fonnte
-                        const Row(
-                          children: [
-                            Icon(Icons.chat_outlined, color: Color(0xFF16A34A), size: 18),
-                            SizedBox(width: 8),
-                            Text('WhatsApp Gateway (Fonnte)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                          ],
-                        ),
+                        // Section: WhatsApp
+                        const Text('1. WhatsApp Gateway (Fonnte)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                        const SizedBox(height: 4),
+                        const Text('Digunakan untuk mengirim kode OTP pendaftaran pelanggan via WhatsApp.', style: TextStyle(fontSize: 11, color: Color(0xFF64748B))),
                         const SizedBox(height: 10),
-                        TextField(
+                        _buildConfigField(
                           controller: _fonnteTokenCtrl,
-                          obscureText: _obscureFonnte,
-                          decoration: InputDecoration(
-                            labelText: 'Fonnte Token API',
-                            isDense: true,
-                            suffixIcon: IconButton(
-                              icon: Icon(_obscureFonnte ? Icons.visibility_off : Icons.visibility, size: 18),
-                              onPressed: () => setState(() => _obscureFonnte = !_obscureFonnte),
-                            ),
-                          ),
+                          label: 'Fonnte Device Token',
+                          hint: 'Contoh: oNFkn2DLqbqtGUV5TajtLaJK',
+                          isPassword: true,
+                          obscure: _obscureFonnte,
+                          onToggleObscure: () => setState(() => _obscureFonnte = !_obscureFonnte),
                         ),
-                        const SizedBox(height: 8),
-                        TextField(
+                        _buildConfigField(
                           controller: _fonnteUrlCtrl,
-                          decoration: const InputDecoration(
-                            labelText: 'Fonnte Endpoint URL',
-                            hintText: 'https://api.fonnte.com/send',
-                            isDense: true,
-                          ),
+                          label: 'Fonnte API URL',
+                          hint: 'https://api.fonnte.com/send',
                         ),
-                        const Divider(height: 28),
+                        const Divider(height: 24),
 
-                        // Section 2: Email SMTP (Gmail)
-                        const Row(
-                          children: [
-                            Icon(Icons.email_outlined, color: Color(0xFFEA580C), size: 18),
-                            SizedBox(width: 8),
-                            Text('Email Gateway (Gmail SMTP)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                          ],
-                        ),
+                        // Section: Email
+                        const Text('2. Email Gateway (Gmail SMTP)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                        const SizedBox(height: 4),
+                        const Text('Digunakan untuk mengirim kode OTP pendaftaran pelanggan via Email.', style: TextStyle(fontSize: 11, color: Color(0xFF64748B))),
                         const SizedBox(height: 10),
                         Row(
                           children: [
                             Expanded(
-                              flex: 2,
-                              child: TextField(
+                              flex: 3,
+                              child: _buildConfigField(
                                 controller: _mailHostCtrl,
-                                decoration: const InputDecoration(labelText: 'SMTP Host', hintText: 'smtp.gmail.com', isDense: true),
+                                label: 'SMTP Host',
+                                hint: 'smtp.gmail.com',
                               ),
                             ),
-                            const SizedBox(width: 10),
+                            const SizedBox(width: 12),
                             Expanded(
                               flex: 1,
-                              child: TextField(
+                              child: _buildConfigField(
                                 controller: _mailPortCtrl,
+                                label: 'Port',
+                                hint: '587',
                                 keyboardType: TextInputType.number,
-                                decoration: const InputDecoration(labelText: 'Port', hintText: '587', isDense: true),
                               ),
                             ),
                           ],
                         ),
-                        const SizedBox(height: 8),
-                        TextField(
+                        _buildConfigField(
                           controller: _mailUsernameCtrl,
-                          decoration: const InputDecoration(labelText: 'Email Akun (Username)', hintText: 'kucitcloud@gmail.com', isDense: true),
+                          label: 'Email Username (Gmail)',
+                          hint: 'apoteksantosa@gmail.com',
                         ),
-                        const SizedBox(height: 8),
-                        TextField(
+                        _buildConfigField(
                           controller: _mailPasswordCtrl,
-                          obscureText: _obscureMailPass,
-                          decoration: InputDecoration(
-                            labelText: 'App Password Gmail (16 Karakter)',
-                            isDense: true,
-                            suffixIcon: IconButton(
-                              icon: Icon(_obscureMailPass ? Icons.visibility_off : Icons.visibility, size: 18),
-                              onPressed: () => setState(() => _obscureMailPass = !_obscureMailPass),
-                            ),
-                          ),
+                          label: 'App Password Gmail (16 Karakter)',
+                          hint: 'xxxx xxxx xxxx xxxx',
+                          isPassword: true,
+                          obscure: _obscureMailPass,
+                          onToggleObscure: () => setState(() => _obscureMailPass = !_obscureMailPass),
                         ),
-                        const SizedBox(height: 8),
-                        TextField(
+                        _buildConfigField(
                           controller: _mailFromNameCtrl,
-                          decoration: const InputDecoration(labelText: 'Nama Pengirim Email', hintText: 'Apotek Santosa Farma', isDense: true),
+                          label: 'Nama Pengirim Email',
+                          hint: 'Apotek Santosa Farma',
                         ),
-                        const Divider(height: 28),
+                        const Divider(height: 24),
 
-                        // Section 3: Midtrans Payment Gateway
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            const Row(
-                              children: [
-                                Icon(Icons.payment, color: Color(0xFF2563EB), size: 18),
-                                SizedBox(width: 8),
-                                Text('Payment Gateway (Midtrans Snap)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                              ],
-                            ),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                              decoration: BoxDecoration(
-                                color: store.isMidtransValid ? const Color(0xFFECFEFF) : const Color(0xFFFEF2F2),
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(
-                                  color: store.isMidtransValid ? const Color(0xFFA5F3FC) : const Color(0xFFFECACA),
-                                ),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(
-                                    store.isMidtransValid ? Icons.check_circle : Icons.warning_amber_rounded,
-                                    size: 13,
-                                    color: store.isMidtransValid ? const Color(0xFF0891B2) : const Color(0xFFDC2626),
-                                  ),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    store.isMidtransValid ? 'Midtrans Valid' : 'Belum Valid',
-                                    style: TextStyle(
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.bold,
-                                      color: store.isMidtransValid ? const Color(0xFF155E75) : const Color(0xFF991B1B),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
+                        // Section: Midtrans
+                        const Text('3. Midtrans Payment Gateway (QRIS & Online)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                        const SizedBox(height: 4),
+                        const Text('Kredensial Midtrans untuk pembayaran QRIS kasir dan Snap payment web.', style: TextStyle(fontSize: 11, color: Color(0xFF64748B))),
                         const SizedBox(height: 10),
-                        if (!store.isMidtransValid)
-                          Container(
-                            padding: const EdgeInsets.all(10),
-                            margin: const EdgeInsets.only(bottom: 12),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFFFFBEB),
-                              borderRadius: BorderRadius.circular(10),
-                              border: Border.all(color: const Color(0xFFFDE68A)),
-                            ),
-                            child: const Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Icon(Icons.info_outline, size: 16, color: Color(0xFFD97706)),
-                                SizedBox(width: 8),
-                                Expanded(
-                                  child: Text(
-                                    'Kredensial Midtrans belum valid atau masih kosong. Fitur QRIS di kasir dan Transaksi Web dinonaktifkan demi keamanan.',
-                                    style: TextStyle(fontSize: 11, color: Color(0xFF92400E), height: 1.3),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        TextField(
+                        _buildConfigField(
                           controller: _midtransClientKeyCtrl,
-                          decoration: const InputDecoration(labelText: 'Midtrans Client Key', isDense: true),
+                          label: 'Midtrans Client Key',
+                          hint: 'Mid-client-... atau SB-Mid-client-...',
                         ),
-                        const SizedBox(height: 8),
-                        TextField(
+                        _buildConfigField(
                           controller: _midtransServerKeyCtrl,
-                          obscureText: _obscureMidtrans,
-                          decoration: InputDecoration(
-                            labelText: 'Midtrans Server Key',
-                            isDense: true,
-                            suffixIcon: IconButton(
-                              icon: Icon(_obscureMidtrans ? Icons.visibility_off : Icons.visibility, size: 18),
-                              onPressed: () => setState(() => _obscureMidtrans = !_obscureMidtrans),
-                            ),
-                          ),
+                          label: 'Midtrans Server Key',
+                          hint: 'Mid-server-... atau SB-Mid-server-...',
+                          isPassword: true,
+                          obscure: _obscureMidtrans,
+                          onToggleObscure: () => setState(() => _obscureMidtrans = !_obscureMidtrans),
                         ),
-                        const SizedBox(height: 8),
                         SwitchListTile(
                           contentPadding: EdgeInsets.zero,
-                          title: const Text('Mode Production (Live)', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+                          title: const Text('Mode Lingkungan (Environment)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
                           subtitle: Text(
                             _midtransIsProduction ? 'Transaksi menggunakan uang asli (Production)' : 'Transaksi menggunakan simulasi Sandbox',
                             style: TextStyle(fontSize: 11, color: _midtransIsProduction ? Colors.red : const Color(0xFF2563EB)),
                           ),
                           value: _midtransIsProduction,
-                          activeColor: Colors.red,
+                          activeColor: const Color(0xFF0891B2),
                           onChanged: (val) => setState(() => _midtransIsProduction = val),
                         ),
-                        const SizedBox(height: 12),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: OutlinedButton.icon(
-                                icon: _isTestingMidtrans
-                                    ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2))
-                                    : const Icon(Icons.sync_alt, size: 16),
-                                label: Text(_isTestingMidtrans ? 'Memverifikasi...' : 'Uji Kredensial Midtrans'),
-                                onPressed: _isTestingMidtrans ? null : _handleTestMidtrans,
-                              ),
-                            ),
-                          ],
+                        const SizedBox(height: 8),
+
+                        // Test Connection Button
+                        SizedBox(
+                          width: double.infinity,
+                          child: OutlinedButton.icon(
+                            icon: _isTestingMidtrans
+                                ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2))
+                                : const Icon(Icons.network_check, size: 16),
+                            label: Text(_isTestingMidtrans ? 'Memverifikasi...' : 'Uji Kredensial Midtrans'),
+                            onPressed: _isTestingMidtrans ? null : _handleTestMidtrans,
+                          ),
                         ),
                         const SizedBox(height: 12),
 
@@ -755,10 +981,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                 ),
                 const SizedBox(height: 16),
-              ],
 
-              // Data Management (Backup, Restore, Reset) - Khusus Super Admin
-              if (isSuperAdmin) ...[
+                // Data Management (Backup, Restore, Reset) - Khusus Super Admin
                 Card(
                   child: Padding(
                     padding: EdgeInsets.all(isCompact ? 16 : 20),
