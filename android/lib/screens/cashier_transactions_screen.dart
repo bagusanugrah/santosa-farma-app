@@ -89,19 +89,15 @@ class _CashierTransactionsScreenState extends State<CashierTransactionsScreen> {
 
   List<TransactionModel> get _filteredTransactions {
     return _transactions.where((t) {
-      // Filter payment method
       if (_selectedPaymentMethod != 'all' && t.paymentMethod != _selectedPaymentMethod) {
         return false;
       }
-
-      // Filter search
       if (_searchQuery.isNotEmpty) {
         final q = _searchQuery.toLowerCase();
         final matchesInvoice = t.invoiceNo.toLowerCase().contains(q);
         final matchesItem = t.items.any((item) => item.productName.toLowerCase().contains(q));
         if (!matchesInvoice && !matchesItem) return false;
       }
-
       return true;
     }).toList();
   }
@@ -114,42 +110,101 @@ class _CashierTransactionsScreenState extends State<CashierTransactionsScreen> {
       .where((t) => t.paymentMethod == 'qris')
       .fold(0.0, (sum, t) => sum + t.total);
 
-  Widget _buildSummaryCard(String title, String value, IconData icon, Color color, Color bg) {
+  Widget _buildFilterChip(String label, String value, String currentValue, ValueChanged<String> onSelected) {
+    final isSelected = currentValue == value;
+    return ChoiceChip(
+      label: Text(label),
+      selected: isSelected,
+      onSelected: (_) => onSelected(value),
+      selectedColor: const Color(0xFFCFFAFE),
+      backgroundColor: Colors.white,
+      labelStyle: TextStyle(
+        fontSize: 11,
+        fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+        color: isSelected ? const Color(0xFF0E7490) : const Color(0xFF475569),
+      ),
+      side: BorderSide(
+        color: isSelected ? const Color(0xFF0891B2) : const Color(0xFFE2E8F0),
+      ),
+      visualDensity: VisualDensity.compact,
+      padding: const EdgeInsets.symmetric(horizontal: 4),
+    );
+  }
+
+  Widget _buildSummaryBar() {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      margin: const EdgeInsets.fromLTRB(16, 10, 16, 6),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(color: const Color(0xFFE2E8F0)),
         boxShadow: const [
-          BoxShadow(color: Color(0x05000000), blurRadius: 4, offset: Offset(0, 2)),
+          BoxShadow(color: Color(0x06000000), blurRadius: 4, offset: Offset(0, 1)),
         ],
       ),
       child: Row(
         children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(10)),
-            child: Icon(icon, color: color, size: 20),
-          ),
-          const SizedBox(width: 10),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text(
-                  title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontSize: 11, color: Color(0xFF64748B), fontWeight: FontWeight.w600),
+                const Text(
+                  'PENJUALAN',
+                  style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: Color(0xFF64748B), letterSpacing: 0.3),
                 ),
                 const SizedBox(height: 2),
                 FittedBox(
                   fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
                   child: Text(
-                    value,
-                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.w900, color: color),
+                    currency.format(_totalOmset),
+                    style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w900, color: Color(0xFF0E7490)),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Container(width: 1, height: 26, color: const Color(0xFFE2E8F0), margin: const EdgeInsets.symmetric(horizontal: 10)),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text(
+                  'TUNAI LACI',
+                  style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: Color(0xFF64748B), letterSpacing: 0.3),
+                ),
+                const SizedBox(height: 2),
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    currency.format(_totalCash),
+                    style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w900, color: Color(0xFF16A34A)),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Container(width: 1, height: 26, color: const Color(0xFFE2E8F0), margin: const EdgeInsets.symmetric(horizontal: 10)),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text(
+                  'QRIS',
+                  style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: Color(0xFF64748B), letterSpacing: 0.3),
+                ),
+                const SizedBox(height: 2),
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    currency.format(_totalQris),
+                    style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w900, color: Color(0xFF2563EB)),
                   ),
                 ),
               ],
@@ -160,62 +215,25 @@ class _CashierTransactionsScreenState extends State<CashierTransactionsScreen> {
     );
   }
 
-  Widget _buildChip(String label, String value, String currentValue, ValueChanged<String> onSelected) {
-    final isSelected = currentValue == value;
-    return ChoiceChip(
-      label: Text(label),
-      selected: isSelected,
-      onSelected: (_) => onSelected(value),
-      selectedColor: const Color(0xFFCFFAFE),
-      backgroundColor: Colors.white,
-      labelStyle: TextStyle(
-        fontSize: 12,
-        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-        color: isSelected ? const Color(0xFF0E7490) : const Color(0xFF475569),
-      ),
-      side: BorderSide(
-        color: isSelected ? const Color(0xFF0891B2) : const Color(0xFFE2E8F0),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final filtered = _filteredTransactions;
 
     return Column(
       children: [
-        // Top info header
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          color: const Color(0xFFECFEFF),
-          child: const Row(
-            children: [
-              Icon(Icons.point_of_sale, size: 16, color: Color(0xFF0891B2)),
-              SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  'Daftar Transaksi Kasir Toko: Seluruh penjualan langsung di apotek tercatat di sini. Ketuk transaksi untuk melihat detail & cetak struk PDF.',
-                  style: TextStyle(fontSize: 11, color: Color(0xFF0E7490), fontWeight: FontWeight.w600),
-                ),
-              ),
-            ],
-          ),
-        ),
-
-        // Search bar & Filters
+        // 1. Search Bar & Filter Chips (No blue banner!)
         Container(
           color: Colors.white,
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Search input
               TextField(
                 controller: _searchController,
+                style: const TextStyle(fontSize: 13),
                 decoration: InputDecoration(
-                  hintText: 'Cari no. invoice (POS-...) atau nama obat...',
-                  hintStyle: const TextStyle(fontSize: 12),
+                  hintText: 'Cari no. invoice atau nama obat...',
+                  hintStyle: const TextStyle(fontSize: 12, color: Color(0xFF94A3B8)),
                   prefixIcon: const Icon(Icons.search, size: 20, color: Color(0xFF0891B2)),
                   suffixIcon: _searchQuery.isNotEmpty
                       ? IconButton(
@@ -227,7 +245,12 @@ class _CashierTransactionsScreenState extends State<CashierTransactionsScreen> {
                         )
                       : null,
                   contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  isDense: true,
                   border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                  ),
+                  enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(10),
                     borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
                   ),
@@ -236,38 +259,38 @@ class _CashierTransactionsScreenState extends State<CashierTransactionsScreen> {
               ),
               const SizedBox(height: 8),
 
-              // Filter Chips Row
+              // Filter Chips
               SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
                 child: Row(
                   children: [
-                    const Text('Periode: ', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF64748B))),
-                    _buildChip('Hari Ini', 'today', _selectedRange, (v) {
+                    _buildFilterChip('Hari Ini', 'today', _selectedRange, (v) {
                       setState(() => _selectedRange = v);
                       _loadTransactions();
                     }),
                     const SizedBox(width: 6),
-                    _buildChip('7 Hari', '7days', _selectedRange, (v) {
+                    _buildFilterChip('7 Hari', '7days', _selectedRange, (v) {
                       setState(() => _selectedRange = v);
                       _loadTransactions();
                     }),
                     const SizedBox(width: 6),
-                    _buildChip('30 Hari', '30days', _selectedRange, (v) {
+                    _buildFilterChip('30 Hari', '30days', _selectedRange, (v) {
                       setState(() => _selectedRange = v);
                       _loadTransactions();
                     }),
                     const SizedBox(width: 6),
-                    _buildChip('Semua', 'all', _selectedRange, (v) {
+                    _buildFilterChip('Semua', 'all', _selectedRange, (v) {
                       setState(() => _selectedRange = v);
                       _loadTransactions();
                     }),
-                    const SizedBox(width: 14),
-                    const Text('Metode: ', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF64748B))),
-                    _buildChip('Semua', 'all', _selectedPaymentMethod, (v) => setState(() => _selectedPaymentMethod = v)),
+                    const SizedBox(width: 10),
+                    Container(width: 1, height: 18, color: const Color(0xFFCBD5E1)),
+                    const SizedBox(width: 10),
+                    _buildFilterChip('Semua Cara Bayar', 'all', _selectedPaymentMethod, (v) => setState(() => _selectedPaymentMethod = v)),
                     const SizedBox(width: 6),
-                    _buildChip('Tunai', 'tunai', _selectedPaymentMethod, (v) => setState(() => _selectedPaymentMethod = v)),
+                    _buildFilterChip('Tunai', 'tunai', _selectedPaymentMethod, (v) => setState(() => _selectedPaymentMethod = v)),
                     const SizedBox(width: 6),
-                    _buildChip('QRIS', 'qris', _selectedPaymentMethod, (v) => setState(() => _selectedPaymentMethod = v)),
+                    _buildFilterChip('QRIS', 'qris', _selectedPaymentMethod, (v) => setState(() => _selectedPaymentMethod = v)),
                   ],
                 ),
               ),
@@ -276,45 +299,10 @@ class _CashierTransactionsScreenState extends State<CashierTransactionsScreen> {
         ),
         const Divider(height: 1, color: Color(0xFFE2E8F0)),
 
-        // Summary Bar (Omset, Tunai di Laci, Jumlah)
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-          child: Row(
-            children: [
-              Expanded(
-                child: _buildSummaryCard(
-                  'Total Penjualan',
-                  currency.format(_totalOmset),
-                  Icons.receipt_long,
-                  const Color(0xFF0E7490),
-                  const Color(0xFFECFEFF),
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: _buildSummaryCard(
-                  'Tunai di Laci',
-                  currency.format(_totalCash),
-                  Icons.payments_outlined,
-                  const Color(0xFF16A34A),
-                  const Color(0xFFDCFCE7),
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: _buildSummaryCard(
-                  'QRIS Kasir',
-                  currency.format(_totalQris),
-                  Icons.qr_code_2,
-                  const Color(0xFF2563EB),
-                  const Color(0xFFEFF6FF),
-                ),
-              ),
-            ],
-          ),
-        ),
+        // 2. Compact 3-Column Summary Bar (Never truncated!)
+        _buildSummaryBar(),
 
-        // List Header
+        // 3. Section Header
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
           child: Row(
@@ -327,13 +315,14 @@ class _CashierTransactionsScreenState extends State<CashierTransactionsScreen> {
               IconButton(
                 icon: const Icon(Icons.refresh, size: 18, color: Color(0xFF0891B2)),
                 tooltip: 'Muat Ulang',
+                visualDensity: VisualDensity.compact,
                 onPressed: _loadTransactions,
               ),
             ],
           ),
         ),
 
-        // Transactions List
+        // 4. Transactions List
         Expanded(
           child: RefreshIndicator(
             color: const Color(0xFF0891B2),
@@ -345,22 +334,17 @@ class _CashierTransactionsScreenState extends State<CashierTransactionsScreen> {
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Icon(Icons.receipt_long_outlined, size: 56, color: Colors.grey[400]),
-                            const SizedBox(height: 12),
+                            Icon(Icons.receipt_long_outlined, size: 48, color: Colors.grey[400]),
+                            const SizedBox(height: 10),
                             const Text(
-                              'Belum ada transaksi kasir pada periode ini',
-                              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Color(0xFF64748B)),
-                            ),
-                            const SizedBox(height: 4),
-                            const Text(
-                              'Transaksi yang dilakukan di Kasir POS akan otomatis muncul di sini.',
-                              style: TextStyle(fontSize: 12, color: Color(0xFF94A3B8)),
+                              'Belum ada transaksi di periode ini',
+                              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF64748B)),
                             ),
                           ],
                         ),
                       )
                     : ListView.builder(
-                        padding: const EdgeInsets.fromLTRB(16, 4, 16, 20),
+                        padding: const EdgeInsets.fromLTRB(16, 2, 16, 16),
                         itemCount: filtered.length,
                         itemBuilder: (context, index) {
                           final trx = filtered[index];
@@ -368,7 +352,7 @@ class _CashierTransactionsScreenState extends State<CashierTransactionsScreen> {
 
                           return Card(
                             margin: const EdgeInsets.only(bottom: 10),
-                            elevation: 0.5,
+                            elevation: 0,
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12),
                               side: const BorderSide(color: Color(0xFFE2E8F0)),
@@ -382,22 +366,14 @@ class _CashierTransactionsScreenState extends State<CashierTransactionsScreen> {
                                 );
                               },
                               child: Padding(
-                                padding: const EdgeInsets.all(14),
+                                padding: const EdgeInsets.all(12),
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.stretch,
                                   children: [
-                                    // Header: Invoice No + Badges + Date
+                                    // Row 1: Invoice & Total
                                     Row(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
-                                        Container(
-                                          padding: const EdgeInsets.all(7),
-                                          decoration: BoxDecoration(
-                                            color: const Color(0xFFECFEFF),
-                                            borderRadius: BorderRadius.circular(8),
-                                          ),
-                                          child: const Icon(Icons.point_of_sale, size: 16, color: Color(0xFF0891B2)),
-                                        ),
-                                        const SizedBox(width: 10),
                                         Expanded(
                                           child: Column(
                                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -406,7 +382,7 @@ class _CashierTransactionsScreenState extends State<CashierTransactionsScreen> {
                                                 trx.invoiceNo,
                                                 style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 13),
                                               ),
-                                              const SizedBox(height: 1),
+                                              const SizedBox(height: 2),
                                               Text(
                                                 dateFormat.format(trx.createdAt),
                                                 style: const TextStyle(fontSize: 11, color: Color(0xFF64748B)),
@@ -414,60 +390,66 @@ class _CashierTransactionsScreenState extends State<CashierTransactionsScreen> {
                                             ],
                                           ),
                                         ),
-                                        // Payment Badge
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                                          decoration: BoxDecoration(
-                                            color: isCash ? const Color(0xFFDCFCE7) : const Color(0xFFEFF6FF),
-                                            borderRadius: BorderRadius.circular(8),
-                                            border: Border.all(
-                                              color: isCash ? const Color(0xFFBBF7D0) : const Color(0xFFBFDBFE),
+                                        const SizedBox(width: 8),
+                                        Column(
+                                          crossAxisAlignment: CrossAxisAlignment.end,
+                                          children: [
+                                            Text(
+                                              currency.format(trx.total),
+                                              style: const TextStyle(
+                                                fontSize: 15,
+                                                fontWeight: FontWeight.w900,
+                                                color: Color(0xFF0E7490),
+                                              ),
                                             ),
-                                          ),
-                                          child: Row(
-                                            mainAxisSize: MainAxisSize.min,
-                                            children: [
-                                              Icon(
-                                                isCash ? Icons.payments_outlined : Icons.qr_code_2,
-                                                size: 12,
-                                                color: isCash ? const Color(0xFF16A34A) : const Color(0xFF2563EB),
-                                              ),
-                                              const SizedBox(width: 4),
-                                              Text(
-                                                isCash ? 'TUNAI' : 'QRIS',
-                                                style: TextStyle(
-                                                  fontSize: 10,
-                                                  fontWeight: FontWeight.w800,
-                                                  color: isCash ? const Color(0xFF15803D) : const Color(0xFF1D4ED8),
+                                            const SizedBox(height: 3),
+                                            Row(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                Container(
+                                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                                  decoration: BoxDecoration(
+                                                    color: isCash ? const Color(0xFFDCFCE7) : const Color(0xFFEFF6FF),
+                                                    borderRadius: BorderRadius.circular(6),
+                                                    border: Border.all(
+                                                      color: isCash ? const Color(0xFFBBF7D0) : const Color(0xFFBFDBFE),
+                                                    ),
+                                                  ),
+                                                  child: Text(
+                                                    isCash ? 'TUNAI' : 'QRIS',
+                                                    style: TextStyle(
+                                                      fontSize: 9,
+                                                      fontWeight: FontWeight.w800,
+                                                      color: isCash ? const Color(0xFF15803D) : const Color(0xFF1D4ED8),
+                                                    ),
+                                                  ),
                                                 ),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                        const SizedBox(width: 6),
-                                        // Status Selesai badge
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                                          decoration: BoxDecoration(
-                                            color: const Color(0xFFF1F5F9),
-                                            borderRadius: BorderRadius.circular(8),
-                                          ),
-                                          child: const Text(
-                                            'SELESAI',
-                                            style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Color(0xFF475569)),
-                                          ),
+                                                const SizedBox(width: 4),
+                                                Container(
+                                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                                  decoration: BoxDecoration(
+                                                    color: const Color(0xFFF1F5F9),
+                                                    borderRadius: BorderRadius.circular(6),
+                                                  ),
+                                                  child: const Text(
+                                                    'SELESAI',
+                                                    style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Color(0xFF475569)),
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ],
                                         ),
                                       ],
                                     ),
-                                    const Divider(height: 18),
+                                    const Divider(height: 16),
 
-                                    // Items breakdown
+                                    // Items List
                                     if (trx.items.isNotEmpty) ...[
                                       ...trx.items.take(3).map((item) {
                                         return Padding(
-                                          padding: const EdgeInsets.only(bottom: 3),
+                                          padding: const EdgeInsets.only(bottom: 2),
                                           child: Row(
-                                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                             children: [
                                               Expanded(
                                                 child: Text(
@@ -480,59 +462,52 @@ class _CashierTransactionsScreenState extends State<CashierTransactionsScreen> {
                                               const SizedBox(width: 8),
                                               Text(
                                                 currency.format(item.subtotal),
-                                                style: const TextStyle(fontSize: 12, color: Color(0xFF64748B), fontWeight: FontWeight.w600),
+                                                style: const TextStyle(fontSize: 11, color: Color(0xFF64748B), fontWeight: FontWeight.w600),
                                               ),
                                             ],
                                           ),
                                         );
                                       }),
                                       if (trx.items.length > 3)
-                                        Text(
-                                          '+ ${trx.items.length - 3} obat lainnya...',
-                                          style: const TextStyle(fontSize: 11, fontStyle: FontStyle.italic, color: Color(0xFF94A3B8)),
+                                        Padding(
+                                          padding: const EdgeInsets.only(top: 2),
+                                          child: Text(
+                                            '+ ${trx.items.length - 3} obat lainnya...',
+                                            style: const TextStyle(fontSize: 11, fontStyle: FontStyle.italic, color: Color(0xFF94A3B8)),
+                                          ),
                                         ),
                                       const SizedBox(height: 6),
                                     ],
 
-                                    // Total & Change row
-                                    Row(
-                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                      children: [
-                                        if (isCash && (trx.amountPaid ?? 0) > 0)
-                                          Text(
-                                            'Diterima: ${currency.format(trx.amountPaid ?? 0)} • Kembali: ${currency.format(trx.changeAmount ?? 0)}',
-                                            style: const TextStyle(fontSize: 11, color: Color(0xFF64748B)),
-                                          )
-                                        else
-                                          const Text(
-                                            'Pembayaran Non-Tunai QRIS',
-                                            style: TextStyle(fontSize: 11, color: Color(0xFF2563EB)),
-                                          ),
-                                        Text(
-                                          currency.format(trx.total),
-                                          style: const TextStyle(
-                                            fontSize: 15,
-                                            fontWeight: FontWeight.w900,
-                                            color: Color(0xFF0E7490),
-                                          ),
+                                    // Cash details (if tunai)
+                                    if (isCash && (trx.amountPaid ?? 0) > 0) ...[
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                        decoration: BoxDecoration(
+                                          color: const Color(0xFFF8FAFC),
+                                          borderRadius: BorderRadius.circular(6),
                                         ),
-                                      ],
-                                    ),
-                                    const SizedBox(height: 10),
+                                        child: Text(
+                                          'Bayar: ${currency.format(trx.amountPaid ?? 0)}   •   Kembali: ${currency.format(trx.changeAmount ?? 0)}',
+                                          style: const TextStyle(fontSize: 11, color: Color(0xFF64748B), fontWeight: FontWeight.w500),
+                                        ),
+                                      ),
+                                      const SizedBox(height: 8),
+                                    ],
 
-                                    // Action button
+                                    // Footer Action Button
                                     SizedBox(
-                                      width: double.infinity,
+                                      height: 32,
                                       child: OutlinedButton.icon(
                                         style: OutlinedButton.styleFrom(
-                                          padding: const EdgeInsets.symmetric(vertical: 8),
+                                          padding: const EdgeInsets.symmetric(horizontal: 10),
                                           side: const BorderSide(color: Color(0xFF0891B2)),
-                                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
                                         ),
-                                        icon: const Icon(Icons.receipt_long, size: 16, color: Color(0xFF0891B2)),
+                                        icon: const Icon(Icons.print_outlined, size: 14, color: Color(0xFF0891B2)),
                                         label: const Text(
                                           'Lihat Rincian & Cetak Struk (PDF)',
-                                          style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF0891B2)),
+                                          style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF0891B2)),
                                         ),
                                         onPressed: () {
                                           showDialog(
