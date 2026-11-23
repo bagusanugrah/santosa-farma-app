@@ -228,8 +228,6 @@ ON CONFLICT (id) DO UPDATE
 SET public = true,
     file_size_limit = 5242880;
 
-ALTER TABLE storage.objects ENABLE ROW LEVEL SECURITY;
-
 DROP POLICY IF EXISTS "Public View Products Storage" ON storage.objects;
 DROP POLICY IF EXISTS "Public Insert Products Storage" ON storage.objects;
 DROP POLICY IF EXISTS "Public Update Products Storage" ON storage.objects;

@@ -1,11 +1,12 @@
 -- ==============================================================================
 -- MIGRATION: Kebijakan RLS Supabase Storage untuk Bucket 'products'
 -- ==============================================================================
--- Jalankan seluruh query di bawah ini pada menu SQL Editor di Supabase Dashboard:
--- https://supabase.com/dashboard/project/nykoitxkyyhwvtrndyrb/sql
+-- Jalankan query di bawah ini di menu SQL Editor Supabase:
+-- (CATATAN: JANGAN masukkan 'ALTER TABLE storage.objects' karena RLS sudah aktif
+-- bawaan dan tabel storage dimiliki oleh role internal Supabase).
 -- ==============================================================================
 
--- 1. Buat atau perbarui bucket 'products' agar berstatus publik
+-- 1. Pastikan bucket 'products' berstatus publik
 INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 VALUES (
     'products',
@@ -18,34 +19,31 @@ ON CONFLICT (id) DO UPDATE
 SET public = true,
     file_size_limit = 5242880;
 
--- 2. Pastikan Row Level Security aktif pada tabel storage.objects
-ALTER TABLE storage.objects ENABLE ROW LEVEL SECURITY;
-
--- 3. Hapus kebijakan lama jika ada agar tidak terjadi duplikasi
+-- 2. Hapus kebijakan lama jika ada agar tidak terjadi duplikasi error
 DROP POLICY IF EXISTS "Public View Products Storage" ON storage.objects;
 DROP POLICY IF EXISTS "Public Insert Products Storage" ON storage.objects;
 DROP POLICY IF EXISTS "Public Update Products Storage" ON storage.objects;
 DROP POLICY IF EXISTS "Public Delete Products Storage" ON storage.objects;
 
--- 4. Kebijakan SELECT (Publik / siapapun dapat melihat gambar obat)
+-- 3. Kebijakan SELECT (Publik / siapapun dapat melihat gambar obat)
 CREATE POLICY "Public View Products Storage"
 ON storage.objects FOR SELECT
 TO public
 USING (bucket_id = 'products');
 
--- 5. Kebijakan INSERT (Izinkan aplikasi kasir mengunggah gambar obat)
+-- 4. Kebijakan INSERT (Izinkan aplikasi kasir mengunggah gambar obat)
 CREATE POLICY "Public Insert Products Storage"
 ON storage.objects FOR INSERT
 TO public
 WITH CHECK (bucket_id = 'products');
 
--- 6. Kebijakan UPDATE (Izinkan memperbarui gambar obat di bucket 'products')
+-- 5. Kebijakan UPDATE (Izinkan memperbarui gambar obat di bucket 'products')
 CREATE POLICY "Public Update Products Storage"
 ON storage.objects FOR UPDATE
 TO public
 USING (bucket_id = 'products');
 
--- 7. Kebijakan DELETE (Izinkan menghapus gambar obat dari bucket 'products')
+-- 6. Kebijakan DELETE (Izinkan menghapus gambar obat dari bucket 'products')
 CREATE POLICY "Public Delete Products Storage"
 ON storage.objects FOR DELETE
 TO public
