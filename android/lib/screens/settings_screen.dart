@@ -622,7 +622,133 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
               const SizedBox(height: 16),
 
-              // 2. Card Keamanan Akun & Ubah Password (Untuk Kasir dan Admin)
+              // 2. Pengaturan Operasional Toko & Website (Dikelola oleh Kasir & Admin)
+              Card(
+                child: Padding(
+                  padding: EdgeInsets.all(isCompact ? 16 : 20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFECFEFF),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: const Icon(Icons.storefront, color: Color(0xFF0891B2), size: 20),
+                          ),
+                          const SizedBox(width: 12),
+                          const Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Pengaturan Toko & Website',
+                                  style: TextStyle(fontWeight: FontWeight.w900, fontSize: 15),
+                                ),
+                                Text(
+                                  'Kontrol status buka toko dan ketersediaan transaksi online pelanggan.',
+                                  style: TextStyle(fontSize: 11, color: Color(0xFF64748B)),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                      const Divider(height: 24),
+                      SwitchListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: const Text('Status Buka Apotek', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                        subtitle: Text(
+                          store.isOpen ? 'Apotek sedang BUKA dan melayani pembeli' : 'Apotek sedang TUTUP',
+                          style: TextStyle(fontSize: 12, color: store.isOpen ? const Color(0xFF16A34A) : Colors.red),
+                        ),
+                        value: store.isOpen,
+                        activeColor: const Color(0xFF0891B2),
+                        onChanged: (val) => store.toggleStoreOpen(val),
+                      ),
+                      const Divider(height: 16),
+                      SwitchListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: const Text('Fitur Transaksi di Web Pelanggan', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                        subtitle: Text(
+                          store.onlineOrdersEnabled
+                              ? (store.isMidtransValid
+                                  ? 'Transaksi web aktif (Metode: Midtrans Online & Bayar di Apotek)'
+                                  : 'Transaksi web aktif (Metode: Bayar di Apotek, Midtrans belum diisi)')
+                              : 'Transaksi web dinonaktifkan sementara (pelanggan hanya bisa melihat katalog)',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: store.onlineOrdersEnabled
+                                ? (store.isMidtransValid ? const Color(0xFF2563EB) : const Color(0xFF0891B2))
+                                : Colors.amber[800],
+                          ),
+                        ),
+                        value: store.onlineOrdersEnabled,
+                        activeColor: const Color(0xFF0891B2),
+                        onChanged: (val) => store.toggleOnlineOrders(val),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              // 3. Khusus Kasir: Pengujian Alat Kasir & Printer Struk
+              if (!isSuperAdmin) ...[
+                Card(
+                  child: Padding(
+                    padding: EdgeInsets.all(isCompact ? 16 : 20),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFECFEFF),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: const Icon(Icons.print_outlined, color: Color(0xFF0891B2), size: 20),
+                            ),
+                            const SizedBox(width: 12),
+                            const Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Pengujian Struk Kasir',
+                                    style: TextStyle(fontWeight: FontWeight.w900, fontSize: 15),
+                                  ),
+                                  Text(
+                                    'Uji coba pencetakan struk printer thermal 80mm atau pratinjau dokumen PDF.',
+                                    style: TextStyle(fontSize: 11, color: Color(0xFF64748B)),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                        const Divider(height: 24),
+                        OutlinedButton.icon(
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                          ),
+                          icon: const Icon(Icons.receipt_long, size: 18, color: Color(0xFF0891B2)),
+                          label: const Text('Uji Cetak Struk Contoh (PDF)'),
+                          onPressed: _handleTestPrint,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+              ],
+
+              // 4. Card Keamanan Akun & Ubah Password (Untuk Kasir dan Admin)
               Card(
                 child: Padding(
                   padding: EdgeInsets.all(isCompact ? 16 : 20),
@@ -708,111 +834,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
               const SizedBox(height: 16),
 
-              // 3. Khusus Kasir: Pengujian Alat Kasir & Printer Struk
-              if (!isSuperAdmin) ...[
-                Card(
-                  child: Padding(
-                    padding: EdgeInsets.all(isCompact ? 16 : 20),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(8),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFECFEFF),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: const Icon(Icons.print_outlined, color: Color(0xFF0891B2), size: 20),
-                            ),
-                            const SizedBox(width: 12),
-                            const Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'Pengujian Struk Kasir',
-                                    style: TextStyle(fontWeight: FontWeight.w900, fontSize: 15),
-                                  ),
-                                  Text(
-                                    'Uji coba pencetakan struk printer thermal 80mm atau pratinjau dokumen PDF.',
-                                    style: TextStyle(fontSize: 11, color: Color(0xFF64748B)),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                        const Divider(height: 24),
-                        OutlinedButton.icon(
-                          style: OutlinedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-                          ),
-                          icon: const Icon(Icons.receipt_long, size: 18, color: Color(0xFF0891B2)),
-                          label: const Text('Uji Cetak Struk Contoh (PDF)'),
-                          onPressed: _handleTestPrint,
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-              ],
-
-              // 4. Khusus Super Admin: Pengaturan Toko & Pemesanan Web
+              // 5. Khusus Super Admin: Pengaturan Integrasi & Cadangan
               if (isSuperAdmin) ...[
-                Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(20),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text('Pengaturan Toko & Website', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 15)),
-                        const SizedBox(height: 4),
-                        const Text(
-                          'Kontrol ketersediaan apotek dan transaksi online pelanggan secara langsung.',
-                          style: TextStyle(fontSize: 12, color: Color(0xFF64748B)),
-                        ),
-                        const Divider(height: 24),
-                        SwitchListTile(
-                          contentPadding: EdgeInsets.zero,
-                          title: const Text('Status Buka Apotek', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                          subtitle: Text(
-                            store.isOpen ? 'Apotek sedang BUKA dan melayani pembeli' : 'Apotek sedang TUTUP',
-                            style: TextStyle(fontSize: 12, color: store.isOpen ? const Color(0xFF16A34A) : Colors.red),
-                          ),
-                          value: store.isOpen,
-                          activeColor: const Color(0xFF0891B2),
-                          onChanged: (val) => store.toggleStoreOpen(val),
-                        ),
-                        const Divider(height: 16),
-                        SwitchListTile(
-                          contentPadding: EdgeInsets.zero,
-                          title: const Text('Fitur Transaksi di Web Pelanggan', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                          subtitle: Text(
-                            store.onlineOrdersEnabled
-                                ? (store.isMidtransValid
-                                    ? 'Transaksi web aktif (Metode: Midtrans Online & Bayar di Apotek)'
-                                    : 'Transaksi web aktif (Metode: Bayar di Apotek, Midtrans belum diisi)')
-                                : 'Transaksi web dinonaktifkan sementara (pelanggan hanya bisa melihat katalog)',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: store.onlineOrdersEnabled
-                                  ? (store.isMidtransValid ? const Color(0xFF2563EB) : const Color(0xFF0891B2))
-                                  : Colors.amber[800],
-                            ),
-                          ),
-                          value: store.onlineOrdersEnabled,
-                          activeColor: const Color(0xFF0891B2),
-                          onChanged: (val) => store.toggleOnlineOrders(val),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-
                 // Super Admin Integration Settings Card
                 Card(
                   child: Padding(

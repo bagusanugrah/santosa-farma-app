@@ -419,40 +419,7 @@ class AdaptiveScaffold extends StatelessWidget {
                 },
               ),
             ],
-            if (isSuperAdmin) ...[
-              isWideTablet ? headerToggles : mobileStatusPill,
-            ] else ...[
-              Container(
-                margin: const EdgeInsets.symmetric(horizontal: 4),
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: storeProvider.isOpen ? const Color(0xFFECFEFF) : const Color(0xFFFEF2F2),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: storeProvider.isOpen ? const Color(0xFFA5F3FC) : const Color(0xFFFECACA),
-                  ),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      storeProvider.isOpen ? Icons.storefront : Icons.storefront_outlined,
-                      size: 13,
-                      color: storeProvider.isOpen ? const Color(0xFF0891B2) : Colors.red,
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      storeProvider.isOpen ? 'Apotek Buka' : 'Apotek Tutup',
-                      style: TextStyle(
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold,
-                        color: storeProvider.isOpen ? const Color(0xFF0E7490) : Colors.red,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
+            isWideTablet ? headerToggles : mobileStatusPill,
             if (actions != null) ...actions!,
             const SizedBox(width: 8),
             IconButton(
@@ -525,40 +492,7 @@ class AdaptiveScaffold extends StatelessWidget {
               },
             ),
           ],
-          if (isSuperAdmin) ...[
-            mobileStatusPill,
-          ] else ...[
-            Container(
-              margin: const EdgeInsets.symmetric(horizontal: 4),
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-              decoration: BoxDecoration(
-                color: storeProvider.isOpen ? const Color(0xFFECFEFF) : const Color(0xFFFEF2F2),
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(
-                  color: storeProvider.isOpen ? const Color(0xFFA5F3FC) : const Color(0xFFFECACA),
-                ),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    storeProvider.isOpen ? Icons.storefront : Icons.storefront_outlined,
-                    size: 12,
-                    color: storeProvider.isOpen ? const Color(0xFF0891B2) : Colors.red,
-                  ),
-                  const SizedBox(width: 4),
-                  Text(
-                    storeProvider.isOpen ? 'Buka' : 'Tutup',
-                    style: TextStyle(
-                      fontSize: 9,
-                      fontWeight: FontWeight.bold,
-                      color: storeProvider.isOpen ? const Color(0xFF0E7490) : Colors.red,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
+          mobileStatusPill,
           if (actions != null) ...actions!,
           IconButton(
             icon: const Icon(Icons.logout, size: 20, color: Color(0xFF64748B)),
