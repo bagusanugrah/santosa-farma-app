@@ -391,6 +391,23 @@ class SupabaseService {
   }
 
   // ==========================================
+  // CASHIER TRANSACTIONS (Transaksi Kasir Toko)
+  // ==========================================
+  Future<List<TransactionModel>> getCashierTransactions({DateTime? fromDate}) async {
+    var query = client
+        .from('transactions')
+        .select('*, transaction_items(*)')
+        .eq('channel', 'toko');
+
+    if (fromDate != null) {
+      query = query.gte('created_at', fromDate.toIso8601String());
+    }
+
+    final res = await query.order('id', ascending: false);
+    return (res as List).map((t) => TransactionModel.fromMap(t)).toList();
+  }
+
+  // ==========================================
   // WEB ORDERS (Pesanan Online Realtime)
   // ==========================================
   Future<List<TransactionModel>> getWebOrders() async {

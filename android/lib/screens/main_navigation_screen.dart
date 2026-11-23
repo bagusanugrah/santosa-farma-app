@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import '../widgets/adaptive_scaffold.dart';
+import 'cashier_transactions_screen.dart';
 import 'pos_screen.dart';
 import 'web_orders_screen.dart';
 import 'products_screen.dart';
@@ -35,12 +36,14 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   // Layar & Judul untuk Kasir Toko (Pelayanan Transaksi)
   final List<String> _kasirTitles = const [
     'Kasir POS Apotek',
+    'Transaksi Kasir (Toko)',
     'Pesanan Web Pelanggan',
     'Pengaturan & Akun Kasir',
   ];
 
   final List<Widget> _kasirScreens = const [
     PosScreen(),
+    CashierTransactionsScreen(),
     WebOrdersScreen(),
     SettingsScreen(),
   ];

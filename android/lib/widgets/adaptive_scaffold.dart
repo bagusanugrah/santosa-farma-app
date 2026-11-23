@@ -52,6 +52,11 @@ class AdaptiveScaffold extends StatelessWidget {
               selectedIcon: Icon(Icons.point_of_sale, color: Color(0xFF0E7490)),
               label: 'Kasir POS',
             ),
+            const NavigationDestination(
+              icon: Icon(Icons.receipt_long_outlined),
+              selectedIcon: Icon(Icons.receipt_long, color: Color(0xFF0E7490)),
+              label: 'Transaksi Kasir',
+            ),
             NavigationDestination(
               icon: Badge(
                 isLabelVisible: webOrdersProvider.pendingPickupCount > 0,
@@ -97,6 +102,11 @@ class AdaptiveScaffold extends StatelessWidget {
               icon: Icon(Icons.point_of_sale_outlined),
               selectedIcon: Icon(Icons.point_of_sale),
               label: Text('Kasir POS'),
+            ),
+            const NavigationRailDestination(
+              icon: Icon(Icons.receipt_long_outlined),
+              selectedIcon: Icon(Icons.receipt_long),
+              label: Text('Transaksi Kasir'),
             ),
             NavigationRailDestination(
               icon: Badge(

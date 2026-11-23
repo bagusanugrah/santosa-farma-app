@@ -15,6 +15,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
   List<TransactionModel> _transactions = [];
   bool _isLoading = true;
   String _selectedRange = 'today'; // 'today', '7days', '30days', 'all'
+  String _selectedChannel = 'all'; // 'all', 'toko', 'online'
   final currency = NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ', decimalDigits: 0);
   final dateFormat = DateFormat('dd/MM/yyyy HH:mm');
 
@@ -46,15 +47,28 @@ class _ReportsScreenState extends State<ReportsScreen> {
     setState(() => _isLoading = false);
   }
 
+  List<TransactionModel> get _displayedTransactions {
+    if (_selectedChannel == 'all') return _transactions;
+    return _transactions.where((t) => t.channel == _selectedChannel).toList();
+  }
+
   double get totalOmset => _transactions
       .where((t) => t.status == 'selesai' || t.status == 'diambil' || t.status == 'paid')
       .fold(0.0, (sum, t) => sum + t.total);
 
-  int get totalTrx => _transactions.length;
+  double get kasirOmset => _transactions
+      .where((t) => t.channel == 'toko' && (t.status == 'selesai' || t.status == 'diambil' || t.status == 'paid'))
+      .fold(0.0, (sum, t) => sum + t.total);
 
+  double get webOmset => _transactions
+      .where((t) => t.channel == 'online' && (t.status == 'selesai' || t.status == 'diambil' || t.status == 'paid'))
+      .fold(0.0, (sum, t) => sum + t.total);
+
+  int get totalTrx => _transactions.length;
+  int get kasirCount => _transactions.where((t) => t.channel == 'toko').length;
+  int get onlineCount => _transactions.where((t) => t.channel == 'online').length;
   int get cashCount => _transactions.where((t) => t.paymentMethod == 'tunai').length;
   int get qrisCount => _transactions.where((t) => t.paymentMethod == 'qris').length;
-  int get onlineCount => _transactions.where((t) => t.channel == 'online').length;
 
   @override
   Widget build(BuildContext context) {
@@ -179,11 +193,77 @@ class _ReportsScreenState extends State<ReportsScreen> {
                           // Transactions History Header
                           Padding(
                             padding: const EdgeInsets.symmetric(horizontal: 16),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
                               children: [
-                                const Text('Riwayat Transaksi', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 14)),
-                                Text('${_transactions.length} tercatat', style: const TextStyle(fontSize: 12, color: Color(0xFF64748B))),
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    const Text('Riwayat Transaksi (Gabungan)', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 14)),
+                                    Text(
+                                      _selectedChannel == 'all'
+                                          ? '${_transactions.length} tercatat'
+                                          : '${_displayedTransactions.length} dari ${_transactions.length} tercatat',
+                                      style: const TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 8),
+                                SingleChildScrollView(
+                                  scrollDirection: Axis.horizontal,
+                                  child: Row(
+                                    children: [
+                                      const Text('Kanal: ', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF64748B))),
+                                      ChoiceChip(
+                                        label: Text('Semua ($totalTrx)'),
+                                        selected: _selectedChannel == 'all',
+                                        onSelected: (_) => setState(() => _selectedChannel = 'all'),
+                                        selectedColor: const Color(0xFFCFFAFE),
+                                        backgroundColor: Colors.white,
+                                        labelStyle: TextStyle(
+                                          fontSize: 11,
+                                          fontWeight: _selectedChannel == 'all' ? FontWeight.bold : FontWeight.normal,
+                                          color: _selectedChannel == 'all' ? const Color(0xFF0E7490) : const Color(0xFF475569),
+                                        ),
+                                        side: BorderSide(
+                                          color: _selectedChannel == 'all' ? const Color(0xFF0891B2) : const Color(0xFFE2E8F0),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 6),
+                                      ChoiceChip(
+                                        label: Text('Kasir Toko ($kasirCount)'),
+                                        selected: _selectedChannel == 'toko',
+                                        onSelected: (_) => setState(() => _selectedChannel = 'toko'),
+                                        selectedColor: const Color(0xFFCFFAFE),
+                                        backgroundColor: Colors.white,
+                                        labelStyle: TextStyle(
+                                          fontSize: 11,
+                                          fontWeight: _selectedChannel == 'toko' ? FontWeight.bold : FontWeight.normal,
+                                          color: _selectedChannel == 'toko' ? const Color(0xFF0E7490) : const Color(0xFF475569),
+                                        ),
+                                        side: BorderSide(
+                                          color: _selectedChannel == 'toko' ? const Color(0xFF0891B2) : const Color(0xFFE2E8F0),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 6),
+                                      ChoiceChip(
+                                        label: Text('Pesanan Web ($onlineCount)'),
+                                        selected: _selectedChannel == 'online',
+                                        onSelected: (_) => setState(() => _selectedChannel = 'online'),
+                                        selectedColor: const Color(0xFFDBEAFE),
+                                        backgroundColor: Colors.white,
+                                        labelStyle: TextStyle(
+                                          fontSize: 11,
+                                          fontWeight: _selectedChannel == 'online' ? FontWeight.bold : FontWeight.normal,
+                                          color: _selectedChannel == 'online' ? const Color(0xFF1D4ED8) : const Color(0xFF475569),
+                                        ),
+                                        side: BorderSide(
+                                          color: _selectedChannel == 'online' ? const Color(0xFF2563EB) : const Color(0xFFE2E8F0),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
                               ],
                             ),
                           ),
@@ -199,14 +279,14 @@ class _ReportsScreenState extends State<ReportsScreen> {
                     hasScrollBody: false,
                     child: Center(child: CircularProgressIndicator(color: Color(0xFF0891B2))),
                   )
-                else if (_transactions.isEmpty)
+                else if (_displayedTransactions.isEmpty)
                   const SliverFillRemaining(
                     hasScrollBody: false,
                     child: Center(
                       child: Padding(
                         padding: EdgeInsets.all(24),
                         child: Text(
-                          'Belum ada transaksi di periode ini',
+                          'Belum ada transaksi di periode atau kanal ini',
                           textAlign: TextAlign.center,
                           style: TextStyle(color: Color(0xFF94A3B8)),
                         ),
@@ -219,7 +299,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                     sliver: SliverList(
                       delegate: SliverChildBuilderDelegate(
                         (context, index) {
-                          final trx = _transactions[index];
+                          final trx = _displayedTransactions[index];
                           return Center(
                             child: ConstrainedBox(
                               constraints: const BoxConstraints(maxWidth: 900),
@@ -258,23 +338,61 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                         ),
                                       ],
                                     ),
-                                    subtitle: Row(
-                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                      children: [
-                                        Expanded(
-                                          child: Text(
-                                            dateFormat.format(trx.createdAt),
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
-                                            style: const TextStyle(fontSize: 11, color: Color(0xFF64748B)),
+                                    subtitle: Padding(
+                                      padding: const EdgeInsets.only(top: 4),
+                                      child: Row(
+                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          Expanded(
+                                            child: Text(
+                                              dateFormat.format(trx.createdAt),
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: const TextStyle(fontSize: 11, color: Color(0xFF64748B)),
+                                            ),
                                           ),
-                                        ),
-                                        const SizedBox(width: 8),
-                                        Text(
-                                          '${trx.paymentMethod.toUpperCase()} • ${trx.status.toUpperCase()}',
-                                          style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFF475569)),
-                                        ),
-                                      ],
+                                          const SizedBox(width: 8),
+                                          Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              Container(
+                                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                                decoration: BoxDecoration(
+                                                  color: trx.isOnline ? const Color(0xFFEFF6FF) : const Color(0xFFECFEFF),
+                                                  borderRadius: BorderRadius.circular(6),
+                                                  border: Border.all(
+                                                    color: trx.isOnline ? const Color(0xFFBFDBFE) : const Color(0xFFA5F3FC),
+                                                  ),
+                                                ),
+                                                child: Text(
+                                                  trx.isOnline ? 'WEB' : 'KASIR',
+                                                  style: TextStyle(
+                                                    fontSize: 9,
+                                                    fontWeight: FontWeight.w900,
+                                                    color: trx.isOnline ? const Color(0xFF1D4ED8) : const Color(0xFF0E7490),
+                                                  ),
+                                                ),
+                                              ),
+                                              const SizedBox(width: 4),
+                                              Container(
+                                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                                decoration: BoxDecoration(
+                                                  color: const Color(0xFFF1F5F9),
+                                                  borderRadius: BorderRadius.circular(6),
+                                                ),
+                                                child: Text(
+                                                  trx.paymentMethod.toUpperCase(),
+                                                  style: const TextStyle(
+                                                    fontSize: 9,
+                                                    fontWeight: FontWeight.bold,
+                                                    color: Color(0xFF475569),
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ],
+                                      ),
                                     ),
                                     onTap: () {
                                       showDialog(
@@ -288,7 +406,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                             ),
                           );
                         },
-                        childCount: _transactions.length,
+                        childCount: _displayedTransactions.length,
                       ),
                     ),
                   ),
