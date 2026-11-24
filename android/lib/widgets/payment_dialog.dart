@@ -87,6 +87,20 @@ class _PaymentDialogState extends State<PaymentDialog> with SingleTickerProvider
     _tabController.removeListener(_handleTabChange);
     _tabController.dispose();
     _cashController.dispose();
+
+    // Auto cancel pending Midtrans QRIS charge when dialog is closed before payment
+    if (_qrisOrderId != null && _qrisPaymentStatus != 'paid') {
+      final orderIdToCancel = _qrisOrderId!;
+      try {
+        final storeSetting = context.read<StoreProvider>().setting;
+        SupabaseService.instance.cancelMidtransTransaction(
+          orderId: orderIdToCancel,
+          serverKey: storeSetting.midtransServerKey,
+          isProduction: storeSetting.midtransIsProduction,
+        );
+      } catch (_) {}
+    }
+
     super.dispose();
   }
 
@@ -304,6 +318,17 @@ class _PaymentDialogState extends State<PaymentDialog> with SingleTickerProvider
     setState(() => _isProcessing = true);
     final posProvider = context.read<PosProvider>();
     final authProvider = context.read<AuthProvider>();
+
+    // If paying cash and a QRIS charge was previously created, cancel the pending QRIS
+    if (method == 'tunai' && _qrisOrderId != null && _qrisPaymentStatus != 'paid') {
+      final orderIdToCancel = _qrisOrderId!;
+      final storeSetting = context.read<StoreProvider>().setting;
+      SupabaseService.instance.cancelMidtransTransaction(
+        orderId: orderIdToCancel,
+        serverKey: storeSetting.midtransServerKey,
+        isProduction: storeSetting.midtransIsProduction,
+      );
+    }
 
     try {
       final TransactionModel trx;

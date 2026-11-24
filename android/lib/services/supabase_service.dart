@@ -271,6 +271,33 @@ class SupabaseService {
     }
   }
 
+  Future<bool> cancelMidtransTransaction({
+    required String orderId,
+    required String serverKey,
+    required bool isProduction,
+  }) async {
+    final cleanServer = serverKey.trim();
+    final host = isProduction ? 'api.midtrans.com' : 'api.sandbox.midtrans.com';
+    final auth = base64Encode(utf8.encode('$cleanServer:'));
+    final client = HttpClient()..connectionTimeout = const Duration(seconds: 6);
+
+    try {
+      final req = await client
+          .postUrl(Uri.parse('https://$host/v2/$orderId/cancel'))
+          .timeout(const Duration(seconds: 6));
+      req.headers.set('Authorization', 'Basic $auth');
+      req.headers.set('Content-Type', 'application/json');
+      req.headers.set('Accept', 'application/json');
+
+      final res = await req.close().timeout(const Duration(seconds: 6));
+      client.close();
+      return res.statusCode >= 200 && res.statusCode < 300;
+    } catch (e) {
+      client.close();
+      return false;
+    }
+  }
+
   Future<void> updateIntegrationSettings({
     required String fonnteToken,
     required String fonnteUrl,
