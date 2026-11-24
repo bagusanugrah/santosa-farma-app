@@ -190,6 +190,87 @@ class SupabaseService {
     }
   }
 
+  // ==========================================
+  // MIDTRANS QRIS TRANSACTIONS (POS)
+  // ==========================================
+  Future<Map<String, dynamic>?> createMidtransQrisCharge({
+    required String orderId,
+    required int grossAmount,
+    required String serverKey,
+    required bool isProduction,
+  }) async {
+    final cleanServer = serverKey.trim();
+    final host = isProduction ? 'api.midtrans.com' : 'api.sandbox.midtrans.com';
+    final auth = base64Encode(utf8.encode('$cleanServer:'));
+    final client = HttpClient()..connectionTimeout = const Duration(seconds: 10);
+
+    try {
+      final req = await client
+          .postUrl(Uri.parse('https://$host/v2/charge'))
+          .timeout(const Duration(seconds: 10));
+      req.headers.set('Authorization', 'Basic $auth');
+      req.headers.set('Content-Type', 'application/json');
+      req.headers.set('Accept', 'application/json');
+
+      final payload = jsonEncode({
+        'payment_type': 'qris',
+        'transaction_details': {
+          'order_id': orderId,
+          'gross_amount': grossAmount,
+        },
+        'qris': {
+          'acquirer': 'gopay',
+        },
+      });
+      req.write(payload);
+
+      final res = await req.close().timeout(const Duration(seconds: 10));
+      final body = await res.transform(utf8.decoder).join();
+      client.close();
+
+      if (res.statusCode >= 200 && res.statusCode < 300) {
+        return jsonDecode(body) as Map<String, dynamic>;
+      } else {
+        return null;
+      }
+    } catch (e) {
+      client.close();
+      return null;
+    }
+  }
+
+  Future<Map<String, dynamic>?> checkMidtransStatus({
+    required String orderId,
+    required String serverKey,
+    required bool isProduction,
+  }) async {
+    final cleanServer = serverKey.trim();
+    final host = isProduction ? 'api.midtrans.com' : 'api.sandbox.midtrans.com';
+    final auth = base64Encode(utf8.encode('$cleanServer:'));
+    final client = HttpClient()..connectionTimeout = const Duration(seconds: 8);
+
+    try {
+      final req = await client
+          .getUrl(Uri.parse('https://$host/v2/$orderId/status'))
+          .timeout(const Duration(seconds: 8));
+      req.headers.set('Authorization', 'Basic $auth');
+      req.headers.set('Accept', 'application/json');
+
+      final res = await req.close().timeout(const Duration(seconds: 8));
+      final body = await res.transform(utf8.decoder).join();
+      client.close();
+
+      if (res.statusCode >= 200 && res.statusCode < 300) {
+        return jsonDecode(body) as Map<String, dynamic>;
+      } else {
+        return null;
+      }
+    } catch (e) {
+      client.close();
+      return null;
+    }
+  }
+
   Future<void> updateIntegrationSettings({
     required String fonnteToken,
     required String fonnteUrl,
