@@ -305,43 +305,56 @@ class _ProcessWebOrderDialogState extends State<ProcessWebOrderDialog> {
               // Header
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                    child: Row(
                       children: [
-                        Row(
-                          children: [
-                            const Icon(Icons.shopping_bag_outlined, color: Color(0xFF0891B2), size: 20),
-                            const SizedBox(width: 6),
-                            Flexible(
-                              child: Text(
-                                widget.order.invoiceNo,
-                                style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16),
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                          ],
+                        Container(
+                          padding: const EdgeInsets.all(6),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFE0F2FE),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Icon(Icons.shopping_bag_outlined, color: Color(0xFF0891B2), size: 18),
                         ),
-                        const SizedBox(height: 2),
-                        Text(
-                          dateFormat.format(widget.order.createdAt),
-                          style: const TextStyle(fontSize: 11, color: Color(0xFF64748B)),
+                        const SizedBox(width: 8),
+                        Flexible(
+                          child: Text(
+                            widget.order.invoiceNo,
+                            style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 15, color: Color(0xFF0F172A)),
+                            overflow: TextOverflow.ellipsis,
+                          ),
                         ),
                       ],
                     ),
                   ),
+                  IconButton(
+                    icon: const Icon(Icons.close, color: Color(0xFF64748B)),
+                    visualDensity: VisualDensity.compact,
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 6),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    dateFormat.format(widget.order.createdAt),
+                    style: const TextStyle(fontSize: 11, color: Color(0xFF64748B)),
+                  ),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                     decoration: BoxDecoration(
                       color: const Color(0xFFFEF3C7),
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(8),
                       border: Border.all(color: const Color(0xFFFDE68A)),
                     ),
                     child: const Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.storefront, size: 14, color: Color(0xFFB45309)),
+                        Icon(Icons.storefront, size: 13, color: Color(0xFFB45309)),
                         SizedBox(width: 4),
                         Text(
                           'Bayar di Kasir',
@@ -349,10 +362,6 @@ class _ProcessWebOrderDialogState extends State<ProcessWebOrderDialog> {
                         ),
                       ],
                     ),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.close, color: Color(0xFF64748B)),
-                    onPressed: () => Navigator.pop(context),
                   ),
                 ],
               ),
@@ -446,96 +455,113 @@ class _ProcessWebOrderDialogState extends State<ProcessWebOrderDialog> {
                       )
                     : ListView.separated(
                         itemCount: _items.length,
-                        separatorBuilder: (_, __) => const Divider(height: 8, color: Color(0xFFF1F5F9)),
+                        separatorBuilder: (_, __) => const SizedBox(height: 8),
                         itemBuilder: (ctx, index) {
                           final item = _items[index];
 
                           return Container(
-                            padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
+                            padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
                             decoration: BoxDecoration(
-                              color: Colors.white,
+                              color: const Color(0xFFF8FAFC),
                               borderRadius: BorderRadius.circular(10),
+                              border: Border.all(color: const Color(0xFFE2E8F0)),
                             ),
-                            child: Row(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        item.productName,
-                                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-                                        maxLines: 2,
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                      const SizedBox(height: 2),
-                                      Text(
-                                        '${currency.format(item.price)} / unit',
-                                        style: const TextStyle(fontSize: 11, color: Color(0xFF64748B)),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-
-                                // Stepper Qty
                                 Row(
-                                  mainAxisSize: MainAxisSize.min,
+                                  crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    IconButton(
-                                      visualDensity: VisualDensity.compact,
-                                      icon: const Icon(Icons.remove_circle_outline, size: 20, color: Color(0xFF64748B)),
-                                      onPressed: () {
-                                        setState(() {
-                                          if (item.qty > 1) {
-                                            item.qty--;
-                                          } else {
-                                            _items.removeAt(index);
-                                          }
-                                        });
-                                      },
-                                    ),
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                      decoration: BoxDecoration(
-                                        color: const Color(0xFFF1F5F9),
-                                        borderRadius: BorderRadius.circular(6),
-                                      ),
+                                    Expanded(
                                       child: Text(
-                                        '${item.qty}',
-                                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                                        item.productName,
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 13,
+                                          color: Color(0xFF0F172A),
+                                        ),
                                       ),
                                     ),
-                                    IconButton(
-                                      visualDensity: VisualDensity.compact,
-                                      icon: const Icon(Icons.add_circle_outline, size: 20, color: Color(0xFF0891B2)),
-                                      onPressed: () {
-                                        setState(() {
-                                          item.qty++;
-                                        });
-                                      },
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      currency.format(item.subtotal),
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.w900,
+                                        fontSize: 13,
+                                        color: Color(0xFF0891B2),
+                                      ),
                                     ),
                                   ],
                                 ),
-                                const SizedBox(width: 6),
-
-                                // Subtotal
-                                SizedBox(
-                                  width: 80,
-                                  child: Text(
-                                    currency.format(item.subtotal),
-                                    textAlign: TextAlign.right,
-                                    style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 12),
-                                  ),
-                                ),
-
-                                // Delete
-                                IconButton(
-                                  visualDensity: VisualDensity.compact,
-                                  icon: const Icon(Icons.delete_outline, size: 18, color: Colors.red),
-                                  onPressed: () {
-                                    setState(() => _items.removeAt(index));
-                                  },
+                                const SizedBox(height: 8),
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Text(
+                                      '@ ${currency.format(item.price)}',
+                                      style: const TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+                                    ),
+                                    Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        InkWell(
+                                          onTap: () {
+                                            setState(() {
+                                              if (item.qty > 1) {
+                                                item.qty--;
+                                              } else {
+                                                _items.removeAt(index);
+                                              }
+                                            });
+                                          },
+                                          borderRadius: BorderRadius.circular(6),
+                                          child: Container(
+                                            padding: const EdgeInsets.all(4),
+                                            decoration: BoxDecoration(
+                                              color: Colors.white,
+                                              borderRadius: BorderRadius.circular(6),
+                                              border: Border.all(color: const Color(0xFFCBD5E1)),
+                                            ),
+                                            child: const Icon(Icons.remove, size: 16, color: Color(0xFF475569)),
+                                          ),
+                                        ),
+                                        Padding(
+                                          padding: const EdgeInsets.symmetric(horizontal: 10),
+                                          child: Text(
+                                            '${item.qty}',
+                                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                                          ),
+                                        ),
+                                        InkWell(
+                                          onTap: () {
+                                            setState(() {
+                                              item.qty++;
+                                            });
+                                          },
+                                          borderRadius: BorderRadius.circular(6),
+                                          child: Container(
+                                            padding: const EdgeInsets.all(4),
+                                            decoration: BoxDecoration(
+                                              color: const Color(0xFF0891B2),
+                                              borderRadius: BorderRadius.circular(6),
+                                            ),
+                                            child: const Icon(Icons.add, size: 16, color: Colors.white),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 14),
+                                        InkWell(
+                                          onTap: () {
+                                            setState(() => _items.removeAt(index));
+                                          },
+                                          borderRadius: BorderRadius.circular(6),
+                                          child: const Padding(
+                                            padding: EdgeInsets.all(4),
+                                            child: Icon(Icons.delete_outline, size: 18, color: Colors.red),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
                                 ),
                               ],
                             ),
@@ -600,11 +626,11 @@ class _ProcessWebOrderDialogState extends State<ProcessWebOrderDialog> {
                     child: FilledButton.icon(
                       style: FilledButton.styleFrom(
                         backgroundColor: const Color(0xFF0891B2),
-                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        padding: const EdgeInsets.symmetric(vertical: 13),
                       ),
                       icon: const Icon(Icons.point_of_sale, size: 18),
                       label: const Text(
-                        'Bayar di Kasir (Tunai / QRIS)',
+                        'Proses Pembayaran',
                         style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
                       ),
                       onPressed: _proceedToPayment,
