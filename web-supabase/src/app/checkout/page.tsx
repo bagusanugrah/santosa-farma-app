@@ -374,7 +374,7 @@ export default function CheckoutPage() {
               <div>
                 <h4 className="font-bold text-brand-900 text-sm">Metode Pengambilan di Toko</h4>
                 <p className="text-xs text-brand-800/90 mt-1 leading-relaxed">
-                  Setelah pesanan dibuat, Anda akan menerima <strong>Kode QR Pesanan</strong>. Tunjukkan kode QR tersebut langsung kepada kasir di Apotek Santosa Farma (Jl. Raya Jalancagak, Subang) saat mengambil obat.
+                  Setelah pesanan dibuat, Anda akan menerima <strong>Kode QR Pesanan</strong>. Tunjukkan kode QR tersebut langsung kepada kasir di Apotek Santosa Farma saat mengambil obat.
                 </p>
               </div>
             </div>
@@ -409,6 +409,12 @@ export default function CheckoutPage() {
                 <span>Biaya Layanan</span>
                 <span className="text-emerald-600 font-bold">GRATIS</span>
               </div>
+              <div className="flex justify-between text-xs text-slate-500">
+                <span>Metode Pembayaran</span>
+                <span className="font-semibold text-brand-700">
+                  {paymentMethod === 'pharmacy' || !hasMidtrans ? 'Bayar di Kasir (Apotek)' : 'Midtrans Online'}
+                </span>
+              </div>
               <div className="flex justify-between text-sm font-black text-slate-900 pt-2 border-t border-slate-100">
                 <span>Total Estimasi</span>
                 <span className="text-brand-600 text-base">
@@ -429,9 +435,9 @@ export default function CheckoutPage() {
             <button
               onClick={handlePayNow}
               disabled={loading || !onlineOrdersEnabled || !isOpen}
-              className="w-full py-3.5 bg-brand-600 hover:bg-brand-700 disabled:opacity-50 text-white font-bold rounded-xl sm:rounded-2xl transition shadow-lg shadow-brand-600/20 text-xs sm:text-sm flex items-center justify-center space-x-2"
+              className="w-full py-3.5 px-4 bg-brand-600 hover:bg-brand-700 disabled:opacity-50 text-white font-bold rounded-xl sm:rounded-2xl transition shadow-lg shadow-brand-600/20 text-sm flex items-center justify-center space-x-2 cursor-pointer disabled:cursor-not-allowed"
             >
-              <span>
+              <span className="truncate">
                 {loading
                   ? 'Menyiapkan Pesanan...'
                   : !isOpen
@@ -439,10 +445,10 @@ export default function CheckoutPage() {
                   : !onlineOrdersEnabled
                   ? 'Pemesanan Online Nonaktif'
                   : paymentMethod === 'pharmacy' || !hasMidtrans
-                  ? 'Pesan Sekarang (Bayar di Apotek)'
-                  : 'Bayar Sekarang (Midtrans Online)'}
+                  ? 'Pesan Sekarang'
+                  : 'Bayar Sekarang'}
               </span>
-              <ArrowRight className="w-4 h-4" />
+              <ArrowRight className="w-4 h-4 shrink-0" />
             </button>
           </div>
         </div>
