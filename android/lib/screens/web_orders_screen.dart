@@ -20,6 +20,8 @@ class _WebOrdersScreenState extends State<WebOrdersScreen> with SingleTickerProv
   late TabController _tabController;
   final currency = NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ', decimalDigits: 0);
   final dateFormat = DateFormat('dd/MM/yyyy HH:mm');
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
 
   @override
   void initState() {
@@ -30,11 +32,31 @@ class _WebOrdersScreenState extends State<WebOrdersScreen> with SingleTickerProv
   @override
   void dispose() {
     _tabController.dispose();
+    _searchController.dispose();
     super.dispose();
   }
 
   List<TransactionModel> _filterOrders(List<TransactionModel> allOrders, int tabIndex) {
-    final activeOrders = allOrders.where((o) => o.status != 'dibatalkan').toList();
+    var activeOrders = allOrders.where((o) => o.status != 'dibatalkan').toList();
+
+    if (_searchQuery.isNotEmpty) {
+      final q = _searchQuery.toLowerCase();
+      final cleanQDigits = q.replaceAll(RegExp(r'[^0-9]'), '');
+
+      activeOrders = activeOrders.where((o) {
+        final matchInvoice = o.invoiceNo.toLowerCase().contains(q);
+        final matchName = (o.customerName ?? '').toLowerCase().contains(q);
+
+        final cleanPhone = (o.customerPhone ?? '').replaceAll(RegExp(r'[^0-9]'), '');
+        final matchPhone = (cleanQDigits.isNotEmpty && cleanPhone.contains(cleanQDigits)) ||
+            (o.customerPhone ?? '').toLowerCase().contains(q);
+
+        final matchItems = o.items.any((item) => item.productName.toLowerCase().contains(q));
+
+        return matchInvoice || matchName || matchPhone || matchItems;
+      }).toList();
+    }
+
     switch (tabIndex) {
       case 1: // Bayar di Apotek
         return activeOrders.where((o) => o.status == 'pending').toList();
@@ -141,32 +163,88 @@ class _WebOrdersScreenState extends State<WebOrdersScreen> with SingleTickerProv
 
     return Column(
       children: [
-        // Top Action Bar
+        // Top Action Bar: Search Bar + Scan QR + Refresh
         Container(
           color: Colors.white,
-          padding: const EdgeInsets.all(16),
-          child: Row(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Expanded(
-                child: FilledButton.icon(
-                  icon: const Icon(Icons.qr_code_scanner),
-                  label: const Text('Scan QR Pengambilan Obat'),
-                  style: FilledButton.styleFrom(
-                    backgroundColor: const Color(0xFF0E7490),
-                    padding: const EdgeInsets.symmetric(vertical: 14),
+              // Search Input
+              TextField(
+                controller: _searchController,
+                style: const TextStyle(fontSize: 13),
+                decoration: InputDecoration(
+                  hintText: 'Cari no. invoice (INV-...), nama, atau HP...',
+                  hintStyle: const TextStyle(fontSize: 12, color: Color(0xFF94A3B8)),
+                  prefixIcon: const Icon(Icons.search, size: 20, color: Color(0xFF0891B2)),
+                  suffixIcon: _searchQuery.isNotEmpty
+                      ? IconButton(
+                          icon: const Icon(Icons.clear, size: 18),
+                          onPressed: () {
+                            _searchController.clear();
+                            setState(() => _searchQuery = '');
+                          },
+                        )
+                      : null,
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  isDense: true,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
                   ),
-                  onPressed: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(builder: (_) => const QrScannerScreen()),
-                    );
-                  },
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: const BorderSide(color: Color(0xFF0891B2), width: 1.5),
+                  ),
+                  filled: true,
+                  fillColor: const Color(0xFFF8FAFC),
                 ),
+                onChanged: (val) => setState(() => _searchQuery = val.trim()),
+                onSubmitted: (_) => FocusScope.of(context).unfocus(),
               ),
-              const SizedBox(width: 12),
-              IconButton.outlined(
-                tooltip: 'Muat Ulang Pesanan',
-                icon: const Icon(Icons.refresh, color: Color(0xFF0E7490)),
-                onPressed: () => webOrdersProvider.loadOrders(),
+              const SizedBox(height: 10),
+
+              // Action Buttons Row: Scan QR & Refresh
+              Row(
+                children: [
+                  Expanded(
+                    child: FilledButton.icon(
+                      icon: const Icon(Icons.qr_code_scanner, size: 18),
+                      label: const Text(
+                        'Scan QR Pengambilan Obat',
+                        style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+                      ),
+                      style: FilledButton.styleFrom(
+                        backgroundColor: const Color(0xFF0E7490),
+                        padding: const EdgeInsets.symmetric(vertical: 11),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      ),
+                      onPressed: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(builder: (_) => const QrScannerScreen()),
+                        );
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  IconButton.outlined(
+                    tooltip: 'Muat Ulang Pesanan',
+                    icon: const Icon(Icons.refresh, color: Color(0xFF0E7490)),
+                    style: IconButton.styleFrom(
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        side: const BorderSide(color: Color(0xFFCBD5E1)),
+                      ),
+                      padding: const EdgeInsets.all(10),
+                    ),
+                    onPressed: () => webOrdersProvider.loadOrders(),
+                  ),
+                ],
               ),
             ],
           ),
@@ -184,10 +262,10 @@ class _WebOrdersScreenState extends State<WebOrdersScreen> with SingleTickerProv
             indicatorWeight: 3,
             labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
             tabs: [
-              Tab(text: 'Semua (${webOrdersProvider.orders.where((o) => o.status != 'dibatalkan').length})'),
-              Tab(text: 'Bayar di Apotek (${webOrdersProvider.orders.where((o) => o.status == 'pending').length})'),
-              Tab(text: 'Siap Diambil (${webOrdersProvider.pendingPickupCount})'),
-              const Tab(text: 'Sudah Selesai'),
+              Tab(text: 'Semua (${_filterOrders(webOrdersProvider.orders, 0).length})'),
+              Tab(text: 'Bayar di Apotek (${_filterOrders(webOrdersProvider.orders, 1).length})'),
+              Tab(text: 'Siap Diambil (${_filterOrders(webOrdersProvider.orders, 2).length})'),
+              Tab(text: 'Sudah Selesai (${_filterOrders(webOrdersProvider.orders, 3).length})'),
             ],
           ),
         ),
@@ -209,19 +287,39 @@ class _WebOrdersScreenState extends State<WebOrdersScreen> with SingleTickerProv
                           child: Column(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Icon(Icons.inbox_outlined, size: 56, color: Colors.grey[300]),
+                              Icon(
+                                _searchQuery.isNotEmpty ? Icons.search_off : Icons.inbox_outlined,
+                                size: 56,
+                                color: Colors.grey[300],
+                              ),
                               const SizedBox(height: 12),
-                              const Text(
-                                'Belum ada transaksi di tab ini',
+                              Text(
+                                _searchQuery.isNotEmpty
+                                    ? 'Pesanan tidak ditemukan'
+                                    : 'Belum ada transaksi di tab ini',
                                 textAlign: TextAlign.center,
-                                style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF64748B)),
+                                style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF64748B)),
                               ),
                               const SizedBox(height: 4),
-                              const Text(
-                                'Pesanan online yang masuk melalui website akan otomatis tampil di sini',
+                              Text(
+                                _searchQuery.isNotEmpty
+                                    ? 'Tidak ada pesanan dengan kata kunci "$_searchQuery" di tab ini.'
+                                    : 'Pesanan online yang masuk melalui website akan otomatis tampil di sini',
                                 textAlign: TextAlign.center,
-                                style: TextStyle(fontSize: 12, color: Color(0xFF94A3B8)),
+                                style: const TextStyle(fontSize: 12, color: Color(0xFF94A3B8)),
                               ),
+                              if (_searchQuery.isNotEmpty && tabIndex != 0) ...[
+                                const SizedBox(height: 12),
+                                OutlinedButton.icon(
+                                  icon: const Icon(Icons.search, size: 16),
+                                  label: const Text('Cari di Tab "Semua"'),
+                                  style: OutlinedButton.styleFrom(
+                                    foregroundColor: const Color(0xFF0891B2),
+                                    side: const BorderSide(color: Color(0xFF0891B2)),
+                                  ),
+                                  onPressed: () => _tabController.animateTo(0),
+                                ),
+                              ],
                             ],
                           ),
                         ),
