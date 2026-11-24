@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { API_BASE_URL, Transaction } from '@/lib/api';
+import { supabase } from '@/lib/supabase';
 import { QRCodeSVG } from 'qrcode.react';
 import { ArrowLeft, CheckCircle2, QrCode, FileText } from 'lucide-react';
 import Link from 'next/link';
@@ -27,7 +28,21 @@ export default function OrderDetailPage() {
 
     const fetchOrder = async () => {
       try {
-        const res = await fetch(`${API_BASE_URL}/transactions/customer/my-orders`, {
+        const { data: directTrx, error: directErr } = await supabase
+          .from('transactions')
+          .select('*, items:transaction_items(*)')
+          .eq('invoice_no', invoiceNo)
+          .eq('customer_id', user.id)
+          .neq('status', 'dibatalkan')
+          .maybeSingle();
+
+        if (!directErr && directTrx) {
+          setOrder(directTrx as any);
+          return;
+        }
+
+        const res = await fetch(`${API_BASE_URL}/transactions/customer/my-orders?_t=${Date.now()}`, {
+          cache: 'no-store',
           headers: {
             Authorization: `Bearer ${token}`,
             Accept: 'application/json',

@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { API_BASE_URL, Transaction } from '@/lib/api';
+import { supabase } from '@/lib/supabase';
 import QrPickupModal from '@/components/QrPickupModal';
 import { Package, QrCode, RefreshCw, ShoppingBag, Trash2 } from 'lucide-react';
 
@@ -21,24 +22,45 @@ export default function MyOrdersPage() {
   const [showQrModal, setShowQrModal] = useState(false);
 
   const fetchOrders = useCallback(async () => {
-    if (!token) return;
+    if (!user) return;
     try {
-      const res = await fetch(`${API_BASE_URL}/transactions/customer/my-orders`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          Accept: 'application/json',
-        },
-      });
-      if (res.ok) {
-        const json = await res.json();
-        setOrders(json.data || []);
+      // 1. Direct Supabase query (always fresh & instantaneous)
+      const { data: directData, error: directErr } = await supabase
+        .from('transactions')
+        .select('*, items:transaction_items(*)')
+        .eq('customer_id', user.id)
+        .neq('status', 'dibatalkan')
+        .order('id', { ascending: false });
+
+      if (!directErr && directData && directData.length > 0) {
+        setOrders(directData as any);
+        return;
+      }
+
+      // 2. Query via API route with timestamp cache-buster
+      if (token) {
+        const res = await fetch(`${API_BASE_URL}/transactions/customer/my-orders?_t=${Date.now()}`, {
+          cache: 'no-store',
+          headers: {
+            Authorization: `Bearer ${token}`,
+            Accept: 'application/json',
+          },
+        });
+        if (res.ok) {
+          const json = await res.json();
+          setOrders(json.data || []);
+        } else if (directData) {
+          setOrders(directData as any);
+        }
+      } else if (directData) {
+        setOrders(directData as any);
       }
     } catch (err) {
       console.error('Error fetching orders', err);
     } finally {
       setLoading(false);
     }
-  }, [token]);
+  }, [user, token]);
 
   useEffect(() => {
     if (authLoading) return;
@@ -49,6 +71,26 @@ export default function MyOrdersPage() {
     }
 
     fetchOrders();
+
+    // Supabase Realtime Subscription: auto-sync orders when cashier processes or cancels
+    const channel = supabase
+      .channel(`public:transactions:customer:${user.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'transactions',
+        },
+        () => {
+          fetchOrders();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [user, token, authLoading, router, fetchOrders]);
 
   const handleVerifyPayment = async (invoiceNo: string) => {
@@ -157,15 +199,23 @@ export default function MyOrdersPage() {
           <Package className="w-5 h-5 sm:w-6 sm:h-6 text-brand-600" />
           <h2 className="text-xl sm:text-2xl font-black text-slate-900">Pesanan Saya</h2>
         </div>
+        <button
+          onClick={() => fetchOrders()}
+          disabled={loading}
+          className="px-3 py-1.5 text-xs font-bold text-brand-600 hover:text-brand-700 bg-brand-50 hover:bg-brand-100 rounded-xl flex items-center space-x-1.5 transition"
+        >
+          <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+          <span>Muat Ulang</span>
+        </button>
       </div>
 
       {/* Tabs */}
       <div className="flex items-center space-x-2 border-b border-slate-200 pb-2 overflow-x-auto scrollbar-none -mx-3.5 px-3.5 sm:mx-0 sm:px-0">
         {[
-          { id: 'all', label: 'Semua Pesanan' },
-          { id: 'paid', label: 'Siap Diambil (QR)' },
-          { id: 'pending', label: 'Menunggu Pembayaran' },
-          { id: 'diambil', label: 'Selesai Diambil' },
+          { id: 'all', label: `Semua Pesanan (${orders.length})` },
+          { id: 'paid', label: `Siap Diambil (${orders.filter((o) => o.status === 'paid').length})` },
+          { id: 'pending', label: `Menunggu Bayar (${orders.filter((o) => o.status === 'pending').length})` },
+          { id: 'diambil', label: `Selesai (${orders.filter((o) => o.status === 'diambil' || o.status === 'selesai').length})` },
         ].map((tab) => (
           <button
             key={tab.id}

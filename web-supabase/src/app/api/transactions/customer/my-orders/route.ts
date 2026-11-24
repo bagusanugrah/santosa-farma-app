@@ -25,10 +25,19 @@ export async function GET(req: Request) {
       );
     }
 
-    return NextResponse.json({
-      status: 'success',
-      data: transactions || [],
-    });
+    return NextResponse.json(
+      {
+        status: 'success',
+        data: transactions || [],
+      },
+      {
+        headers: {
+          'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0',
+          Pragma: 'no-cache',
+          Expires: '0',
+        },
+      }
+    );
   } catch (err: any) {
     return NextResponse.json(
       { status: 'error', message: err.message || 'Terjadi kesalahan server.' },

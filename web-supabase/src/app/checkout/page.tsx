@@ -453,6 +453,7 @@ export default function CheckoutPage() {
         onClose={() => {
           setShowQrModal(false);
           router.push('/orders');
+          router.refresh();
         }}
         transaction={createdTrx}
       />

@@ -96,6 +96,9 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const clearCart = () => {
     setItems([]);
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('asf_web_cart');
+    }
   };
 
   const totalItems = items.reduce((sum, item) => sum + item.qty, 0);
