@@ -452,12 +452,13 @@ class _PaymentDialogState extends State<PaymentDialog> with SingleTickerProvider
               AnimatedContainer(
                 duration: const Duration(milliseconds: 200),
                 curve: Curves.easeInOut,
-                height: _tabController.index == 0 ? 245.0 : 280.0,
+                height: _tabController.index == 0 ? 255.0 : 340.0,
                 child: TabBarView(
                   controller: _tabController,
                   children: [
                     // Tab 1: Tunai
                     SingleChildScrollView(
+                      physics: const ClampingScrollPhysics(),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
@@ -604,91 +605,89 @@ class _PaymentDialogState extends State<PaymentDialog> with SingleTickerProvider
                       )
                     else
                       Center(
-                        child: SingleChildScrollView(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              // Compact & Clear QR Container
-                              Container(
-                                padding: const EdgeInsets.all(8),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            // Compact & Clear QR Container
+                            Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(color: const Color(0xFFCBD5E1), width: 1.2),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.04),
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 3),
+                                  ),
+                                ],
+                              ),
+                              child: QrImageView(
+                                data: _qrisString ?? '',
+                                version: QrVersions.auto,
+                                size: 190.0,
+                                eyeStyle: const QrEyeStyle(eyeShape: QrEyeShape.square, color: Color(0xFF0F172A)),
+                                dataModuleStyle: const QrDataModuleStyle(dataModuleShape: QrDataModuleShape.square, color: Color(0xFF0F172A)),
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            // Interactive status badge (Clickable to Cek Status manually)
+                            InkWell(
+                              onTap: (_isCheckingStatus || _qrisOrderId == null || _qrisPaymentStatus == 'paid')
+                                  ? null
+                                  : () => _checkPaymentStatus(silent: false),
+                              borderRadius: BorderRadius.circular(20),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
                                 decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  borderRadius: BorderRadius.circular(16),
-                                  border: Border.all(color: const Color(0xFFCBD5E1), width: 1.2),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.black.withOpacity(0.04),
-                                      blurRadius: 8,
-                                      offset: const Offset(0, 3),
+                                  color: _qrisPaymentStatus == 'paid'
+                                      ? const Color(0xFFECFDF5)
+                                      : const Color(0xFFF0FDF4),
+                                  borderRadius: BorderRadius.circular(20),
+                                  border: Border.all(
+                                    color: _qrisPaymentStatus == 'paid'
+                                        ? const Color(0xFF34D399)
+                                        : const Color(0xFF86EFAC),
+                                  ),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    if (_isCheckingStatus)
+                                      const SizedBox(
+                                        width: 13,
+                                        height: 13,
+                                        child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF16A34A)),
+                                      )
+                                    else if (_qrisPaymentStatus == 'paid')
+                                      const Icon(Icons.check_circle, size: 16, color: Color(0xFF059669))
+                                    else
+                                      const Icon(Icons.sync, size: 16, color: Color(0xFF16A34A)),
+                                    const SizedBox(width: 7),
+                                    Text(
+                                      _qrisPaymentStatus == 'paid'
+                                          ? 'Pembayaran Berhasil! Memproses...'
+                                          : (_isCheckingStatus ? 'Mengecek pembayaran...' : 'Menunggu pembayaran (Cek Status)'),
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w600,
+                                        color: _qrisPaymentStatus == 'paid'
+                                            ? const Color(0xFF065F46)
+                                            : const Color(0xFF166534),
+                                      ),
                                     ),
                                   ],
                                 ),
-                                child: QrImageView(
-                                  data: _qrisString ?? '',
-                                  version: QrVersions.auto,
-                                  size: 190.0,
-                                  eyeStyle: const QrEyeStyle(eyeShape: QrEyeShape.square, color: Color(0xFF0F172A)),
-                                  dataModuleStyle: const QrDataModuleStyle(dataModuleShape: QrDataModuleShape.square, color: Color(0xFF0F172A)),
-                                ),
                               ),
-                              const SizedBox(height: 10),
-                              // Interactive status badge (Clickable to Cek Status manually)
-                              InkWell(
-                                onTap: (_isCheckingStatus || _qrisOrderId == null || _qrisPaymentStatus == 'paid')
-                                    ? null
-                                    : () => _checkPaymentStatus(silent: false),
-                                borderRadius: BorderRadius.circular(20),
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                                  decoration: BoxDecoration(
-                                    color: _qrisPaymentStatus == 'paid'
-                                        ? const Color(0xFFECFDF5)
-                                        : const Color(0xFFF0FDF4),
-                                    borderRadius: BorderRadius.circular(20),
-                                    border: Border.all(
-                                      color: _qrisPaymentStatus == 'paid'
-                                          ? const Color(0xFF34D399)
-                                          : const Color(0xFF86EFAC),
-                                    ),
-                                  ),
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      if (_isCheckingStatus)
-                                        const SizedBox(
-                                          width: 13,
-                                          height: 13,
-                                          child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF16A34A)),
-                                        )
-                                      else if (_qrisPaymentStatus == 'paid')
-                                        const Icon(Icons.check_circle, size: 16, color: Color(0xFF059669))
-                                      else
-                                        const Icon(Icons.sync, size: 16, color: Color(0xFF16A34A)),
-                                      const SizedBox(width: 7),
-                                      Text(
-                                        _qrisPaymentStatus == 'paid'
-                                            ? 'Pembayaran Berhasil! Memproses...'
-                                            : (_isCheckingStatus ? 'Mengecek pembayaran...' : 'Menunggu pembayaran (Cek Status)'),
-                                        style: TextStyle(
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.w600,
-                                          color: _qrisPaymentStatus == 'paid'
-                                              ? const Color(0xFF065F46)
-                                              : const Color(0xFF166534),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(height: 6),
-                              const Text(
-                                'Scan via m-Banking atau e-Wallet (BCA, Mandiri, GoPay, OVO, dll)',
-                                textAlign: TextAlign.center,
-                                style: TextStyle(fontSize: 11, color: Color(0xFF64748B)),
-                              ),
-                            ],
-                          ),
+                            ),
+                            const SizedBox(height: 8),
+                            const Text(
+                              'Scan via m-Banking atau e-Wallet (BCA, Mandiri, GoPay, OVO, dll)',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(fontSize: 11, color: Color(0xFF64748B)),
+                            ),
+                          ],
                         ),
                       ),
                   ],
