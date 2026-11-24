@@ -58,7 +58,7 @@ class _WebOrdersScreenState extends State<WebOrdersScreen> with SingleTickerProv
     }
 
     switch (tabIndex) {
-      case 1: // Bayar di Apotek
+      case 1: // Belum Dibayar (Pending)
         return activeOrders.where((o) => o.status == 'pending').toList();
       case 2: // Siap Diambil (Lunas)
         return activeOrders.where((o) => o.status == 'paid').toList();
@@ -263,7 +263,7 @@ class _WebOrdersScreenState extends State<WebOrdersScreen> with SingleTickerProv
             labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
             tabs: [
               Tab(text: 'Semua (${_filterOrders(webOrdersProvider.orders, 0).length})'),
-              Tab(text: 'Bayar di Apotek (${_filterOrders(webOrdersProvider.orders, 1).length})'),
+              Tab(text: 'Belum Dibayar (${_filterOrders(webOrdersProvider.orders, 1).length})'),
               Tab(text: 'Siap Diambil (${_filterOrders(webOrdersProvider.orders, 2).length})'),
               Tab(text: 'Sudah Selesai (${_filterOrders(webOrdersProvider.orders, 3).length})'),
             ],
