@@ -409,12 +409,6 @@ export default function CheckoutPage() {
                 <span>Biaya Layanan</span>
                 <span className="text-emerald-600 font-bold">GRATIS</span>
               </div>
-              <div className="flex justify-between text-xs text-slate-500">
-                <span>Metode Pembayaran</span>
-                <span className="font-semibold text-brand-700">
-                  {paymentMethod === 'pharmacy' || !hasMidtrans ? 'Bayar di Kasir (Apotek)' : 'Midtrans Online'}
-                </span>
-              </div>
               <div className="flex justify-between text-sm font-black text-slate-900 pt-2 border-t border-slate-100">
                 <span>Total Estimasi</span>
                 <span className="text-brand-600 text-base">
