@@ -5,8 +5,20 @@ import { useParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { API_BASE_URL, Transaction } from '@/lib/api';
 import { supabase } from '@/lib/supabase';
+import { loadSnapScript } from '@/lib/midtrans';
 import { QRCodeSVG } from 'qrcode.react';
-import { ArrowLeft, CheckCircle2, QrCode, FileText } from 'lucide-react';
+import {
+  ArrowLeft,
+  CheckCircle2,
+  QrCode,
+  FileText,
+  CreditCard,
+  Copy,
+  Check,
+  RefreshCw,
+  AlertCircle,
+  Trash2,
+} from 'lucide-react';
 import Link from 'next/link';
 
 export default function OrderDetailPage() {
@@ -17,6 +29,86 @@ export default function OrderDetailPage() {
 
   const [order, setOrder] = useState<Transaction | null>(null);
   const [loading, setLoading] = useState(true);
+  const [paymentDetails, setPaymentDetails] = useState<any>(null);
+  const [paying, setPaying] = useState(false);
+  const [verifying, setVerifying] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
+  const [copiedVa, setCopiedVa] = useState(false);
+
+  const fetchOrder = async () => {
+    try {
+      const { data: directTrx, error: directErr } = await supabase
+        .from('transactions')
+        .select('*, items:transaction_items(*)')
+        .eq('invoice_no', invoiceNo)
+        .eq('customer_id', user?.id)
+        .neq('status', 'dibatalkan')
+        .maybeSingle();
+
+      if (!directErr && directTrx) {
+        setOrder(directTrx as any);
+        if (
+          directTrx.status === 'pending' &&
+          directTrx.payment_method !== 'pharmacy' &&
+          directTrx.payment_method !== 'bayar_di_apotek'
+        ) {
+          fetchPaymentInfo();
+        }
+        return;
+      }
+
+      if (token) {
+        const res = await fetch(`${API_BASE_URL}/transactions/customer/my-orders?_t=${Date.now()}`, {
+          cache: 'no-store',
+          headers: {
+            Authorization: `Bearer ${token}`,
+            Accept: 'application/json',
+          },
+        });
+        if (res.ok) {
+          const json = await res.json();
+          const found = json.data.find((o: Transaction) => o.invoice_no === invoiceNo);
+          setOrder(found || null);
+          if (
+            found &&
+            found.status === 'pending' &&
+            found.payment_method !== 'pharmacy' &&
+            found.payment_method !== 'bayar_di_apotek'
+          ) {
+            fetchPaymentInfo();
+          }
+        }
+      }
+    } catch (err) {
+      console.error('Error fetching order detail', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchPaymentInfo = async () => {
+    if (!token || !invoiceNo) return;
+    try {
+      const res = await fetch(`${API_BASE_URL}/transactions/customer/pay-order`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ invoice_no: invoiceNo }),
+      });
+      if (res.ok) {
+        const json = await res.json();
+        if (json.data?.payment_details) {
+          setPaymentDetails(json.data.payment_details);
+        }
+        if (json.data?.is_paid) {
+          fetchOrder();
+        }
+      }
+    } catch (_) {}
+  };
 
   useEffect(() => {
     if (authLoading) return;
@@ -26,43 +118,154 @@ export default function OrderDetailPage() {
       return;
     }
 
-    const fetchOrder = async () => {
-      try {
-        const { data: directTrx, error: directErr } = await supabase
-          .from('transactions')
-          .select('*, items:transaction_items(*)')
-          .eq('invoice_no', invoiceNo)
-          .eq('customer_id', user.id)
-          .neq('status', 'dibatalkan')
-          .maybeSingle();
+    fetchOrder();
 
-        if (!directErr && directTrx) {
-          setOrder(directTrx as any);
-          return;
+    // Supabase Realtime Subscription
+    const channel = supabase
+      .channel(`public:transactions:detail:${invoiceNo}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'transactions',
+          filter: `invoice_no=eq.${invoiceNo}`,
+        },
+        () => {
+          fetchOrder();
         }
+      )
+      .subscribe();
 
-        const res = await fetch(`${API_BASE_URL}/transactions/customer/my-orders?_t=${Date.now()}`, {
-          cache: 'no-store',
-          headers: {
-            Authorization: `Bearer ${token}`,
-            Accept: 'application/json',
-            'ngrok-skip-browser-warning': 'true',
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user, token, authLoading, invoiceNo, router]);
+
+  const handlePayOnline = async () => {
+    if (!token || !order) return;
+    setPaying(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/transactions/customer/pay-order`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ invoice_no: order.invoice_no }),
+      });
+
+      const json = await res.json();
+      if (!res.ok) {
+        alert(json.message || 'Gagal memuat pembayaran.');
+        return;
+      }
+
+      const data = json.data;
+      if (data.is_paid) {
+        alert('Pembayaran pesanan ini sudah berhasil dikonfirmasi!');
+        await fetchOrder();
+        return;
+      }
+
+      if (data.payment_details) {
+        setPaymentDetails(data.payment_details);
+      }
+
+      const snapToken = data.snap_token;
+      if (!snapToken) {
+        alert('Gagal mendapatkan token pembayaran Midtrans.');
+        return;
+      }
+
+      await loadSnapScript(data.client_key, data.is_production);
+
+      if ((window as any).snap) {
+        (window as any).snap.pay(snapToken, {
+          onSuccess: async () => {
+            await handleVerifyPayment();
+            await fetchOrder();
+          },
+          onPending: async () => {
+            await handleVerifyPayment();
+            await fetchOrder();
+          },
+          onError: () => {
+            alert('Pembayaran gagal atau dibatalkan.');
+          },
+          onClose: async () => {
+            await handleVerifyPayment();
+            await fetchOrder();
           },
         });
-        if (res.ok) {
-          const json = await res.json();
-          const found = json.data.find((o: Transaction) => o.invoice_no === invoiceNo);
-          setOrder(found || null);
-        }
-      } catch (err) {
-        console.error('Error fetching order detail', err);
-      } finally {
-        setLoading(false);
+      } else {
+        alert('Gagal memuat popup pembayaran Midtrans. Silakan coba sesaat lagi.');
       }
-    };
+    } catch (err: any) {
+      console.error('Error opening payment:', err);
+      alert('Terjadi kesalahan: ' + (err.message || 'Gagal membuka pembayaran'));
+    } finally {
+      setPaying(false);
+    }
+  };
 
-    fetchOrder();
-  }, [user, token, authLoading, invoiceNo, router]);
+  const handleVerifyPayment = async () => {
+    if (!token || !invoiceNo) return;
+    setVerifying(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/transactions/verify-payment`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ invoice_no: invoiceNo }),
+      });
+      if (res.ok) {
+        await fetchOrder();
+      }
+    } catch (err) {
+      console.error('Error verifying payment:', err);
+    } finally {
+      setVerifying(false);
+    }
+  };
+
+  const handleCancelOrder = async () => {
+    if (!token || !invoiceNo) return;
+    if (!window.confirm(`Yakin ingin membatalkan pesanan ${invoiceNo}? Pesanan akan dihapus.`)) return;
+
+    setCancelling(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/transactions/customer/cancel-order`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ invoice_no: invoiceNo }),
+      });
+      if (res.ok) {
+        router.replace('/orders');
+      } else {
+        const json = await res.json();
+        alert(json.message || 'Gagal membatalkan pesanan.');
+      }
+    } catch (err) {
+      console.error('Error cancelling order:', err);
+    } finally {
+      setCancelling(false);
+    }
+  };
+
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedVa(true);
+    setTimeout(() => setCopiedVa(false), 2000);
+  };
 
   if (authLoading || loading) {
     return (
@@ -124,6 +327,89 @@ export default function OrderDetailPage() {
           </span>
         </div>
 
+        {/* Online Payment Instruction Box for Pending Orders */}
+        {order.status === 'pending' &&
+          order.payment_method !== 'pharmacy' &&
+          order.payment_method !== 'bayar_di_apotek' && (
+            <div className="bg-gradient-to-r from-amber-50/80 to-orange-50/80 border border-amber-200 rounded-2xl p-4 sm:p-5 space-y-3">
+              <div className="flex items-center justify-between flex-wrap gap-1">
+                <div className="flex items-center space-x-1.5 text-xs font-extrabold text-amber-900">
+                  <CreditCard className="w-4 h-4 text-amber-700" />
+                  <span>
+                    {paymentDetails?.bank_name
+                      ? `Virtual Account ${paymentDetails.bank_name}`
+                      : 'Pembayaran Online Midtrans'}
+                  </span>
+                </div>
+                {paymentDetails?.expiry_time && (
+                  <span className="text-[10px] font-bold text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full">
+                    Batas Bayar: {paymentDetails.expiry_time}
+                  </span>
+                )}
+              </div>
+
+              {paymentDetails?.va_number ? (
+                <div className="flex items-center justify-between bg-white border border-amber-200 rounded-xl px-4 py-2.5">
+                  <div>
+                    <span className="text-[10px] text-slate-400 block font-medium">Nomor Virtual Account</span>
+                    <span className="text-base sm:text-lg font-black tracking-wider font-mono text-slate-900">
+                      {paymentDetails.va_number}
+                    </span>
+                  </div>
+                  <button
+                    onClick={() => copyToClipboard(paymentDetails.va_number)}
+                    className="px-3 py-1.5 bg-amber-50 hover:bg-amber-100 active:bg-amber-200 border border-amber-200 rounded-lg text-amber-900 text-xs font-bold transition flex items-center space-x-1"
+                  >
+                    {copiedVa ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+                    <span>{copiedVa ? 'Tersalin' : 'Salin'}</span>
+                  </button>
+                </div>
+              ) : paymentDetails?.bill_key ? (
+                <div className="bg-white border border-amber-200 rounded-xl p-3 text-xs space-y-1">
+                  <div><span className="text-slate-400">Kode Perusahaan (Biller): </span><span className="font-mono font-bold text-slate-900">{paymentDetails.biller_code}</span></div>
+                  <div><span className="text-slate-400">Kode Pembayaran (Bill Key): </span><span className="font-mono font-bold text-slate-900">{paymentDetails.bill_key}</span></div>
+                </div>
+              ) : (
+                <div className="flex items-start space-x-2 text-xs text-amber-800">
+                  <AlertCircle className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
+                  <p>
+                    Popup pembayaran sempat ditutup sebelum selesai. Silakan klik tombol <strong>Bayar Sekarang</strong> di bawah untuk membuka kembali pilihan pembayaran (Bank BCA, Mandiri, BRI, QRIS, dll).
+                  </p>
+                </div>
+              )}
+
+              {/* Action Buttons in Order Detail */}
+              <div className="pt-2 flex items-center space-x-2 flex-wrap gap-y-2">
+                <button
+                  onClick={handlePayOnline}
+                  disabled={paying}
+                  className="flex-1 sm:flex-initial px-4 py-2.5 bg-brand-600 hover:bg-brand-700 disabled:opacity-50 text-white font-bold text-xs rounded-xl shadow-md flex items-center justify-center space-x-1.5 transition"
+                >
+                  {paying ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <CreditCard className="w-3.5 h-3.5" />}
+                  <span>{paying ? 'Membuka...' : paymentDetails?.va_number ? 'Buka Popup / Ganti Metode' : 'Bayar Sekarang'}</span>
+                </button>
+
+                <button
+                  onClick={handleVerifyPayment}
+                  disabled={verifying}
+                  className="px-3.5 py-2.5 bg-amber-500 hover:bg-amber-600 disabled:opacity-50 text-white font-bold text-xs rounded-xl shadow-sm flex items-center justify-center space-x-1.5 transition"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${verifying ? 'animate-spin' : ''}`} />
+                  <span>{verifying ? 'Memeriksa...' : 'Cek Status'}</span>
+                </button>
+
+                <button
+                  onClick={handleCancelOrder}
+                  disabled={cancelling}
+                  className="px-3 py-2.5 border border-red-200 text-red-600 hover:bg-red-50 disabled:opacity-50 font-bold text-xs rounded-xl flex items-center justify-center space-x-1 transition"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  <span>{cancelling ? 'Membatalkan...' : 'Batalkan'}</span>
+                </button>
+              </div>
+            </div>
+          )}
+
         {/* QR Code Section (for paid orders OR Bayar di Apotek) */}
         {(order.status === 'paid' || (order.status === 'pending' && (order.payment_method === 'pharmacy' || order.payment_method === 'bayar_di_apotek'))) && (
           <div className="bg-brand-50/60 rounded-3xl border-2 border-dashed border-brand-300 p-6 text-center space-y-3">
@@ -171,4 +457,3 @@ export default function OrderDetailPage() {
     </div>
   );
 }
-

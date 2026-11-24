@@ -6,8 +6,19 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { API_BASE_URL, Transaction } from '@/lib/api';
 import { supabase } from '@/lib/supabase';
+import { loadSnapScript } from '@/lib/midtrans';
 import QrPickupModal from '@/components/QrPickupModal';
-import { Package, QrCode, RefreshCw, ShoppingBag, Trash2 } from 'lucide-react';
+import {
+  Package,
+  QrCode,
+  RefreshCw,
+  ShoppingBag,
+  Trash2,
+  CreditCard,
+  Copy,
+  Check,
+  AlertCircle,
+} from 'lucide-react';
 
 export default function MyOrdersPage() {
   const router = useRouter();
@@ -17,6 +28,9 @@ export default function MyOrdersPage() {
   const [loading, setLoading] = useState(true);
   const [verifyingInvoice, setVerifyingInvoice] = useState<string | null>(null);
   const [cancellingInvoice, setCancellingInvoice] = useState<string | null>(null);
+  const [payingInvoice, setPayingInvoice] = useState<string | null>(null);
+  const [copiedVa, setCopiedVa] = useState<string | null>(null);
+  const [paymentDetailsMap, setPaymentDetailsMap] = useState<Record<string, any>>({});
   const [activeTab, setActiveTab] = useState<'all' | 'pending' | 'paid' | 'diambil'>('all');
   const [selectedTrx, setSelectedTrx] = useState<Transaction | null>(null);
   const [showQrModal, setShowQrModal] = useState(false);
@@ -34,6 +48,7 @@ export default function MyOrdersPage() {
 
       if (!directErr && directData && directData.length > 0) {
         setOrders(directData as any);
+        loadPendingPaymentDetails(directData as any);
         return;
       }
 
@@ -48,12 +63,16 @@ export default function MyOrdersPage() {
         });
         if (res.ok) {
           const json = await res.json();
-          setOrders(json.data || []);
+          const list = json.data || [];
+          setOrders(list);
+          loadPendingPaymentDetails(list);
         } else if (directData) {
           setOrders(directData as any);
+          loadPendingPaymentDetails(directData as any);
         }
       } else if (directData) {
         setOrders(directData as any);
+        loadPendingPaymentDetails(directData as any);
       }
     } catch (err) {
       console.error('Error fetching orders', err);
@@ -61,6 +80,44 @@ export default function MyOrdersPage() {
       setLoading(false);
     }
   }, [user, token]);
+
+  const loadPendingPaymentDetails = useCallback(
+    async (list: Transaction[]) => {
+      if (!token) return;
+      const pendingOnline = list.filter(
+        (o) =>
+          o.status === 'pending' &&
+          o.payment_method !== 'pharmacy' &&
+          o.payment_method !== 'bayar_di_apotek'
+      );
+      for (const o of pendingOnline) {
+        try {
+          const res = await fetch(`${API_BASE_URL}/transactions/customer/pay-order`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Accept: 'application/json',
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({ invoice_no: o.invoice_no }),
+          });
+          if (res.ok) {
+            const json = await res.json();
+            if (json.data?.payment_details) {
+              setPaymentDetailsMap((prev) => ({
+                ...prev,
+                [o.invoice_no]: json.data.payment_details,
+              }));
+            }
+            if (json.data?.is_paid) {
+              fetchOrders();
+            }
+          }
+        } catch (_) {}
+      }
+    },
+    [token]
+  );
 
   useEffect(() => {
     if (authLoading) return;
@@ -141,6 +198,85 @@ export default function MyOrdersPage() {
       console.error('Error cancelling order:', err);
     } finally {
       setCancellingInvoice(null);
+    }
+  };
+
+  const copyToClipboard = (text: string, id: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedVa(id);
+    setTimeout(() => {
+      setCopiedVa(null);
+    }, 2000);
+  };
+
+  const handlePayOnline = async (order: Transaction) => {
+    if (!token) return;
+    setPayingInvoice(order.invoice_no);
+    try {
+      const res = await fetch(`${API_BASE_URL}/transactions/customer/pay-order`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ invoice_no: order.invoice_no }),
+      });
+
+      const json = await res.json();
+      if (!res.ok) {
+        alert(json.message || 'Gagal memuat pembayaran.');
+        return;
+      }
+
+      const data = json.data;
+      if (data.is_paid) {
+        alert('Pembayaran pesanan ini sudah berhasil dikonfirmasi!');
+        await fetchOrders();
+        return;
+      }
+
+      if (data.payment_details) {
+        setPaymentDetailsMap((prev) => ({
+          ...prev,
+          [order.invoice_no]: data.payment_details,
+        }));
+      }
+
+      const snapToken = data.snap_token;
+      if (!snapToken) {
+        alert('Gagal mendapatkan token pembayaran Midtrans.');
+        return;
+      }
+
+      await loadSnapScript(data.client_key, data.is_production);
+
+      if ((window as any).snap) {
+        (window as any).snap.pay(snapToken, {
+          onSuccess: async () => {
+            await handleVerifyPayment(order.invoice_no);
+            await fetchOrders();
+          },
+          onPending: async () => {
+            await handleVerifyPayment(order.invoice_no);
+            await fetchOrders();
+          },
+          onError: () => {
+            alert('Pembayaran gagal atau dibatalkan.');
+          },
+          onClose: async () => {
+            await handleVerifyPayment(order.invoice_no);
+            await fetchOrders();
+          },
+        });
+      } else {
+        alert('Gagal memuat popup pembayaran Midtrans. Silakan coba sesaat lagi.');
+      }
+    } catch (err: any) {
+      console.error('Error opening payment:', err);
+      alert('Terjadi kesalahan: ' + (err.message || 'Gagal membuka pembayaran'));
+    } finally {
+      setPayingInvoice(null);
     }
   };
 
@@ -290,6 +426,59 @@ export default function MyOrdersPage() {
                 ))}
               </div>
 
+              {/* Payment Details / Virtual Account Box for Pending Online Orders */}
+              {order.status === 'pending' &&
+                order.payment_method !== 'pharmacy' &&
+                order.payment_method !== 'bayar_di_apotek' && (
+                  <div className="bg-gradient-to-r from-amber-50/80 to-orange-50/80 border border-amber-200 rounded-2xl p-3.5 space-y-2.5">
+                    <div className="flex items-center justify-between flex-wrap gap-1">
+                      <div className="flex items-center space-x-1.5 text-xs font-extrabold text-amber-900">
+                        <CreditCard className="w-4 h-4 text-amber-700" />
+                        <span>
+                          {paymentDetailsMap[order.invoice_no]?.bank_name
+                            ? `Virtual Account ${paymentDetailsMap[order.invoice_no].bank_name}`
+                            : 'Pembayaran Online Midtrans'}
+                        </span>
+                      </div>
+                      {paymentDetailsMap[order.invoice_no]?.expiry_time && (
+                        <span className="text-[10px] font-bold text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full">
+                          Batas Bayar: {paymentDetailsMap[order.invoice_no].expiry_time}
+                        </span>
+                      )}
+                    </div>
+
+                    {paymentDetailsMap[order.invoice_no]?.va_number ? (
+                      <div className="flex items-center justify-between bg-white border border-amber-200 rounded-xl px-3 py-2">
+                        <div>
+                          <span className="text-[10px] text-slate-400 block font-medium">Nomor Virtual Account</span>
+                          <span className="text-sm sm:text-base font-black tracking-wider font-mono text-slate-900">
+                            {paymentDetailsMap[order.invoice_no].va_number}
+                          </span>
+                        </div>
+                        <button
+                          onClick={() => copyToClipboard(paymentDetailsMap[order.invoice_no].va_number, order.invoice_no)}
+                          className="px-2.5 py-1.5 bg-amber-50 hover:bg-amber-100 active:bg-amber-200 border border-amber-200 rounded-lg text-amber-900 text-xs font-bold transition flex items-center space-x-1"
+                        >
+                          {copiedVa === order.invoice_no ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+                          <span>{copiedVa === order.invoice_no ? 'Tersalin' : 'Salin'}</span>
+                        </button>
+                      </div>
+                    ) : paymentDetailsMap[order.invoice_no]?.bill_key ? (
+                      <div className="bg-white border border-amber-200 rounded-xl p-2.5 text-xs space-y-1">
+                        <div><span className="text-slate-400">Kode Perusahaan (Biller): </span><span className="font-mono font-bold text-slate-900">{paymentDetailsMap[order.invoice_no].biller_code}</span></div>
+                        <div><span className="text-slate-400">Kode Pembayaran (Bill Key): </span><span className="font-mono font-bold text-slate-900">{paymentDetailsMap[order.invoice_no].bill_key}</span></div>
+                      </div>
+                    ) : (
+                      <div className="flex items-start space-x-2 text-xs text-amber-800">
+                        <AlertCircle className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
+                        <p>
+                          Popup pembayaran sempat ditutup sebelum selesai. Klik tombol <strong>Bayar Sekarang</strong> di bawah untuk membuka kembali pilihan pembayaran (Bank BCA, Mandiri, BRI, QRIS, dll).
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                )}
+
               {/* Total & Action Buttons */}
               <div className="pt-3 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div className="flex sm:flex-col justify-between sm:justify-start items-center sm:items-start">
@@ -299,7 +488,7 @@ export default function MyOrdersPage() {
                   </span>
                 </div>
 
-                <div className="flex items-center space-x-2 w-full sm:w-auto">
+                <div className="flex items-center space-x-2 w-full sm:w-auto flex-wrap sm:flex-nowrap gap-y-2">
                   {order.status === 'pending' && (order.payment_method === 'pharmacy' || order.payment_method === 'bayar_di_apotek') && (
                     <button
                       onClick={() => {
@@ -313,6 +502,42 @@ export default function MyOrdersPage() {
                     </button>
                   )}
 
+                  {order.status === 'pending' && order.payment_method !== 'pharmacy' && order.payment_method !== 'bayar_di_apotek' && (
+                    <>
+                      <button
+                        onClick={() => handlePayOnline(order)}
+                        disabled={payingInvoice === order.invoice_no}
+                        className="w-full sm:w-auto justify-center px-4 py-2.5 bg-brand-600 hover:bg-brand-700 disabled:opacity-50 text-white font-bold text-xs rounded-xl shadow-md flex items-center space-x-1.5 transition"
+                      >
+                        {payingInvoice === order.invoice_no ? (
+                          <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                        ) : (
+                          <CreditCard className="w-3.5 h-3.5" />
+                        )}
+                        <span>
+                          {payingInvoice === order.invoice_no
+                            ? 'Membuka...'
+                            : paymentDetailsMap[order.invoice_no]?.va_number
+                            ? 'Buka Popup / Ganti Metode'
+                            : 'Bayar Sekarang'}
+                        </span>
+                      </button>
+
+                      <button
+                        onClick={() => handleVerifyPayment(order.invoice_no)}
+                        disabled={verifyingInvoice === order.invoice_no}
+                        className="w-full sm:w-auto justify-center px-3.5 py-2.5 bg-amber-500 hover:bg-amber-600 disabled:opacity-50 text-white font-bold text-xs rounded-xl shadow-sm flex items-center space-x-1.5 transition"
+                      >
+                        <RefreshCw
+                          className={`w-3.5 h-3.5 ${verifyingInvoice === order.invoice_no ? 'animate-spin' : ''}`}
+                        />
+                        <span>
+                          {verifyingInvoice === order.invoice_no ? 'Memeriksa...' : 'Cek Status Bayar'}
+                        </span>
+                      </button>
+                    </>
+                  )}
+
                   {order.status === 'pending' && (
                     <button
                       onClick={() => handleCancelOrder(order.invoice_no)}
@@ -321,21 +546,6 @@ export default function MyOrdersPage() {
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                       <span>{cancellingInvoice === order.invoice_no ? 'Membatalkan...' : 'Batalkan'}</span>
-                    </button>
-                  )}
-
-                  {order.status === 'pending' && order.payment_method !== 'pharmacy' && order.payment_method !== 'bayar_di_apotek' && (
-                    <button
-                      onClick={() => handleVerifyPayment(order.invoice_no)}
-                      disabled={verifyingInvoice === order.invoice_no}
-                      className="w-full sm:w-auto justify-center px-4 py-2.5 bg-amber-500 hover:bg-amber-600 disabled:opacity-50 text-white font-bold text-xs rounded-xl shadow-sm flex items-center space-x-1.5 transition"
-                    >
-                      <RefreshCw
-                        className={`w-3.5 h-3.5 ${verifyingInvoice === order.invoice_no ? 'animate-spin' : ''}`}
-                      />
-                      <span>
-                        {verifyingInvoice === order.invoice_no ? 'Memeriksa...' : 'Cek Status Bayar'}
-                      </span>
                     </button>
                   )}
 
