@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../models/transaction.dart';
 import '../providers/web_orders_provider.dart';
+import '../services/supabase_service.dart';
 import '../widgets/process_web_order_dialog.dart';
 import '../widgets/receipt_dialog.dart';
 import 'qr_scanner_screen.dart';
@@ -33,15 +34,58 @@ class _WebOrdersScreenState extends State<WebOrdersScreen> with SingleTickerProv
   }
 
   List<TransactionModel> _filterOrders(List<TransactionModel> allOrders, int tabIndex) {
+    final activeOrders = allOrders.where((o) => o.status != 'dibatalkan').toList();
     switch (tabIndex) {
       case 1: // Bayar di Apotek
-        return allOrders.where((o) => o.status == 'pending').toList();
+        return activeOrders.where((o) => o.status == 'pending').toList();
       case 2: // Siap Diambil (Lunas)
-        return allOrders.where((o) => o.status == 'paid').toList();
+        return activeOrders.where((o) => o.status == 'paid').toList();
       case 3: // Sudah Diambil / Selesai
-        return allOrders.where((o) => o.status == 'diambil' || o.status == 'selesai').toList();
+        return activeOrders.where((o) => o.status == 'diambil' || o.status == 'selesai').toList();
       default:
-        return allOrders;
+        return activeOrders;
+    }
+  }
+
+  Future<void> _confirmDeleteOrder(BuildContext context, TransactionModel order, WebOrdersProvider provider) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Batalkan & Hapus Pesanan?'),
+        content: Text('Pesanan ${order.invoiceNo} akan dibatalkan dan dihapus secara permanen.'),
+        actions: [
+          TextButton(
+            child: const Text('Kembali'),
+            onPressed: () => Navigator.pop(ctx, false),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('Ya, Hapus Pesanan'),
+            onPressed: () => Navigator.pop(ctx, true),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
+    try {
+      await SupabaseService.instance.cancelWebOrder(order.id);
+      provider.loadOrders();
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Pesanan ${order.invoiceNo} telah dihapus permanen.'),
+            backgroundColor: Colors.red[700],
+          ),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Gagal menghapus pesanan: $e'), backgroundColor: Colors.red),
+        );
+      }
     }
   }
 
@@ -140,7 +184,7 @@ class _WebOrdersScreenState extends State<WebOrdersScreen> with SingleTickerProv
             indicatorWeight: 3,
             labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
             tabs: [
-              const Tab(text: 'Semua'),
+              Tab(text: 'Semua (${webOrdersProvider.orders.where((o) => o.status != 'dibatalkan').length})'),
               Tab(text: 'Bayar di Apotek (${webOrdersProvider.orders.where((o) => o.status == 'pending').length})'),
               Tab(text: 'Siap Diambil (${webOrdersProvider.pendingPickupCount})'),
               const Tab(text: 'Sudah Selesai'),
@@ -330,7 +374,13 @@ class _WebOrdersScreenState extends State<WebOrdersScreen> with SingleTickerProv
                                       Row(
                                         mainAxisSize: MainAxisSize.min,
                                         children: [
-                                          if (order.status == 'pending')
+                                          if (order.status == 'pending') ...[
+                                            IconButton(
+                                              tooltip: 'Batalkan & Hapus Pesanan',
+                                              icon: const Icon(Icons.delete_outline, color: Colors.red, size: 20),
+                                              onPressed: () => _confirmDeleteOrder(context, order, webOrdersProvider),
+                                            ),
+                                            const SizedBox(width: 4),
                                             FilledButton.icon(
                                               icon: const Icon(Icons.point_of_sale, size: 16),
                                               label: const Text('Edit & Bayar di Kasir'),
@@ -342,6 +392,7 @@ class _WebOrdersScreenState extends State<WebOrdersScreen> with SingleTickerProv
                                                 );
                                               },
                                             ),
+                                          ],
                                           if (order.status == 'paid')
                                             FilledButton.icon(
                                               icon: const Icon(Icons.handshake, size: 16),

@@ -15,6 +15,7 @@ export async function GET(req: Request) {
       .from('transactions')
       .select('*, items:transaction_items(*)')
       .eq('customer_id', customer.id)
+      .neq('status', 'dibatalkan')
       .order('id', { ascending: false });
 
     if (error) {

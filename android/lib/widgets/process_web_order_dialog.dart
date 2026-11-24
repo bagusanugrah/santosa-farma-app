@@ -194,8 +194,8 @@ class _ProcessWebOrderDialogState extends State<ProcessWebOrderDialog> {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Batalkan Pesanan Web?'),
-        content: Text('Pesanan ${widget.order.invoiceNo} akan ditandai sebagai DIBATALKAN.'),
+        title: const Text('Batalkan & Hapus Pesanan?'),
+        content: Text('Pesanan ${widget.order.invoiceNo} akan dibatalkan dan dihapus secara permanen.'),
         actions: [
           TextButton(
             child: const Text('Kembali'),
@@ -203,7 +203,7 @@ class _ProcessWebOrderDialogState extends State<ProcessWebOrderDialog> {
           ),
           FilledButton(
             style: FilledButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text('Ya, Batalkan'),
+            child: const Text('Ya, Hapus Pesanan'),
             onPressed: () => Navigator.pop(ctx, true),
           ),
         ],
@@ -220,7 +220,7 @@ class _ProcessWebOrderDialogState extends State<ProcessWebOrderDialog> {
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Pesanan ${widget.order.invoiceNo} telah dibatalkan.'),
+            content: Text('Pesanan ${widget.order.invoiceNo} telah dihapus permanen.'),
             backgroundColor: Colors.red[700],
           ),
         );
@@ -228,7 +228,7 @@ class _ProcessWebOrderDialogState extends State<ProcessWebOrderDialog> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Gagal membatalkan pesanan: $e'), backgroundColor: Colors.red),
+          SnackBar(content: Text('Gagal menghapus pesanan: $e'), backgroundColor: Colors.red),
         );
       }
     } finally {

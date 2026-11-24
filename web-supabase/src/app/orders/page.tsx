@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { API_BASE_URL, Transaction } from '@/lib/api';
 import QrPickupModal from '@/components/QrPickupModal';
-import { Package, QrCode, RefreshCw, ShoppingBag } from 'lucide-react';
+import { Package, QrCode, RefreshCw, ShoppingBag, Trash2 } from 'lucide-react';
 
 export default function MyOrdersPage() {
   const router = useRouter();
@@ -15,6 +15,7 @@ export default function MyOrdersPage() {
   const [orders, setOrders] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [verifyingInvoice, setVerifyingInvoice] = useState<string | null>(null);
+  const [cancellingInvoice, setCancellingInvoice] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'all' | 'pending' | 'paid' | 'diambil'>('all');
   const [selectedTrx, setSelectedTrx] = useState<Transaction | null>(null);
   const [showQrModal, setShowQrModal] = useState(false);
@@ -73,6 +74,34 @@ export default function MyOrdersPage() {
     }
   };
 
+  const handleCancelOrder = async (invoiceNo: string) => {
+    if (!token) return;
+    if (!window.confirm(`Yakin ingin membatalkan pesanan ${invoiceNo}? Pesanan akan dihapus.`)) return;
+
+    setCancellingInvoice(invoiceNo);
+    try {
+      const res = await fetch(`${API_BASE_URL}/transactions/customer/cancel-order`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ invoice_no: invoiceNo }),
+      });
+      if (res.ok) {
+        await fetchOrders();
+      } else {
+        const json = await res.json();
+        alert(json.message || 'Gagal membatalkan pesanan.');
+      }
+    } catch (err) {
+      console.error('Error cancelling order:', err);
+    } finally {
+      setCancellingInvoice(null);
+    }
+  };
+
   if (authLoading) {
     return (
       <div className="max-w-4xl mx-auto py-16 flex flex-col items-center justify-center space-y-3">
@@ -85,6 +114,7 @@ export default function MyOrdersPage() {
   if (!user || !token) return null;
 
   const filteredOrders = orders.filter((order) => {
+    if (order.status === 'dibatalkan') return false;
     if (activeTab === 'all') return true;
     return order.status === activeTab;
   });
@@ -230,6 +260,17 @@ export default function MyOrdersPage() {
                     >
                       <QrCode className="w-4 h-4" />
                       <span>QR Pesanan Kasir</span>
+                    </button>
+                  )}
+
+                  {order.status === 'pending' && (
+                    <button
+                      onClick={() => handleCancelOrder(order.invoice_no)}
+                      disabled={cancellingInvoice === order.invoice_no}
+                      className="w-full sm:w-auto justify-center px-3 py-2.5 border border-red-200 text-red-600 hover:bg-red-50 disabled:opacity-50 font-bold text-xs rounded-xl flex items-center space-x-1 transition"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      <span>{cancellingInvoice === order.invoice_no ? 'Membatalkan...' : 'Batalkan'}</span>
                     </button>
                   )}
 

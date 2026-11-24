@@ -415,6 +415,7 @@ class SupabaseService {
         .from('transactions')
         .select('*, transaction_items(*), customer:customers(name, phone)')
         .eq('channel', 'online')
+        .neq('status', 'dibatalkan')
         .order('id', ascending: false);
 
     return (res as List).map((t) => TransactionModel.fromMap(t)).toList();
@@ -542,13 +543,11 @@ class SupabaseService {
   }
 
   Future<void> cancelWebOrder(int transactionId) async {
-    await client
-        .from('transactions')
-        .update({
-          'status': 'dibatalkan',
-          'updated_at': DateTime.now().toIso8601String(),
-        })
-        .eq('id', transactionId);
+    // 1. Delete associated transaction items first
+    await client.from('transaction_items').delete().eq('transaction_id', transactionId);
+
+    // 2. Permanently delete transaction record so it leaves no trace
+    await client.from('transactions').delete().eq('id', transactionId);
   }
 
   // ==========================================
