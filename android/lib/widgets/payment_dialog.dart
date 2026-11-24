@@ -260,7 +260,7 @@ class _PaymentDialogState extends State<PaymentDialog> with SingleTickerProvider
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Gambar QRIS ($fileName) berhasil disimpan dan siap dibuka/dibagikan!'),
+            content: Text('QRIS ($fileName) berhasil diunduh & siap dibagikan!'),
             backgroundColor: const Color(0xFF0E7490),
           ),
         );
@@ -268,7 +268,7 @@ class _PaymentDialogState extends State<PaymentDialog> with SingleTickerProvider
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Gagal mengunduh gambar QRIS: $e'), backgroundColor: Colors.red),
+          SnackBar(content: Text('Gagal mengunduh QRIS: $e'), backgroundColor: Colors.red),
         );
       }
     } finally {
@@ -417,15 +417,17 @@ class _PaymentDialogState extends State<PaymentDialog> with SingleTickerProvider
                   const Tab(icon: Icon(Icons.payments_outlined), text: 'Tunai (Cash)'),
                   Tab(
                     icon: Icon(isMidtransValid ? Icons.qr_code_2 : Icons.lock_outline),
-                    text: isMidtransValid ? 'QRIS Midtrans' : 'QRIS (Terkunci)',
+                    text: isMidtransValid ? 'QRIS' : 'QRIS (Terkunci)',
                   ),
                 ],
               ),
               const SizedBox(height: 16),
 
               // Tab Content
-              SizedBox(
-                height: 380,
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                curve: Curves.easeInOut,
+                height: _tabController.index == 0 ? 245.0 : 280.0,
                 child: TabBarView(
                   controller: _tabController,
                   children: [
@@ -581,76 +583,84 @@ class _PaymentDialogState extends State<PaymentDialog> with SingleTickerProvider
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              // Enlarged QR Container
+                              // Compact & Clear QR Container
                               Container(
-                                padding: const EdgeInsets.all(12),
+                                padding: const EdgeInsets.all(8),
                                 decoration: BoxDecoration(
                                   color: Colors.white,
                                   borderRadius: BorderRadius.circular(16),
-                                  border: Border.all(color: const Color(0xFFCBD5E1), width: 1.5),
+                                  border: Border.all(color: const Color(0xFFCBD5E1), width: 1.2),
                                   boxShadow: [
                                     BoxShadow(
                                       color: Colors.black.withOpacity(0.04),
-                                      blurRadius: 10,
-                                      offset: const Offset(0, 4),
+                                      blurRadius: 8,
+                                      offset: const Offset(0, 3),
                                     ),
                                   ],
                                 ),
                                 child: QrImageView(
                                   data: _qrisString ?? '',
                                   version: QrVersions.auto,
-                                  size: 220.0,
+                                  size: 190.0,
                                   eyeStyle: const QrEyeStyle(eyeShape: QrEyeShape.square, color: Color(0xFF0F172A)),
                                   dataModuleStyle: const QrDataModuleStyle(dataModuleShape: QrDataModuleShape.square, color: Color(0xFF0F172A)),
                                 ),
                               ),
-                              const SizedBox(height: 12),
-                              // Realtime status badge
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
-                                decoration: BoxDecoration(
-                                  color: _qrisPaymentStatus == 'paid'
-                                      ? const Color(0xFFECFDF5)
-                                      : const Color(0xFFF0FDF4),
-                                  borderRadius: BorderRadius.circular(10),
-                                  border: Border.all(
+                              const SizedBox(height: 10),
+                              // Interactive status badge (Clickable to Cek Status manually)
+                              InkWell(
+                                onTap: (_isCheckingStatus || _qrisOrderId == null || _qrisPaymentStatus == 'paid')
+                                    ? null
+                                    : () => _checkPaymentStatus(silent: false),
+                                borderRadius: BorderRadius.circular(20),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                                  decoration: BoxDecoration(
                                     color: _qrisPaymentStatus == 'paid'
-                                        ? const Color(0xFF34D399)
-                                        : const Color(0xFF86EFAC),
+                                        ? const Color(0xFFECFDF5)
+                                        : const Color(0xFFF0FDF4),
+                                    borderRadius: BorderRadius.circular(20),
+                                    border: Border.all(
+                                      color: _qrisPaymentStatus == 'paid'
+                                          ? const Color(0xFF34D399)
+                                          : const Color(0xFF86EFAC),
+                                    ),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      if (_isCheckingStatus)
+                                        const SizedBox(
+                                          width: 13,
+                                          height: 13,
+                                          child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF16A34A)),
+                                        )
+                                      else if (_qrisPaymentStatus == 'paid')
+                                        const Icon(Icons.check_circle, size: 16, color: Color(0xFF059669))
+                                      else
+                                        const Icon(Icons.sync, size: 16, color: Color(0xFF16A34A)),
+                                      const SizedBox(width: 7),
+                                      Text(
+                                        _qrisPaymentStatus == 'paid'
+                                            ? 'Pembayaran Berhasil! Memproses...'
+                                            : (_isCheckingStatus ? 'Mengecek pembayaran...' : 'Menunggu pembayaran (Cek Status)'),
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w600,
+                                          color: _qrisPaymentStatus == 'paid'
+                                              ? const Color(0xFF065F46)
+                                              : const Color(0xFF166534),
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    if (_qrisPaymentStatus == 'paid')
-                                      const Icon(Icons.check_circle, size: 16, color: Color(0xFF059669))
-                                    else
-                                      const SizedBox(
-                                        width: 14,
-                                        height: 14,
-                                        child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF16A34A)),
-                                      ),
-                                    const SizedBox(width: 8),
-                                    Text(
-                                      _qrisPaymentStatus == 'paid'
-                                          ? 'Pembayaran Berhasil! Memproses...'
-                                          : 'Menunggu scan & pembayaran QRIS...',
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.w600,
-                                        color: _qrisPaymentStatus == 'paid'
-                                            ? const Color(0xFF065F46)
-                                            : const Color(0xFF166534),
-                                      ),
-                                    ),
-                                  ],
-                                ),
                               ),
-                              const SizedBox(height: 8),
+                              const SizedBox(height: 6),
                               const Text(
-                                'Scan menggunakan BCA, Mandiri, GoPay, OVO, ShopeePay, atau m-Banking.\nSistem otomatis menyelesaikan pesanan begitu pembayaran masuk.',
+                                'Scan via m-Banking atau e-Wallet (BCA, Mandiri, GoPay, OVO, dll)',
                                 textAlign: TextAlign.center,
-                                style: TextStyle(fontSize: 11, color: Color(0xFF64748B), height: 1.3),
+                                style: TextStyle(fontSize: 11, color: Color(0xFF64748B)),
                               ),
                             ],
                           ),
@@ -666,8 +676,15 @@ class _PaymentDialogState extends State<PaymentDialog> with SingleTickerProvider
                 // Tunai Mode: Selesaikan Pembayaran button
                 FilledButton.icon(
                   style: isQrisLocked
-                      ? FilledButton.styleFrom(backgroundColor: const Color(0xFF94A3B8))
-                      : null,
+                      ? FilledButton.styleFrom(
+                          backgroundColor: const Color(0xFF94A3B8),
+                          padding: const EdgeInsets.symmetric(vertical: 13),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                        )
+                      : FilledButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 13),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                        ),
                   icon: _isProcessing
                       ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
                       : const Icon(Icons.check_circle_outline),
@@ -675,6 +692,7 @@ class _PaymentDialogState extends State<PaymentDialog> with SingleTickerProvider
                     fit: BoxFit.scaleDown,
                     child: Text(
                       _isProcessing ? 'Memproses...' : 'Selesaikan Pembayaran & Cetak Struk',
+                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
                     ),
                   ),
                   onPressed: (_isProcessing || _cashAmount < widget.grandTotal)
@@ -682,48 +700,23 @@ class _PaymentDialogState extends State<PaymentDialog> with SingleTickerProvider
                       : () => _processPayment('tunai'),
                 )
               else
-                // QRIS Mode: NO manual complete button! Replace with Download QRIS & Cek Status
-                Row(
-                  children: [
-                    Expanded(
-                      flex: 2,
-                      child: OutlinedButton.icon(
-                        onPressed: (_isCheckingStatus || _isProcessing || !isMidtransValid || _qrisString == null)
-                            ? null
-                            : () => _checkPaymentStatus(silent: false),
-                        icon: _isCheckingStatus
-                            ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
-                            : const Icon(Icons.sync, size: 18),
-                        label: const FittedBox(
-                          fit: BoxFit.scaleDown,
-                          child: Text('Cek Status'),
-                        ),
-                        style: OutlinedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      flex: 3,
-                      child: FilledButton.icon(
-                        onPressed: (_isDownloadingQr || !isMidtransValid || _qrisString == null)
-                            ? null
-                            : _downloadOrShareQris,
-                        icon: _isDownloadingQr
-                            ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                            : const Icon(Icons.download, size: 18),
-                        label: const FittedBox(
-                          fit: BoxFit.scaleDown,
-                          child: Text('Download QRIS (Gambar)'),
-                        ),
-                        style: FilledButton.styleFrom(
-                          backgroundColor: const Color(0xFF0E7490),
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                        ),
-                      ),
-                    ),
-                  ],
+                // QRIS Mode: Single full-width Download QRIS button
+                FilledButton.icon(
+                  style: FilledButton.styleFrom(
+                    backgroundColor: const Color(0xFF0891B2),
+                    padding: const EdgeInsets.symmetric(vertical: 13),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  ),
+                  icon: _isDownloadingQr
+                      ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                      : const Icon(Icons.download, size: 20),
+                  label: Text(
+                    _isDownloadingQr ? 'Menyimpan...' : 'Download QRIS',
+                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                  ),
+                  onPressed: (_isDownloadingQr || !isMidtransValid || _qrisString == null)
+                      ? null
+                      : _downloadOrShareQris,
                 ),
             ],
           ),
