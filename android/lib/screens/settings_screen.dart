@@ -19,6 +19,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool _isBackingUp = false;
   bool _isRestoring = false;
   bool _isResetting = false;
+  bool _isCleaningStorage = false;
 
   // Ubah Password Controllers (Kasir & Super Admin)
   late final TextEditingController _oldPasswordCtrl;
@@ -324,7 +325,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       builder: (_) => AlertDialog(
         title: const Text('Pulihkan Database?'),
         content: const Text(
-          'Data produk, transaksi, dan pengaturan saat ini akan ditimpa atau digabungkan dari file backup. Lanjutkan?',
+          'Data produk, foto obat, transaksi, dan pengaturan akan dipulihkan dari file backup. File gambar lama yang tidak terhubung akan otomatis dibersihkan dari storage Supabase. Lanjutkan?',
         ),
         actions: [
           TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('Batal')),
@@ -341,13 +342,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
     setState(() => _isRestoring = true);
     try {
-      final success = await BackupService.instance.restoreFromPicker();
+      final cleanedCount = await BackupService.instance.restoreFromPicker();
       if (mounted) {
-        if (success) {
+        if (cleanedCount != null) {
+          final extraInfo = cleanedCount > 0
+              ? ' ($cleanedCount file gambar lama yang tidak terhubung berhasil dibersihkan dari storage).'
+              : ' (Storage sudah bersih dan sinkron).';
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Data berhasil dipulihkan dari file cadangan!'),
-              backgroundColor: Color(0xFF0891B2),
+            SnackBar(
+              content: Text('Data berhasil dipulihkan dari file cadangan!$extraInfo'),
+              backgroundColor: const Color(0xFF0891B2),
+              duration: const Duration(seconds: 4),
             ),
           );
         } else {
@@ -364,6 +369,54 @@ class _SettingsScreenState extends State<SettingsScreen> {
       }
     } finally {
       if (mounted) setState(() => _isRestoring = false);
+    }
+  }
+
+  Future<void> _handleCleanStorage() async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Bersihkan Storage Gambar?'),
+        content: const Text(
+          'Sistem akan memindai seluruh file gambar di Supabase Storage dan menghapus file gambar lama yang tidak terhubung dengan produk obat manapun.',
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('Batal')),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: const Color(0xFF0891B2)),
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Mulai Pembersihan'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
+    setState(() => _isCleaningStorage = true);
+    try {
+      final count = await SupabaseService.instance.cleanupOrphanProductImages();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              count > 0
+                  ? 'Berhasil! $count gambar nyangkut di storage telah dibersihkan.'
+                  : 'Storage Supabase sudah bersih! Tidak ada gambar yang nyangkut.',
+            ),
+            backgroundColor: const Color(0xFF0891B2),
+            duration: const Duration(seconds: 4),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Gagal membersihkan storage: $e'), backgroundColor: Colors.red),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isCleaningStorage = false);
     }
   }
 
@@ -1050,6 +1103,22 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                 : const Icon(Icons.folder_open, size: 16),
                             label: const Text('Restore'),
                             onPressed: _isRestoring ? null : _handleRestore,
+                          ),
+                        ),
+                        const Divider(height: 24),
+                        _buildDataActionTile(
+                          isCompact: isCompact,
+                          icon: Icons.cleaning_services,
+                          iconColor: const Color(0xFF0891B2),
+                          iconBg: const Color(0xFFECFEFF),
+                          title: 'Pindai & Bersihkan Storage Gambar',
+                          subtitle: 'Hapus file foto lama di storage Supabase yang tidak terhubung dengan obat apapun',
+                          actionButton: OutlinedButton.icon(
+                            icon: _isCleaningStorage
+                                ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2))
+                                : const Icon(Icons.cleaning_services, size: 16),
+                            label: const Text('Bersihkan'),
+                            onPressed: _isCleaningStorage ? null : _handleCleanStorage,
                           ),
                         ),
                         const Divider(height: 24),

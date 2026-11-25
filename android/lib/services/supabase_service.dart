@@ -1,9 +1,9 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
-import 'dart:typed_data';
 import 'package:bcrypt/bcrypt.dart';
 import 'package:crypto/crypto.dart';
+import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../config/supabase_config.dart';
 import '../models/product.dart';
@@ -381,6 +381,8 @@ class SupabaseService {
 
   Future<Product?> updateProduct(Product product, {File? imageFile, Uint8List? imageBytes, String? fileName}) async {
     String? imagePath = product.image;
+    final oldImage = product.image;
+
     if (imageFile != null || imageBytes != null) {
       imagePath = await uploadProductImage(file: imageFile, bytes: imageBytes, fileName: fileName);
     }
@@ -400,11 +402,133 @@ class SupabaseService {
         .select()
         .single();
 
+    // Hapus gambar lama jika ada gambar baru yang diunggah dan gambar lama tidak dipakai obat lain
+    if (imagePath != null && oldImage != null && oldImage.isNotEmpty && oldImage != imagePath) {
+      try {
+        final other = await client.from('products').select('id').eq('image', oldImage).neq('id', product.id);
+        if ((other as List).isEmpty) {
+          await deleteProductImage(oldImage);
+        }
+      } catch (e) {
+        debugPrint('[updateProduct] Old image cleanup notice: $e');
+      }
+    }
+
     return Product.fromMap(res);
   }
 
   Future<void> deleteProduct(int id) async {
-    await client.from('products').delete().eq('id', id);
+    try {
+      final p = await client.from('products').select('image').eq('id', id).maybeSingle();
+      final img = p?['image'] as String?;
+
+      await client.from('products').delete().eq('id', id);
+
+      if (img != null && img.isNotEmpty) {
+        final other = await client.from('products').select('id').eq('image', img);
+        if ((other as List).isEmpty) {
+          await deleteProductImage(img);
+        }
+      }
+    } catch (e) {
+      debugPrint('[deleteProduct Error]: $e');
+      rethrow;
+    }
+  }
+
+  /// Ekstraksi nama file murni di bucket storage dari path atau URL
+  String? extractStorageFileName(String? path) {
+    if (path == null) return null;
+    var clean = path.trim();
+    if (clean.isEmpty) return null;
+
+    if (clean.startsWith('http://') || clean.startsWith('https://')) {
+      final uri = Uri.tryParse(clean);
+      if (uri == null) return null;
+      if (!clean.contains('/${SupabaseConfig.productsBucket}/')) {
+        return null;
+      }
+      clean = uri.pathSegments.isNotEmpty ? uri.pathSegments.last : '';
+    } else {
+      clean = clean.replaceFirst(RegExp(r'^products/'), '').replaceFirst(RegExp(r'^/'), '');
+      if (clean.contains('/')) {
+        clean = clean.split('/').last;
+      }
+    }
+
+    if (clean.isEmpty || clean.startsWith('.')) return null;
+    return clean;
+  }
+
+  /// Mengunduh data biner gambar produk dari Supabase Storage
+  Future<Uint8List?> downloadProductImage(String fileName) async {
+    try {
+      final cleanName = extractStorageFileName(fileName) ?? fileName;
+      final bytes = await client.storage
+          .from(SupabaseConfig.productsBucket)
+          .download(cleanName);
+      return bytes;
+    } catch (e) {
+      debugPrint('[Supabase Storage Download Error] $fileName: $e');
+      return null;
+    }
+  }
+
+  /// Menghapus file gambar tertentu dari Supabase Storage
+  Future<void> deleteProductImage(String? imagePath) async {
+    if (imagePath == null || imagePath.trim().isEmpty) return;
+    final fileName = extractStorageFileName(imagePath);
+    if (fileName == null || fileName.isEmpty) return;
+
+    try {
+      await client.storage.from(SupabaseConfig.productsBucket).remove([fileName]);
+      debugPrint('[Supabase Storage] Deleted image: $fileName');
+    } catch (e) {
+      debugPrint('[Supabase Storage Delete Error] $fileName: $e');
+    }
+  }
+
+  /// Membersihkan seluruh gambar di storage Supabase yang tidak terhubung dengan produk apapun
+  Future<int> cleanupOrphanProductImages() async {
+    try {
+      // 1. Ambil semua path gambar yang sedang aktif di database products
+      final productsRes = await client.from('products').select('image');
+      final activeFileNames = <String>{};
+      for (final p in (productsRes as List)) {
+        final img = p['image'] as String?;
+        final fn = extractStorageFileName(img);
+        if (fn != null && fn.isNotEmpty) {
+          activeFileNames.add(fn);
+        }
+      }
+
+      // 2. Ambil daftar seluruh file di bucket storage produk
+      final List<FileObject> storageFiles = await client.storage
+          .from(SupabaseConfig.productsBucket)
+          .list(searchOptions: const SearchOptions(limit: 1000));
+
+      // 3. Identifikasi file orphan (ada di storage tapi tidak ada di tabel products)
+      final orphanFiles = <String>[];
+      for (final file in storageFiles) {
+        if (file.name.isEmpty || file.name.startsWith('.')) continue;
+        if (!activeFileNames.contains(file.name)) {
+          orphanFiles.add(file.name);
+        }
+      }
+
+      // 4. Hapus file orphan dari bucket storage
+      if (orphanFiles.isNotEmpty) {
+        await client.storage
+            .from(SupabaseConfig.productsBucket)
+            .remove(orphanFiles);
+        debugPrint('[Cleanup] Berhasil menghapus ${orphanFiles.length} gambar orphan dari storage: $orphanFiles');
+      }
+
+      return orphanFiles.length;
+    } catch (e) {
+      debugPrint('[Cleanup Error] Gagal membersihkan gambar orphan storage: $e');
+      return 0;
+    }
   }
 
   Future<String?> uploadProductImage({File? file, Uint8List? bytes, String? fileName}) async {
@@ -699,34 +823,66 @@ class SupabaseService {
     };
   }
 
-  Future<void> restoreBackupData(Map<String, dynamic> backupJson) async {
+  Future<int> restoreBackupData(
+    Map<String, dynamic> backupJson, {
+    Map<String, Uint8List>? images,
+  }) async {
+    // 1. Pulihkan file biner gambar produk ke Supabase Storage (jika ada file di zip)
+    if (images != null && images.isNotEmpty) {
+      for (final entry in images.entries) {
+        final fileName = entry.key;
+        final bytes = entry.value;
+        try {
+          await client.storage.from(SupabaseConfig.productsBucket).uploadBinary(
+            fileName,
+            bytes,
+            fileOptions: const FileOptions(cacheControl: '3600', upsert: true),
+          );
+          debugPrint('[Restore Image] Berhasil memulihkan gambar ke storage: $fileName');
+        } catch (e) {
+          debugPrint('[Restore Image Error] Gagal memulihkan $fileName: $e');
+        }
+      }
+    }
+
     final data = backupJson['data'] as Map<String, dynamic>? ?? {};
 
-    // Restore products
+    // 2. Restore products
     if (data['products'] != null && data['products'] is List) {
       for (final p in data['products']) {
         await client.from('products').upsert(p);
       }
     }
 
-    // Restore store settings
+    // 3. Restore store settings
     if (data['store_settings'] != null && data['store_settings'] is List && (data['store_settings'] as List).isNotEmpty) {
       await client.from('store_settings').upsert(data['store_settings'][0]);
     }
 
-    // Restore transactions
+    // 4. Restore transactions
     if (data['transactions'] != null && data['transactions'] is List) {
       for (final t in data['transactions']) {
         await client.from('transactions').upsert(t);
       }
     }
 
-    // Restore transaction items
+    // 5. Restore transaction items
     if (data['transaction_items'] != null && data['transaction_items'] is List) {
       for (final ti in data['transaction_items']) {
         await client.from('transaction_items').upsert(ti);
       }
     }
+
+    // 6. Restore customers
+    if (data['customers'] != null && data['customers'] is List) {
+      for (final c in data['customers']) {
+        await client.from('customers').upsert(c);
+      }
+    }
+
+    // 7. Bersihkan seluruh file gambar orphan di storage yang tidak terhubung dengan tabel products
+    final cleanedCount = await cleanupOrphanProductImages();
+    return cleanedCount;
   }
 
   Future<void> factoryReset() async {
@@ -762,5 +918,8 @@ class SupabaseService {
     ];
 
     await client.from('products').insert(seedProducts);
+
+    // 4. Bersihkan file gambar custom di storage agar kembali fresh
+    await cleanupOrphanProductImages();
   }
 }
