@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:share_plus/share_plus.dart';
 import '../models/transaction.dart';
+import '../services/excel_report_service.dart';
 import '../services/supabase_service.dart';
 import '../widgets/receipt_dialog.dart';
 
@@ -14,6 +16,7 @@ class ReportsScreen extends StatefulWidget {
 class _ReportsScreenState extends State<ReportsScreen> {
   List<TransactionModel> _transactions = [];
   bool _isLoading = true;
+  bool _isExporting = false;
   String _selectedRange = 'today'; // 'today', '7days', '30days', 'all'
   String _selectedChannel = 'all'; // 'all', 'toko', 'online'
   final currency = NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ', decimalDigits: 0);
@@ -70,35 +73,118 @@ class _ReportsScreenState extends State<ReportsScreen> {
   int get cashCount => _transactions.where((t) => t.paymentMethod == 'tunai').length;
   int get qrisCount => _transactions.where((t) => t.paymentMethod == 'qris').length;
 
+  Future<void> _exportToExcel() async {
+    final listToExport = _displayedTransactions;
+    if (listToExport.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Tidak ada data transaksi untuk diekspor pada filter ini.'),
+          backgroundColor: Colors.amber,
+        ),
+      );
+      return;
+    }
+
+    setState(() => _isExporting = true);
+    try {
+      final file = await ExcelReportService.instance.generateSalesReportExcel(
+        transactions: listToExport,
+        selectedRange: _selectedRange,
+        selectedChannel: _selectedChannel,
+      );
+
+      if (mounted) {
+        await SharePlus.instance.share(
+          ShareParams(
+            files: [XFile(file.path)],
+            text: 'Laporan Penjualan Apotek Santosa Farma (${_getRangeLabel(_selectedRange)})',
+            subject: 'Laporan Penjualan Excel',
+          ),
+        );
+
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Laporan Excel berhasil dibuat! Silakan buka di Excel atau bagikan.'),
+            backgroundColor: Color(0xFF16A34A),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Gagal mengekspor Excel: $e'), backgroundColor: Colors.red),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isExporting = false);
+    }
+  }
+
+  String _getRangeLabel(String range) {
+    switch (range) {
+      case 'today':
+        return 'Hari Ini';
+      case '7days':
+        return '7 Hari Terakhir';
+      case '30days':
+        return '30 Hari Terakhir';
+      case 'all':
+        return 'Semua Waktu';
+      default:
+        return range;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Column(
       children: [
-        // Range Filter Buttons
+        // Range Filter Buttons & Export Action
         Container(
           color: Colors.white,
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
           child: Row(
             children: [
               const Text('Periode:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF64748B))),
-              const SizedBox(width: 12),
+              const SizedBox(width: 8),
               Expanded(
                 child: SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
                   child: Row(
                     children: [
                       _buildChip('Hari Ini', 'today'),
-                      const SizedBox(width: 8),
+                      const SizedBox(width: 6),
                       _buildChip('7 Hari', '7days'),
-                      const SizedBox(width: 8),
+                      const SizedBox(width: 6),
                       _buildChip('30 Hari', '30days'),
-                      const SizedBox(width: 8),
+                      const SizedBox(width: 6),
                       _buildChip('Semua Waktu', 'all'),
                     ],
                   ),
                 ),
               ),
+              const SizedBox(width: 8),
+              FilledButton.icon(
+                icon: _isExporting
+                    ? const SizedBox(
+                        width: 13,
+                        height: 13,
+                        child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                      )
+                    : const Icon(Icons.table_view_rounded, size: 16),
+                label: const Text('Export Excel', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                style: FilledButton.styleFrom(
+                  backgroundColor: const Color(0xFF16A34A),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  visualDensity: VisualDensity.compact,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                ),
+                onPressed: (_isLoading || _isExporting) ? null : _exportToExcel,
+              ),
+              const SizedBox(width: 4),
               IconButton(
+                tooltip: 'Muat Ulang',
                 icon: const Icon(Icons.refresh, color: Color(0xFF0E7490)),
                 onPressed: _loadReports,
               ),
