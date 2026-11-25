@@ -1,11 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../models/transaction.dart';
-import '../models/transaction_item.dart';
 import '../providers/auth_provider.dart';
 import '../providers/store_provider.dart';
 import '../services/backup_service.dart';
-import '../services/printer_service.dart';
 import '../services/supabase_service.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -176,43 +173,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     } finally {
       if (mounted) setState(() => _isChangingPassword = false);
     }
-  }
-
-  // ==========================================
-  // UJI PRINTER KASIR
-  // ==========================================
-  Future<void> _handleTestPrint() async {
-    final sampleTrx = TransactionModel(
-      id: 999999,
-      invoiceNo: 'TEST-STRUK-${DateTime.now().millisecondsSinceEpoch.toString().substring(8)}',
-      channel: 'toko',
-      paymentMethod: 'tunai',
-      status: 'selesai',
-      total: 35000,
-      amountPaid: 50000,
-      changeAmount: 15000,
-      createdAt: DateTime.now(),
-      items: [
-        TransactionItem(
-          id: 1,
-          transactionId: 999999,
-          productName: 'Paracetamol 500mg (Contoh)',
-          qty: 2,
-          price: 10000,
-          subtotal: 20000,
-        ),
-        TransactionItem(
-          id: 2,
-          transactionId: 999999,
-          productName: 'Vitamin C 500mg (Contoh)',
-          qty: 1,
-          price: 15000,
-          subtotal: 15000,
-        ),
-      ],
-    );
-
-    await PrinterService.instance.printReceipt(sampleTrx);
   }
 
   // ==========================================
@@ -751,58 +711,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 const SizedBox(height: 16),
               ],
 
-              // 3. Khusus Kasir: Pengujian Alat Kasir & Printer Struk
-              if (!isSuperAdmin) ...[
-                Card(
-                  child: Padding(
-                    padding: EdgeInsets.all(isCompact ? 16 : 20),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(8),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFECFEFF),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: const Icon(Icons.print_outlined, color: Color(0xFF0891B2), size: 20),
-                            ),
-                            const SizedBox(width: 12),
-                            const Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'Pengujian Struk Kasir',
-                                    style: TextStyle(fontWeight: FontWeight.w900, fontSize: 15),
-                                  ),
-                                  Text(
-                                    'Uji coba pencetakan struk printer thermal 80mm atau pratinjau dokumen PDF.',
-                                    style: TextStyle(fontSize: 11, color: Color(0xFF64748B)),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                        const Divider(height: 24),
-                        OutlinedButton.icon(
-                          style: OutlinedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-                          ),
-                          icon: const Icon(Icons.receipt_long, size: 18, color: Color(0xFF0891B2)),
-                          label: const Text('Uji Cetak Struk Contoh (PDF)'),
-                          onPressed: _handleTestPrint,
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-              ],
-
               // 4. Card Keamanan Akun & Ubah Password (Untuk Kasir dan Admin)
               Card(
                 child: Padding(
@@ -1150,9 +1058,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
               const Center(
                 child: Column(
                   children: [
-                    Text('Apotek Santosa Farma POS — Android Edition', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF64748B))),
+                    Text('Apotek Santosa Farma POS', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF64748B))),
                     SizedBox(height: 2),
-                    Text('Versi 1.0.0 (Material Design 3 + Supabase Cloud)', style: TextStyle(fontSize: 11, color: Color(0xFF94A3B8))),
+                    Text('Versi 1.0.0', style: TextStyle(fontSize: 11, color: Color(0xFF94A3B8))),
                   ],
                 ),
               ),
