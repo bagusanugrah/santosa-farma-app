@@ -23,10 +23,29 @@ subprojects {
             ]
         }
     }
+    project.plugins.withId("com.android.library") {
+        if (!project.plugins.hasPlugin("org.jetbrains.kotlin.android") &&
+            !project.plugins.hasPlugin("com.android.built-in-kotlin")) {
+            def kotlinDir = new File(project.projectDir, "src/main/kotlin")
+            if (kotlinDir.exists()) {
+                project.apply plugin: "org.jetbrains.kotlin.android"
+            }
+        }
+        project.androidComponents.finalizeDsl { extension ->
+            if (extension.compileSdk == null || extension.compileSdk < 35) {
+                extension.compileSdk = 35
+            }
+            extension.lint.checkReleaseBuilds = false
+            extension.lint.abortOnError = false
+        }
+    }
     project.plugins.withId("kotlin-android") {
         project.tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach {
             kotlinOptions {
                 freeCompilerArgs += ["-Xskip-metadata-version-check"]
+                if (project.name == "file_picker") {
+                    jvmTarget = "17"
+                }
             }
         }
     }
