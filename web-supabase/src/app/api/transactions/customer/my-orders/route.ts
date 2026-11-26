@@ -1,6 +1,11 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
 import { getCustomerFromAuthHeader } from '@/lib/server-auth';
+import { getIntegrationSettings } from '@/lib/settings';
+import {
+  isPharmacyPaymentMethod,
+  syncAndCleanPendingMidtransOrder,
+} from '@/lib/midtrans-cleanup';
 
 export const dynamic = 'force-dynamic';
 
@@ -15,7 +20,7 @@ export async function GET(req: Request) {
       .from('transactions')
       .select('*, items:transaction_items(*)')
       .eq('customer_id', customer.id)
-      .neq('status', 'dibatalkan')
+      .not('status', 'in', '("dibatalkan","expired","gagal")')
       .order('id', { ascending: false });
 
     if (error) {
@@ -25,10 +30,37 @@ export async function GET(req: Request) {
       );
     }
 
+    const list = transactions || [];
+    const pendingMidtrans = list.filter(
+      (t) => t.status === 'pending' && !isPharmacyPaymentMethod(t.payment_method)
+    );
+
+    let activeTransactions = list;
+    if (pendingMidtrans.length > 0) {
+      const settings = await getIntegrationSettings();
+      const results = await Promise.all(
+        pendingMidtrans.map(async (trx) => ({
+          id: trx.id,
+          result: await syncAndCleanPendingMidtransOrder(trx, settings),
+        }))
+      );
+
+      const deletedIds = new Set<number>();
+      const paidMap = new Map<number, any>();
+      for (const r of results) {
+        if (r.result.state === 'deleted') deletedIds.add(r.id);
+        if (r.result.state === 'paid') paidMap.set(r.id, r.result.transaction);
+      }
+
+      activeTransactions = list
+        .filter((t) => !deletedIds.has(t.id))
+        .map((t) => paidMap.get(t.id) || t);
+    }
+
     return NextResponse.json(
       {
         status: 'success',
-        data: transactions || [],
+        data: activeTransactions,
       },
       {
         headers: {

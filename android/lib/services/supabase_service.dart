@@ -659,6 +659,14 @@ class SupabaseService {
   // ==========================================
   // WEB ORDERS (Pesanan Online Realtime)
   // ==========================================
+  DateTime? _parseMidtransExpiry(String? raw) {
+    if (raw == null || raw.trim().isEmpty) return null;
+    final trimmed = raw.trim();
+    final hasTz = RegExp(r'([zZ]|[+-]\d{2}:?\d{2})$').hasMatch(trimmed);
+    final isoLike = trimmed.contains('T') ? trimmed : trimmed.replaceFirst(' ', 'T');
+    return DateTime.tryParse(hasTz ? isoLike : '$isoLike+07:00');
+  }
+
   Future<List<TransactionModel>> getWebOrders() async {
     final res = await client
         .from('transactions')
@@ -667,7 +675,68 @@ class SupabaseService {
         .neq('status', 'dibatalkan')
         .order('id', ascending: false);
 
-    return (res as List).map((t) => TransactionModel.fromMap(t)).toList();
+    final orders = (res as List).map((t) => TransactionModel.fromMap(t)).toList();
+
+    // Auto-cleanup pesanan Midtrans yang sudah melewati batas bayar (expired/cancel/deny)
+    final pendingOnline = orders.where((o) =>
+        o.status == 'expired' ||
+        o.status == 'gagal' ||
+        (o.status == 'pending' &&
+            o.paymentMethod != 'pharmacy' &&
+            o.paymentMethod != 'bayar_di_apotek')).toList();
+
+    if (pendingOnline.isEmpty) {
+      return orders;
+    }
+
+    StoreSetting? storeSetting;
+    try {
+      storeSetting = await getStoreSetting();
+    } catch (_) {}
+
+    final removedIds = <int>{};
+    for (final order in pendingOnline) {
+      if (order.status == 'expired' || order.status == 'gagal') {
+        try {
+          await cancelWebOrder(order.id);
+          removedIds.add(order.id);
+        } catch (_) {}
+        continue;
+      }
+
+      if (storeSetting != null && storeSetting.hasMidtransConfig) {
+        try {
+          final statusData = await checkMidtransStatus(
+            orderId: order.invoiceNo,
+            serverKey: storeSetting.midtransServerKey,
+            isProduction: storeSetting.midtransIsProduction,
+          );
+          if (statusData != null) {
+            final tStatus = (statusData['transaction_status'] ?? '').toString();
+            final expiryTime = _parseMidtransExpiry(statusData['expiry_time']?.toString());
+            final isPaid = tStatus == 'settlement' || tStatus == 'capture';
+            final isExpiredOrFailed = tStatus == 'expire' ||
+                tStatus == 'cancel' ||
+                tStatus == 'deny' ||
+                (!isPaid && expiryTime != null && !expiryTime.isAfter(DateTime.now()));
+
+            if (isExpiredOrFailed) {
+              if (tStatus == 'pending') {
+                await cancelMidtransTransaction(
+                  orderId: order.invoiceNo,
+                  serverKey: storeSetting.midtransServerKey,
+                  isProduction: storeSetting.midtransIsProduction,
+                );
+              }
+              await cancelWebOrder(order.id);
+              removedIds.add(order.id);
+            }
+          }
+        } catch (_) {}
+      }
+    }
+
+    return orders.where((o) => !removedIds.contains(o.id)).toList();
   }
 
   Future<TransactionModel?> findOrderByQrOrInvoice(String qrTokenOrInvoice) async {

@@ -37,26 +37,6 @@ export default function OrderDetailPage() {
 
   const fetchOrder = async () => {
     try {
-      const { data: directTrx, error: directErr } = await supabase
-        .from('transactions')
-        .select('*, items:transaction_items(*)')
-        .eq('invoice_no', invoiceNo)
-        .eq('customer_id', user?.id)
-        .neq('status', 'dibatalkan')
-        .maybeSingle();
-
-      if (!directErr && directTrx) {
-        setOrder(directTrx as any);
-        if (
-          directTrx.status === 'pending' &&
-          directTrx.payment_method !== 'pharmacy' &&
-          directTrx.payment_method !== 'bayar_di_apotek'
-        ) {
-          fetchPaymentInfo();
-        }
-        return;
-      }
-
       if (token) {
         const res = await fetch(`${API_BASE_URL}/transactions/customer/my-orders?_t=${Date.now()}`, {
           cache: 'no-store',
@@ -77,7 +57,29 @@ export default function OrderDetailPage() {
           ) {
             fetchPaymentInfo();
           }
+          return;
         }
+      }
+
+      const { data: directTrx, error: directErr } = await supabase
+        .from('transactions')
+        .select('*, items:transaction_items(*)')
+        .eq('invoice_no', invoiceNo)
+        .eq('customer_id', user?.id)
+        .not('status', 'in', '("dibatalkan","expired","gagal")')
+        .maybeSingle();
+
+      if (!directErr && directTrx) {
+        setOrder(directTrx as any);
+        if (
+          directTrx.status === 'pending' &&
+          directTrx.payment_method !== 'pharmacy' &&
+          directTrx.payment_method !== 'bayar_di_apotek'
+        ) {
+          fetchPaymentInfo();
+        }
+      } else {
+        setOrder(null);
       }
     } catch (err) {
       console.error('Error fetching order detail', err);
@@ -100,6 +102,10 @@ export default function OrderDetailPage() {
       });
       if (res.ok) {
         const json = await res.json();
+        if (json.data?.is_expired || json.data?.deleted) {
+          setOrder(null);
+          return;
+        }
         if (json.data?.payment_details) {
           setPaymentDetails(json.data.payment_details);
         }
@@ -142,6 +148,24 @@ export default function OrderDetailPage() {
     };
   }, [user, token, authLoading, invoiceNo, router]);
 
+  useEffect(() => {
+    if (!order || order.status !== 'pending' || !paymentDetails?.expiry_time) return;
+    const trimmed = String(paymentDetails.expiry_time).trim();
+    if (!trimmed) return;
+    const hasTz = /[zZ]|[+-]\d{2}:?\d{2}$/.test(trimmed);
+    const iso = trimmed.includes('T') ? trimmed : trimmed.replace(' ', 'T');
+    const expiryMs = Date.parse(hasTz ? iso : `${iso}+07:00`);
+    if (Number.isNaN(expiryMs)) return;
+
+    const interval = setInterval(() => {
+      if (Date.now() >= expiryMs) {
+        fetchOrder();
+      }
+    }, 15000);
+
+    return () => clearInterval(interval);
+  }, [order, paymentDetails]);
+
   const handlePayOnline = async () => {
     if (!token || !order) return;
     setPaying(true);
@@ -163,6 +187,12 @@ export default function OrderDetailPage() {
       }
 
       const data = json.data;
+      if (data.is_expired || data.deleted) {
+        alert('Batas waktu pembayaran telah berakhir. Pesanan otomatis dibatalkan dan dihapus.');
+        router.replace('/orders');
+        return;
+      }
+
       if (data.is_paid) {
         alert('Pembayaran pesanan ini sudah berhasil dikonfirmasi!');
         await fetchOrder();
@@ -224,6 +254,12 @@ export default function OrderDetailPage() {
         body: JSON.stringify({ invoice_no: invoiceNo }),
       });
       if (res.ok) {
+        const json = await res.json();
+        if (json.deleted || json.is_expired) {
+          alert(json.message || 'Batas waktu pembayaran telah berakhir. Pesanan otomatis dibatalkan.');
+          router.replace('/orders');
+          return;
+        }
         await fetchOrder();
       }
     } catch (err) {

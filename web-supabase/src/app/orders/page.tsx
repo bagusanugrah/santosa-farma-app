@@ -38,21 +38,7 @@ export default function MyOrdersPage() {
   const fetchOrders = useCallback(async () => {
     if (!user) return;
     try {
-      // 1. Direct Supabase query (always fresh & instantaneous)
-      const { data: directData, error: directErr } = await supabase
-        .from('transactions')
-        .select('*, items:transaction_items(*)')
-        .eq('customer_id', user.id)
-        .neq('status', 'dibatalkan')
-        .order('id', { ascending: false });
-
-      if (!directErr && directData && directData.length > 0) {
-        setOrders(directData as any);
-        loadPendingPaymentDetails(directData as any);
-        return;
-      }
-
-      // 2. Query via API route with timestamp cache-buster
+      // 1. Prefer server API when authenticated so expired Midtrans orders are auto-cleaned
       if (token) {
         const res = await fetch(`${API_BASE_URL}/transactions/customer/my-orders?_t=${Date.now()}`, {
           cache: 'no-store',
@@ -66,11 +52,19 @@ export default function MyOrdersPage() {
           const list = json.data || [];
           setOrders(list);
           loadPendingPaymentDetails(list);
-        } else if (directData) {
-          setOrders(directData as any);
-          loadPendingPaymentDetails(directData as any);
+          return;
         }
-      } else if (directData) {
+      }
+
+      // 2. Direct Supabase query fallback
+      const { data: directData, error: directErr } = await supabase
+        .from('transactions')
+        .select('*, items:transaction_items(*)')
+        .eq('customer_id', user.id)
+        .not('status', 'in', '("dibatalkan","expired","gagal")')
+        .order('id', { ascending: false });
+
+      if (!directErr && directData) {
         setOrders(directData as any);
         loadPendingPaymentDetails(directData as any);
       }
@@ -90,6 +84,7 @@ export default function MyOrdersPage() {
           o.payment_method !== 'pharmacy' &&
           o.payment_method !== 'bayar_di_apotek'
       );
+      let needsRefresh = false;
       for (const o of pendingOnline) {
         try {
           const res = await fetch(`${API_BASE_URL}/transactions/customer/pay-order`, {
@@ -109,15 +104,52 @@ export default function MyOrdersPage() {
                 [o.invoice_no]: json.data.payment_details,
               }));
             }
-            if (json.data?.is_paid) {
-              fetchOrders();
+            if (json.data?.is_paid || json.data?.is_expired || json.data?.deleted) {
+              needsRefresh = true;
             }
           }
         } catch (_) {}
       }
+      if (needsRefresh) {
+        fetchOrders();
+      }
     },
     [token]
   );
+
+  // Auto-clean orders when a displayed Midtrans expiry_time passes while page is open
+  useEffect(() => {
+    const activePendingInvoices = new Set(
+      orders.filter((o) => o.status === 'pending').map((o) => o.invoice_no)
+    );
+    const entries = Object.entries(paymentDetailsMap).filter(([inv]) =>
+      activePendingInvoices.has(inv)
+    );
+    if (entries.length === 0) return;
+
+    const parseExpiryMs = (raw?: string | null) => {
+      if (!raw) return null;
+      const trimmed = raw.trim();
+      if (!trimmed) return null;
+      const hasTz = /[zZ]|[+-]\d{2}:?\d{2}$/.test(trimmed);
+      const iso = trimmed.includes('T') ? trimmed : trimmed.replace(' ', 'T');
+      const ms = Date.parse(hasTz ? iso : `${iso}+07:00`);
+      return Number.isNaN(ms) ? null : ms;
+    };
+
+    const interval = setInterval(() => {
+      const now = Date.now();
+      const hasExpired = entries.some(([, detail]) => {
+        const ms = parseExpiryMs(detail?.expiry_time);
+        return ms !== null && ms <= now;
+      });
+      if (hasExpired) {
+        fetchOrders();
+      }
+    }, 15000);
+
+    return () => clearInterval(interval);
+  }, [orders, paymentDetailsMap, fetchOrders]);
 
   useEffect(() => {
     if (authLoading) return;
@@ -164,6 +196,10 @@ export default function MyOrdersPage() {
         body: JSON.stringify({ invoice_no: invoiceNo }),
       });
       if (res.ok) {
+        const json = await res.json();
+        if (json.deleted || json.is_expired) {
+          alert(json.message || 'Batas waktu pembayaran telah berakhir. Pesanan otomatis dibatalkan dan dihapus.');
+        }
         await fetchOrders();
       }
     } catch (err) {
@@ -230,6 +266,12 @@ export default function MyOrdersPage() {
       }
 
       const data = json.data;
+      if (data.is_expired || data.deleted) {
+        alert('Batas waktu pembayaran telah berakhir. Pesanan otomatis dibatalkan dan dihapus.');
+        await fetchOrders();
+        return;
+      }
+
       if (data.is_paid) {
         alert('Pembayaran pesanan ini sudah berhasil dikonfirmasi!');
         await fetchOrders();
@@ -292,7 +334,7 @@ export default function MyOrdersPage() {
   if (!user || !token) return null;
 
   const filteredOrders = orders.filter((order) => {
-    if (order.status === 'dibatalkan') return false;
+    if (['dibatalkan', 'expired', 'gagal'].includes(order.status)) return false;
     if (activeTab === 'all') return true;
     return order.status === activeTab;
   });

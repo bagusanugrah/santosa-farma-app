@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import crypto from 'crypto';
 import { supabaseAdmin } from '@/lib/supabase';
 import { getIntegrationSettings } from '@/lib/settings';
+import { deletePendingTransaction } from '@/lib/midtrans-cleanup';
 
 export async function POST(req: Request) {
   try {
@@ -130,11 +131,9 @@ export async function POST(req: Request) {
         })
         .eq('id', transaction.id);
     } else if (['deny', 'cancel', 'expire'].includes(transactionStatus)) {
-      const newStatus = transactionStatus === 'expire' ? 'expired' : 'gagal';
-      await supabaseAdmin
-        .from('transactions')
-        .update({ status: newStatus })
-        .eq('id', transaction.id);
+      if (transaction.status === 'pending') {
+        await deletePendingTransaction(transaction.id);
+      }
     }
 
     return NextResponse.json({
