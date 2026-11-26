@@ -1,87 +1,119 @@
 # Apotek Santosa Farma — Sistem Kasir POS & Pemesanan Web
 
-Sistem informasi apotek modern dan terintegrasi untuk **Apotek Santosa Farma** (Pertigaan Jl. Raya Jalancagak, Subang, Jawa Barat). Sistem ini menghubungkan aplikasi kasir toko (Android POS) dengan portal pemesanan obat online bagi pelanggan (Web Next.js) menggunakan **Supabase PostgreSQL** sebagai pusat data realtime.
+Sistem informasi apotek modern dan terintegrasi untuk **Apotek Santosa Farma** (Pertigaan Jl. Raya Jalancagak, Subang, Jawa Barat). Sistem ini menghubungkan **aplikasi kasir Android POS (Flutter)** dengan **portal pemesanan obat online pelanggan (Next.js 14)** menggunakan **Supabase Cloud (PostgreSQL, Realtime, dan Storage)** sebagai pusat data terpadu.
 
-Branding, palet warna (*Medical Cyan / Teal* `#0891B2` / `#4AB8C4` & *Deep Navy* `#1E3A5F`), serta logo resmi diselaraskan langsung dengan identitas visual resmi Instagram [**@santosafarma**](https://instagram.com/santosafarma).
+Branding, palet warna (*Medical Cyan / Teal* `#0891B2` / `#0E7490` & *Deep Navy* `#1E3A5F`), serta ikon aplikasi diselaraskan dengan identitas visual resmi Instagram [**@santosafarma**](https://instagram.com/santosafarma).
+
+> [!TIP]
+> Untuk dokumentasi teknis mendalam (skema tabel lengkap, daftar endpoint API, arsitektur state/provider, alur bisnis, dan panduan AI handoff), baca [**DOCUMENTATION.md**](DOCUMENTATION.md).
 
 ---
 
 ## 🏛️ Arsitektur Proyek
 
-```
+```text
 apotek-santosa-farma/
-├── android/                                    # Aplikasi Android POS Kasir (Flutter)
+├── android/                                    # Aplikasi Android POS & Admin (Flutter)
 │   ├── lib/
-│   │   ├── config/theme.dart                   # Tema resmi Cyan/Teal Instagram @santosafarma
-│   │   ├── config/supabase_config.dart         # Konfigurasi Cloud Supabase
-│   │   ├── models/                             # Product, Transaction, StoreSetting, User
-│   │   ├── providers/                          # PosProvider, WebOrdersProvider, StoreProvider
-│   │   ├── screens/                            # POS, Products, Web Orders, QR Scanner, Reports, Settings
-│   │   └── widgets/                            # CartView, PaymentDialog, ProcessWebOrderDialog, ReceiptDialog
+│   │   ├── config/                             # Theme @santosafarma & konfigurasi Supabase (.env)
+│   │   ├── models/                             # Product, TransactionModel, TransactionItem, StoreSetting, UserModel
+│   │   ├── providers/                          # AuthProvider, PosProvider, StoreProvider, WebOrdersProvider
+│   │   ├── screens/                            # Login, POS, CashierTransactions, WebOrders, QrScanner, Products, Reports, Settings
+│   │   ├── services/                           # SupabaseService, PrinterService, ExcelReportService, BackupService, AudioService
+│   │   └── widgets/                            # AdaptiveScaffold, CartView, PaymentDialog, ProcessWebOrderDialog, ReceiptDialog
+│   ├── .env.example                            # Template kredensial Supabase Android
 │   └── pubspec.yaml
 │
 ├── web-supabase/                               # Portal Web Pelanggan (Next.js 14 App Router)
 │   ├── src/
-│   │   ├── app/                                # Katalog (/), Checkout, Orders, Profile, Auth OTP
-│   │   ├── components/                         # Header, ProductCard, CartDrawer, QrPickupModal
+│   │   ├── app/                                # Katalog (/), Checkout, Orders, Orders/[invoice], Profile, Auth & API Routes
+│   │   ├── components/                         # Header, MobileBottomNav, ProductCard, CartDrawer, OtpModal, QrPickupModal
 │   │   ├── context/                            # AuthContext, CartContext, StoreStatusContext
-│   │   └── lib/                                # Supabase client & server-side admin SDK
+│   │   └── lib/                                # Supabase client/admin, JWT auth, settings, notifications, Midtrans Snap
 │   ├── tailwind.config.js                      # Tailwind theme resmi Santosa Farma
 │   └── package.json
 │
-├── supabase_schema.sql                         # Skema lengkap PostgreSQL & RLS Supabase
-├── supabase_migration_integration_settings.sql # Migrasi store_settings (Midtrans & Fonnte)
-└── supabase_migration_storage_rls.sql          # Migrasi kebijakan RLS upload storage 'products'
+├── DOCUMENTATION.md                            # Dokumentasi teknis menyeluruh (fitur, API, DB, alur bisnis)
+├── supabase_schema.sql                         # Skema PostgreSQL, RLS, Realtime, Storage & Seeder awal
+├── supabase_migration_integration_settings.sql # Migrasi kolom Fonnte WA, SMTP Email & Midtrans di store_settings
+└── supabase_migration_storage_rls.sql          # Migrasi kebijakan RLS bucket Storage 'products'
 ```
 
 ---
 
-## 🔐 Pemisahan Hak Akses & Kredensial Default
+## 🔐 Pemisahan Hak Akses & Keamanan Sesi
 
 > [!IMPORTANT]
-> Demi keamanan kasir fisik, kredensial login **tidak ditampilkan di layar aplikasi**. Hak akses antara **Super Admin** dan **Kasir Toko** dipisahkan secara tegas:
+> Demi keamanan operasional apotek, kredensial login **tidak ditampilkan di layar aplikasi**. Sesi Android juga dilindungi dengan `allowBackup="false"`, `data_extraction_rules.xml` (mencegah auto-restore sesi saat install ulang APK), serta validasi sesi *fail-closed* ke server sebelum membuka dashboard.
 
 | Tipe Akun | Role | Username / Kontak | Password Default | Hak Akses & Ruang Lingkup |
 |---|---|---|---|---|
-| **Super Admin** | `super_admin` | `admin` | `password123` | **Manajemen Apotek**: Mengelola katalog obat (tambah/edit/hapus/upload foto), memantau Laporan Penjualan (Read-Only) seluruh kanal, Integrasi Gateway (Midtrans/WhatsApp), dan Cadangan Data (Backup/Restore). |
-| **Kasir Toko** | `admin_kasir` | `kasir` | `password123` | **Pelayanan Transaksi**: Transaksi Kasir POS (Tunai/QRIS), Proses & Edit Pesanan Web Pelanggan, Scan QR Pengambilan Obat, dan Cetak Struk PDF. *(Menu Kelola Obat & Laporan Keuangan disembunyikan)* |
-| **Customer Web** | `customer` | `081234567890` / `siti@example.com` | `password123` | Pelanggan web dapat mendaftar/login mandiri dengan verifikasi OTP WhatsApp / Email |
+| **Super Admin** | `super_admin` | `admin` | `password123` | **Manajemen Apotek**: Kelola katalog obat & foto produk, pantau Laporan Penjualan gabungan (Read-Only) + ekspor Excel 3 sheet, atur Integrasi Gateway (Fonnte WA, SMTP Email, Midtrans), Backup/Restore ZIP + gambar, pembersihan storage *orphan*, Ubah Password, dan Factory Reset. |
+| **Kasir Toko** | `admin_kasir` | `kasir` | `password123` | **Pelayanan Transaksi**: Kasir POS (Tunai/QRIS), Riwayat Transaksi Kasir Toko realtime, Pesanan Web Pelanggan + Edit Item (`Bayar di Apotek`), Scan QR Pengambilan Obat, Cetak/Bagikan Struk PDF, Sakelar Buka/Tutup Apotek & Pesanan Online, serta Ubah Password. *(Menu Kelola Obat, Laporan, Integrasi Gateway, Backup/Restore & Reset disembunyikan)* |
+| **Customer Web** | `customer` | `081234567890` / `siti@example.com` | `password123` | Pendaftaran/login mandiri via web dengan verifikasi OTP WhatsApp/Email, belanja katalog, pembayaran online/apotek, pantau pesanan & QR pengambilan. |
 
 ---
 
-## ✨ Fitur-Fitur Unggulan
+## ✨ Fitur-Fitur Utama
 
-### 1. Aplikasi Kasir Android POS (`android/`)
-- **Desain Responsif**: Otomatis menyesuaikan tampilan untuk layar smartphone vertikal maupun tablet horizontal (Side Navigation Rail & Grid POS).
-- **Proses Transaksi Kasir**:
-  - Tombol uang pas cepat (*quick cash*): Rp 10.000, Rp 20.000, Rp 50.000, Rp 100.000, dll.
-  - Perhitungan kembalian otomatis realtime.
-  - Pembayaran QRIS (hanya aktif jika kredensial Midtrans telah diisi secara valid).
-- **Proses & Edit Pesanan Web di Kasir (`ProcessWebOrderDialog`)**:
-  - Pelanggan yang memesan dari web dengan opsi **"Bayar di Apotek"** dapat diproses dan diedit oleh kasir.
-  - Kasir dapat menyesuaikan jumlah obat (*stepper qty*), menghapus obat jika stok fisik habis/batal, atau menambahkan obat baru langsung dari katalog apotek.
-  - Kasir menerima pembayaran (Tunai/QRIS) di tempat, stok obat faktual otomatis berkurang, dan struk resmi langsung dicetak.
-- **Scan QR Pengambilan Obat**: Scanner kamera terintegrasi (`mobile_scanner`) dengan senter (*torch*) dan input manual nomor invoice.
-- **Notifikasi Pesanan Masuk Realtime**: Supabase Realtime membunyikan audio lonceng (*chime*) seketika saat ada pesanan online masuk dari website.
-- **Pencetakan Struk Digital & Fisik**: Mendukung cetak struk thermal via Bluetooth printer atau pratinjau struk digital.
-- **Pengaturan Toko & Keamanan**:
-  - Sakelar Buka/Tutup Apotek.
-  - Sakelar Transaksi Web Pelanggan (dapat dinyalakan/dimatikan bebas oleh kasir).
-  - Cadangkan database transaksi dan produk ke file ZIP terenkripsi atau simpan ke Google Drive.
+### 1. Aplikasi Android POS & Admin (`android/`)
+
+- **Tata Letak Responsif & Adaptif (`AdaptiveScaffold`)**:
+  - Menyesuaikan otomatis antara tampilan smartphone (`NavigationBar`) dan tablet/layar lebar (`NavigationRail` & layout split POS).
+- **Kasir POS & Pembayaran (`PosScreen`, `PaymentDialog`)**:
+  - Pencarian cepat & filter kategori obat dengan indikator stok realtime.
+  - **Pembayaran Tunai**: tombol nominal uang cepat (*quick cash*) dan perhitungan kembalian otomatis.
+  - **Pembayaran QRIS Dinamis (Midtrans Core API v2)**: otomatis aktif jika kredensial Midtrans valid; menghasilkan QRIS langsung, *auto-polling* status pembayaran, tombol **Download QRIS**, serta **auto-cancel** transaksi ke Midtrans jika dialog ditutup atau kasir kembali ke tab Tunai sebelum dibayar.
+- **Riwayat Transaksi Kasir Toko (`CashierTransactionsScreen`)**:
+  - Memantau seluruh transaksi kanal `toko` secara realtime dengan filter rentang waktu, filter metode bayar (Tunai / QRIS), pencarian invoice/obat, ringkasan omzet, dan cetak ulang struk.
+- **Pesanan Web Pelanggan & Scan QR (`WebOrdersScreen`, `QrScannerScreen`, `ProcessWebOrderDialog`)**:
+  - **Notifikasi Realtime**: memutar bunyi lonceng (*chime*) seketika saat ada pesanan online masuk melalui Supabase Realtime.
+  - **Filter & Pencarian Lengkap**: tab status (`Semua`, `Belum Dibayar`, `Siap Diambil`, `Selesai`) beserta pencarian berdasarkan nomor invoice, nama pelanggan, nomor HP, atau nama obat, plus tombol chat WhatsApp dan pembatalan permanen pesanan.
+  - **Edit & Proses Pesanan "Bayar di Apotek" (`ProcessWebOrderDialog`)**: kasir dapat mengubah qty (*stepper*), menghapus item yang kosong, atau menambah obat baru sebelum menerima pembayaran (Tunai/QRIS) dan memotong stok aktual.
+  - **Scan QR Kamera & Input Manual (`QrScannerScreen`)**: scanner terintegrasi (`mobile_scanner`) dengan kontrol senter (*torch*) dan input manual nomor invoice/token QR.
+- **Struk Digital & PDF 80mm (`ReceiptDialog`, `PrinterService`)**:
+  - Pratinjau struk digital dan ekspor/cetak PDF format roll thermal **80mm** (`pdf` + `printing` + `share_plus`).
+- **Kelola Obat & Foto Storage (`ProductsScreen`, `ProductFormScreen`)**:
+  - CRUD produk lengkap dengan unggah foto dari kamera/galeri ke Supabase Storage bucket `products` dan pembersihan otomatis gambar lama saat foto diubah atau produk dihapus.
+- **Laporan Penjualan & Ekspor Excel Profesional (`ReportsScreen`, `ExcelReportService`)**:
+  - Analisis omzet gabungan kanal **Kasir Toko** dan **Pesanan Web** dengan filter rentang waktu & kanal.
+  - Ekspor laporan **Excel (`.xlsx`) 3 sheet terstruktur**: `Ringkasan & Transaksi`, `Rincian Obat Terjual`, dan `Produk Terlaris`.
+- **Pengaturan Toko, Integrasi, Backup ZIP & Reset (`SettingsScreen`, `BackupService`)**:
+  - Sakelar **Buka/Tutup Apotek** dan **Penerimaan Pesanan Online** (khusus Kasir) yang tersinkron realtime ke website.
+  - Konfigurasi **Fonnte WhatsApp**, **SMTP Email**, dan **Midtrans** (lengkap dengan **Test Koneksi Midtrans**) yang tersimpan di `store_settings`.
+  - **Backup & Restore ZIP**: mengemas seluruh data tabel + file foto produk (`images/`) ke arsip `.zip` untuk dibagikan/disimpan, serta memulihkan database + foto storage disertai pembersihan gambar *orphan* otomatis.
+  - **Bersihkan Storage Orphan** & **Factory Reset** untuk Super Admin.
 
 ### 2. Portal Web Pelanggan (`web-supabase/`)
-- **Katalog Obat Digital**: Filter kategori (Antibiotik, Analgesik, Flu & Batuk, dll.), pencarian instan, dan indikator status buka/tutup apotek secara realtime.
-- **Opsi Pembayaran Fleksibel**:
-  - **Bayar di Apotek (Kasir)**: Pesan obat lewat web, bayar langsung di kasir (Tunai / QRIS). Tetap berfungsi meskipun gateway online Midtrans belum dikonfigurasi.
-  - **Bayar Online Sekarang (Midtrans Snap)**: Bayar instan via QRIS, GoPay, ShopeePay, atau Virtual Account Bank (otomatis aktif jika admin telah memasukkan kredensial Midtrans).
-- **QR Code Pesanan**: Pelanggan otomatis mendapatkan QR Code bukti pesanan/pengambilan obat untuk ditunjukkan ke kasir saat tiba di apotek.
-- **Autentikasi Aman**: Registrasi & login pelanggan dengan verifikasi OTP via WhatsApp Gateway (Fonnte) atau Email SMTP.
+
+- **Katalog Obat Digital & Status Apotek Realtime (`/`)**:
+  - Pencarian instan, filter kategori, pengurutan, pagination, serta sinkronisasi status buka/tutup apotek dan status pesanan online secara realtime.
+- **Autentikasi Pelanggan & Verifikasi OTP**:
+  - Registrasi, login (No HP atau Email), tambah/ubah kontak di halaman `/profile` (wajib verifikasi OTP ulang), serta lupa/reset password melalui OTP **WhatsApp (Fonnte)** atau **Email (SMTP)**.
+- **Opsi Pembayaran Fleksibel (`/checkout`)**:
+  - **Bayar di Apotek (Kasir)**: buat pesanan langsung tanpa gateway online dan bayar di kasir (Tunai / QRIS).
+  - **Bayar Online (Midtrans Snap)**: pembayaran via QRIS, e-wallet, atau Virtual Account Bank (otomatis aktif jika kredensial Midtrans terkonfigurasi di `store_settings`).
+- **Halaman Pesanan Saya (`/orders` & `/orders/[invoice]`)**:
+  - Sinkronisasi status pesanan realtime dengan tab filter, tombol **Bayar Sekarang** untuk transaksi `pending`, persistensi instruksi & salin nomor **Virtual Account (VA)**, verifikasi pembayaran manual ke Midtrans, serta opsi batalkan pesanan.
+- **QR Code & Slip Pengambilan Cetak (`QrPickupModal`)**:
+  - QR Code pengambilan obat lengkap dengan tampilan cetak khusus (`#pickup-print-slip`) satu halaman penuh untuk ditunjukkan ke kasir.
 
 ---
 
 ## 🚀 Panduan Menjalankan & Membangun
 
-### A. Web Pelanggan (`web-supabase`)
+### A. Setup Database & Storage Supabase
+
+1. Buka project dashboard di [Supabase](https://supabase.com).
+2. Jalankan perintah SQL dari [`supabase_schema.sql`](supabase_schema.sql) pada menu **SQL Editor**.
+3. Jika migrasi bertahap dibutuhkan pada database existing, jalankan juga:
+   - [`supabase_migration_integration_settings.sql`](supabase_migration_integration_settings.sql)
+   - [`supabase_migration_storage_rls.sql`](supabase_migration_storage_rls.sql)
+4. Pastikan **Supabase Realtime** aktif untuk tabel `public.transactions`, `public.store_settings`, dan `public.products`.
+
+---
+
+### B. Web Pelanggan (`web-supabase/`)
 
 1. **Instalasi Dependensi**:
    ```bash
@@ -91,12 +123,22 @@ apotek-santosa-farma/
 
 2. **File Environment (`.env.local`)**:
    ```env
-   NEXT_PUBLIC_SUPABASE_URL=https://nykoitxkyyhwvtrndyrb.supabase.co
-   NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
-   SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
-   NEXT_PUBLIC_MIDTRANS_CLIENT_KEY=Mid-client-xxxxxxxxxxxxxxxx
-   NEXT_PUBLIC_MIDTRANS_IS_PRODUCTION=false
-   MIDTRANS_SERVER_KEY=Mid-server-xxxxxxxxxxxxxxxx
+   NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+   NEXT_PUBLIC_SUPABASE_ANON_KEY=your-supabase-anon-key
+   SUPABASE_SERVICE_ROLE_KEY=your-supabase-service-role-key
+   JWT_SECRET=your-random-jwt-secret
+
+   # Opsional fallback (pengaturan utama dibaca dari tabel store_settings via app Android Admin)
+   NEXT_PUBLIC_MIDTRANS_CLIENT_KEY=
+   MIDTRANS_SERVER_KEY=
+   MIDTRANS_IS_PRODUCTION=false
+   WA_GATEWAY_TOKEN=
+   WA_GATEWAY_URL=https://api.fonnte.com/send
+   MAIL_HOST=smtp.gmail.com
+   MAIL_PORT=587
+   MAIL_USERNAME=
+   MAIL_PASSWORD=
+   MAIL_FROM_NAME="Apotek Santosa Farma"
    ```
 
 3. **Jalankan Development Server**:
@@ -105,17 +147,17 @@ apotek-santosa-farma/
    # Akses di browser: http://localhost:3000
    ```
 
-4. **Build untuk Produksi (Vercel)**:
+4. **Build untuk Produksi (Vercel / Node)**:
    ```bash
    npm run build
    ```
 
 ---
 
-### B. Aplikasi Android POS (`android`)
+### C. Aplikasi Android POS (`android/`)
 
 1. **Persiapan Flutter**:
-   Pastikan Flutter SDK (versi >= 3.24) dan Android SDK telah terpasang.
+   Pastikan Flutter SDK (versi >= 3.24) dan Android SDK telah terpasang:
    ```bash
    cd android
    flutter pub get
@@ -127,45 +169,30 @@ apotek-santosa-farma/
    cp .env.example .env
    ```
    > [!IMPORTANT]
-   > File `.env` ini **otomatis diabaikan oleh Git** (`.gitignore`) sehingga kredensial Supabase Anda tidak akan bocor ke GitHub.
+   > File `.env` otomatis diabaikan oleh Git (`.gitignore`) agar kredensial Supabase tidak bocor ke repositori.
 
-   Variabel yang wajib diisi di dalam `android/.env`:
+   Variabel di dalam `android/.env`:
    | Variabel | Deskripsi | Contoh Nilai |
    |---|---|---|
    | `SUPABASE_URL` | URL project Supabase Cloud Anda | `https://your-project.supabase.co` |
-   | `SUPABASE_ANON_KEY` | Supabase Anon / Publishable Key (aman untuk client mobile) | `sb_publishable_...` atau `eyJhbGciOi...` |
-   | `SUPABASE_PRODUCTS_BUCKET` | *(Opsional)* Nama bucket storage untuk foto obat | `products` |
+   | `SUPABASE_ANON_KEY` | Supabase Anon / Publishable Key | `sb_publishable_...` atau `eyJhbGciOi...` |
+   | `SUPABASE_PRODUCTS_BUCKET` | *(Opsional)* Nama bucket storage foto obat | `products` |
 
 3. **Jalankan Aplikasi (Mode Debug)**:
-   Sambungkan HP Android atau jalankan Android Emulator:
    ```bash
    flutter run --dart-define-from-file=.env
    ```
-   *(Jika menggunakan VS Code, cukup tekan **F5** atau menu **Run & Debug** -> pilih `Santosa Farma POS (Android)`, flag `--dart-define-from-file` sudah otomatis dikonfigurasi).*
 
 4. **Build APK Rilis (Production)**:
    ```bash
    flutter build apk --release --dart-define-from-file=.env
    ```
-   File APK hasil kompilasi akan berada di:
-   `android/build/app/outputs/flutter-apk/app-release.apk`
-
----
-
-## 🗄️ Setup Database & Storage Supabase
-
-1. Buka project dashboard di [Supabase](https://supabase.com).
-2. Jalankan perintah SQL dari file `supabase_schema.sql` pada menu **SQL Editor**.
-3. Jalankan migrasi tambahan pengaturan dari file `supabase_migration_integration_settings.sql`.
-4. Jalankan migrasi storage dari file `supabase_migration_storage_rls.sql` untuk mengaktifkan izin upload/baca gambar obat pada bucket `products`.
-5. Pastikan fitur **Supabase Realtime** aktif untuk tabel:
-   - `public.transactions`
-   - `public.store_settings`
-   - `public.products`
+   Output APK: `android/build/app/outputs/flutter-apk/app-release.apk`.
 
 ---
 
 ## 📄 Lisensi & Hak Cipta
+
 Hak Cipta © 2026 **Apotek Santosa Farma**. Semua hak dilindungi undang-undang.
 Pertigaan Jl. Raya Jalancagak, Subang, Jawa Barat.
 Instagram: [@santosafarma](https://instagram.com/santosafarma)
