@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import '../widgets/adaptive_scaffold.dart';
 import 'cashier_transactions_screen.dart';
+import 'login_screen.dart';
 import 'pos_screen.dart';
 import 'web_orders_screen.dart';
 import 'products_screen.dart';
@@ -51,6 +52,9 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   @override
   Widget build(BuildContext context) {
     final auth = context.watch<AuthProvider>();
+    if (!auth.isAuthenticated || auth.currentUser == null) {
+      return const LoginScreen();
+    }
     final isSuperAdmin = auth.currentUser?.isSuperAdmin == true;
 
     // Reset index jika berganti role user saat logout/login

@@ -74,6 +74,23 @@ class SupabaseService {
     }
   }
 
+  /// Verifikasi apakah sesi staff tersimpan masih valid dan aktif di server
+  Future<UserModel?> verifyStaffSession({
+    required int userId,
+    required String username,
+  }) async {
+    final res = await client
+        .from('users')
+        .select('id, name, username, role')
+        .eq('id', userId)
+        .eq('username', username.trim())
+        .maybeSingle()
+        .timeout(const Duration(seconds: 6));
+
+    if (res == null) return null;
+    return UserModel.fromMap(res);
+  }
+
   /// Ubah password kasir atau admin
   Future<void> changeStaffPassword({
     required int userId,

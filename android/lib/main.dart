@@ -80,33 +80,52 @@ class SantosaPosApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MultiProvider(
-      providers: [
-        ChangeNotifierProvider(create: (_) => AuthProvider()),
-        ChangeNotifierProvider(create: (_) => StoreProvider()),
-        ChangeNotifierProvider(create: (_) => PosProvider()),
-        ChangeNotifierProvider(create: (_) => WebOrdersProvider()),
-      ],
-      child: MaterialApp(
-        title: 'Santosa Farma POS',
-        debugShowCheckedModeBanner: false,
-        theme: AppTheme.lightTheme,
-        home: Consumer<AuthProvider>(
-          builder: (context, auth, _) {
-            if (auth.isLoading) {
-              return const Scaffold(
+    return ChangeNotifierProvider(
+      create: (_) => AuthProvider(),
+      child: Consumer<AuthProvider>(
+        builder: (context, auth, _) {
+          if (auth.isLoading) {
+            return MaterialApp(
+              key: const ValueKey('loading_app'),
+              title: 'Santosa Farma POS',
+              debugShowCheckedModeBanner: false,
+              theme: AppTheme.lightTheme,
+              home: const Scaffold(
                 backgroundColor: Color(0xFFF8FAFC),
                 body: Center(
                   child: CircularProgressIndicator(color: Color(0xFF0891B2)),
                 ),
-              );
-            }
-            if (auth.isAuthenticated) {
-              return const MainNavigationScreen();
-            }
-            return const LoginScreen();
-          },
-        ),
+              ),
+            );
+          }
+
+          final currentUser = auth.currentUser;
+          if (!auth.isAuthenticated || currentUser == null) {
+            return MaterialApp(
+              key: const ValueKey('guest_app'),
+              title: 'Santosa Farma POS',
+              debugShowCheckedModeBanner: false,
+              theme: AppTheme.lightTheme,
+              home: const LoginScreen(),
+            );
+          }
+
+          return MultiProvider(
+            key: ValueKey('auth_providers_${currentUser.id}'),
+            providers: [
+              ChangeNotifierProvider(create: (_) => StoreProvider()),
+              ChangeNotifierProvider(create: (_) => PosProvider()),
+              ChangeNotifierProvider(create: (_) => WebOrdersProvider()),
+            ],
+            child: MaterialApp(
+              key: ValueKey('auth_app_${currentUser.id}'),
+              title: 'Santosa Farma POS',
+              debugShowCheckedModeBanner: false,
+              theme: AppTheme.lightTheme,
+              home: const MainNavigationScreen(),
+            ),
+          );
+        },
       ),
     );
   }
