@@ -1,5 +1,21 @@
 import '../config/supabase_config.dart';
 
+/// Daftar kategori obat standar yang disinkronkan antara Android POS dan Web
+const List<String> kProductCategories = [
+  'Analgesik',
+  'Antibiotik',
+  'Daya Tahan Tubuh',
+  'Flu & Batuk',
+  'Herbal',
+  'Mata',
+  'Minyak Angin',
+  'Obat Cacing',
+  'P3K',
+  'Pencernaan',
+  'Vitamin',
+  'Lainnya',
+];
+
 class Product {
   final int id;
   final String name;

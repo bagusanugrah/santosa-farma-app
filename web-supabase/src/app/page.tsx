@@ -26,11 +26,12 @@ export default function CatalogPage() {
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
 
-  // Categories list
+  // Categories list (disinkronkan dengan Android POS)
   const categories = [
     'all',
     'Analgesik',
     'Antibiotik',
+    'Daya Tahan Tubuh',
     'Flu & Batuk',
     'Herbal',
     'Mata',
@@ -39,7 +40,7 @@ export default function CatalogPage() {
     'P3K',
     'Pencernaan',
     'Vitamin',
-    'Daya Tahan Tubuh',
+    'Lainnya',
   ];
 
   const loadData = useCallback(async () => {

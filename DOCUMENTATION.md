@@ -218,7 +218,7 @@ Definisi utama ada di `supabase_schema.sql`, ditambah 2 file migrasi (`supabase_
 
 ### 4.3 Fitur Kasir POS & Pembayaran (`PosScreen`, `CartView`, `PaymentDialog`)
 
-- **Pencarian & Filter Kategori:** pencarian nama obat secara instan + chip kategori (`Semua`, `Antibiotik`, `Analgesik`, `Flu & Batuk`, `Pencernaan`, `P3K`, `Vitamin`, `Daya Tahan Tubuh`, `Minyak Angin`, `Obat Cacing`).
+- **Pencarian & Filter Kategori:** pencarian nama obat secara instan + chip kategori (`Semua`, `Analgesik`, `Antibiotik`, `Daya Tahan Tubuh`, `Flu & Batuk`, `Herbal`, `Mata`, `Minyak Angin`, `Obat Cacing`, `P3K`, `Pencernaan`, `Vitamin`, `Lainnya`).
 - **Keranjang Belanja (`PosProvider`):** validasi stok maksimum, tambah/kurangi qty, hapus item, hitung `grandTotal`.
 - **Pembayaran Tunai (`PaymentDialog` Tab Tunai):**
   - Dilengkapi `QuickCashButtons` untuk nominal cepat dan hitung kembalian otomatis.
@@ -281,7 +281,7 @@ Definisi utama ada di `supabase_schema.sql`, ditambah 2 file migrasi (`supabase_
 - `StoreStatusContext` berlangganan realtime ke `store_settings` (id=1).
 - Jika `is_open === false` (Apotek Tutup), halaman utama menampilkan layar pemberitahuan bahwa apotek sedang tutup dan pencarian/pemesanan dinonaktifkan sementara.
 - Jika toko buka namun `online_orders_enabled === false`, pelanggan masih dapat melihat katalog tetapi checkout online dinonaktifkan (`StoreClosedBanner`).
-- Fitur katalog (`src/app/page.tsx`): pencarian nama obat, filter kategori (`all`, `Analgesik`, `Antibiotik`, `Flu & Batuk`, `Herbal`, `Mata`, `Minyak Angin`, `Obat Cacing`, `P3K`, `Pencernaan`, `Vitamin`, `Daya Tahan Tubuh`), pengurutan, pagination, dan pemilihan jumlah item per halaman.
+- Fitur katalog (`src/app/page.tsx`): pencarian nama obat, filter kategori (`all`, `Analgesik`, `Antibiotik`, `Daya Tahan Tubuh`, `Flu & Batuk`, `Herbal`, `Mata`, `Minyak Angin`, `Obat Cacing`, `P3K`, `Pencernaan`, `Vitamin`, `Lainnya`), pengurutan, pagination, dan pemilihan jumlah item per halaman.
 - Gambar produk dari URL eksternal/storage dapat diproksi melalui `/api/image-proxy` bila diperlukan.
 
 ### 5.2 Autentikasi Pelanggan, OTP, & Profil

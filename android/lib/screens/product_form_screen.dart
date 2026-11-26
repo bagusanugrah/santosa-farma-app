@@ -25,17 +25,7 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
   File? _pickedImage;
   bool _isLoading = false;
 
-  final List<String> _categoryOptions = [
-    'Antibiotik',
-    'Analgesik',
-    'Flu & Batuk',
-    'Pencernaan',
-    'P3K',
-    'Vitamin',
-    'Daya Tahan Tubuh',
-    'Minyak Angin',
-    'Obat Cacing',
-  ];
+  final List<String> _categoryOptions = kProductCategories;
 
   @override
   void initState() {
@@ -191,53 +181,60 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
                 children: [
                   // Photo Box
                   Center(
-                    child: Stack(
-                      children: [
-                        Container(
-                          width: 140,
-                          height: 140,
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFF1F5F9),
-                            borderRadius: BorderRadius.circular(20),
-                            border: Border.all(color: const Color(0xFFE2E8F0)),
-                          ),
-                          clipBehavior: Clip.antiAlias,
-                          child: _pickedImage != null
-                              ? Image.file(_pickedImage!, fit: BoxFit.cover)
-                              : (widget.product?.imageUrl.isNotEmpty ?? false)
-                                  ? CachedNetworkImage(
-                                      imageUrl: widget.product!.imageUrl,
-                                      fit: BoxFit.cover,
-                                      errorWidget: (_, __, ___) => const Icon(Icons.medication, size: 48, color: Colors.grey),
-                                    )
-                                  : const Center(
-                                      child: Column(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          Icon(Icons.add_a_photo, size: 36, color: Color(0xFF64748B)),
-                                          SizedBox(height: 4),
-                                          Text('Foto Obat', style: TextStyle(fontSize: 11, color: Color(0xFF64748B))),
-                                        ],
-                                      ),
-                                    ),
-                        ),
-                        Positioned(
-                          right: 4,
-                          bottom: 4,
-                          child: Material(
-                            color: const Color(0xFF0891B2),
-                            shape: const CircleBorder(),
-                            child: InkWell(
-                              customBorder: const CircleBorder(),
-                              onTap: _showImagePickerSheet,
-                              child: const Padding(
-                                padding: EdgeInsets.all(8),
-                                child: Icon(Icons.camera_alt, color: Colors.white, size: 18),
+                    child: Material(
+                      color: const Color(0xFFF1F5F9),
+                      borderRadius: BorderRadius.circular(20),
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(20),
+                        onTap: _isLoading ? null : _showImagePickerSheet,
+                        child: Stack(
+                          children: [
+                            Container(
+                              width: 140,
+                              height: 140,
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(20),
+                                border: Border.all(color: const Color(0xFFE2E8F0)),
+                              ),
+                              clipBehavior: Clip.antiAlias,
+                              child: _pickedImage != null
+                                  ? Image.file(_pickedImage!, fit: BoxFit.cover)
+                                  : (widget.product?.imageUrl.isNotEmpty ?? false)
+                                      ? CachedNetworkImage(
+                                          imageUrl: widget.product!.imageUrl,
+                                          fit: BoxFit.cover,
+                                          errorWidget: (_, __, ___) => const Icon(Icons.medication, size: 48, color: Colors.grey),
+                                        )
+                                      : const Center(
+                                          child: Column(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              Icon(Icons.add_a_photo, size: 36, color: Color(0xFF64748B)),
+                                              SizedBox(height: 4),
+                                              Text('Foto Obat', style: TextStyle(fontSize: 11, color: Color(0xFF64748B))),
+                                            ],
+                                          ),
+                                        ),
+                            ),
+                            Positioned(
+                              right: 4,
+                              bottom: 4,
+                              child: Material(
+                                color: const Color(0xFF0891B2),
+                                shape: const CircleBorder(),
+                                child: InkWell(
+                                  customBorder: const CircleBorder(),
+                                  onTap: _isLoading ? null : _showImagePickerSheet,
+                                  child: const Padding(
+                                    padding: EdgeInsets.all(8),
+                                    child: Icon(Icons.camera_alt, color: Colors.white, size: 18),
+                                  ),
+                                ),
                               ),
                             ),
-                          ),
+                          ],
                         ),
-                      ],
+                      ),
                     ),
                   ),
                   const SizedBox(height: 24),
@@ -256,7 +253,7 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
 
                   // Category Selector
                   DropdownButtonFormField<String>(
-                    value: _categoryOptions.contains(_categoryController.text) ? _categoryController.text : _categoryOptions.first,
+                    value: _categoryOptions.contains(_categoryController.text) ? _categoryController.text : 'Lainnya',
                     decoration: const InputDecoration(
                       labelText: 'Kategori Obat',
                       prefixIcon: Icon(Icons.category_outlined),

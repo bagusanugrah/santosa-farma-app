@@ -32,15 +32,7 @@ class PosProvider extends ChangeNotifier {
 
   final List<String> categories = [
     'Semua',
-    'Antibiotik',
-    'Analgesik',
-    'Flu & Batuk',
-    'Pencernaan',
-    'P3K',
-    'Vitamin',
-    'Daya Tahan Tubuh',
-    'Minyak Angin',
-    'Obat Cacing',
+    ...kProductCategories,
   ];
 
   PosProvider() {
