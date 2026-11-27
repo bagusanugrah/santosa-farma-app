@@ -21,20 +21,21 @@ apotek-santosa-farma/
 │   │   ├── screens/                            # Login, POS, CashierTransactions, WebOrders, QrScanner, Products, Reports, Settings
 │   │   ├── services/                           # SupabaseService, PrinterService, ExcelReportService, BackupService, AudioService
 │   │   └── widgets/                            # AdaptiveScaffold, CartView, PaymentDialog, ProcessWebOrderDialog, ReceiptDialog
+│   ├── test/                                   # Unit & widget tests (backup_validation_test.dart, responsive_layout_test.dart)
 │   ├── .env.example                            # Template kredensial Supabase Android
 │   └── pubspec.yaml
 │
 ├── web-supabase/                               # Portal Web Pelanggan (Next.js 14 App Router)
 │   ├── src/
 │   │   ├── app/                                # Katalog (/), Checkout, Orders, Orders/[invoice], Profile, Auth & API Routes
-│   │   ├── components/                         # Header, MobileBottomNav, ProductCard, CartDrawer, OtpModal, QrPickupModal
+│   │   ├── components/                         # Header, Footer, MobileBottomNav, ProductCard, CartDrawer, OtpModal, QrPickupModal
 │   │   ├── context/                            # AuthContext, CartContext, StoreStatusContext
-│   │   └── lib/                                # Supabase client/admin, JWT auth, settings, notifications, Midtrans Snap
+│   │   └── lib/                                # Supabase client/admin, JWT auth, settings, notifications, midtrans-cleanup, Midtrans Snap
 │   ├── tailwind.config.js                      # Tailwind theme resmi Santosa Farma
 │   └── package.json
 │
 ├── DOCUMENTATION.md                            # Dokumentasi teknis menyeluruh (fitur, API, DB, alur bisnis)
-└── supabase_schema.sql                         # Skema all-in-one PostgreSQL, RLS, Realtime, Storage & Seeder awal
+└── supabase_schema.sql                         # Skema all-in-one PostgreSQL, RLS, Realtime, Storage, Sequence Sync & Seeder awal
 ```
 
 ---
@@ -56,45 +57,48 @@ apotek-santosa-farma/
 
 ### 1. Aplikasi Android POS & Admin (`android/`)
 
-- **Tata Letak Responsif & Adaptif (`AdaptiveScaffold`)**:
-  - Menyesuaikan otomatis antara tampilan smartphone (`NavigationBar`) dan tablet/layar lebar (`NavigationRail` & layout split POS).
+- **Tata Letak Responsif Multi-Perangkat (`AdaptiveScaffold` & Dialog Adaptif)**:
+  - Menyesuaikan otomatis dari HP layar kecil (`320dp`), smartphone standar, mode landscape, hingga tablet 7"–12"+ (`NavigationRail` mulai lebar `>= 600dp`, extended sidebar `>= 1100dp`, dan mode *split-pane* `Katalog | Keranjang` di `PosScreen` mulai `>= 760dp`).
+  - Seluruh layar, grid produk (`textScaler`-aware), serta dialog pembayaran dan struk dilengkapi `ConstrainedBox` / `Wrap` / `FittedBox` agar bebas overflow.
 - **Kasir POS & Pembayaran (`PosScreen`, `PaymentDialog`)**:
   - Pencarian cepat & filter kategori obat dengan indikator stok realtime.
   - **Pembayaran Tunai**: tombol nominal uang cepat (*quick cash*) dan perhitungan kembalian otomatis.
-  - **Pembayaran QRIS Dinamis (Midtrans Core API v2)**: otomatis aktif jika kredensial Midtrans valid; menghasilkan QRIS langsung, *auto-polling* status pembayaran, tombol **Download QRIS**, serta **auto-cancel** transaksi ke Midtrans jika dialog ditutup atau kasir kembali ke tab Tunai sebelum dibayar.
+  - **Pembayaran QRIS Dinamis (Midtrans Core API v2)**: otomatis aktif jika kredensial Midtrans valid; menghasilkan QRIS langsung, *auto-polling* status pembayaran, tombol **Download QRIS**, serta **auto-cancel** transaksi ke Midtrans jika dialog ditutup, kasir berpindah kembali ke tab Tunai, atau sebelum checkout Tunai.
 - **Riwayat Transaksi Kasir Toko (`CashierTransactionsScreen`)**:
-  - Memantau seluruh transaksi kanal `toko` secara realtime dengan filter rentang waktu, filter metode bayar (Tunai / QRIS), pencarian invoice/obat, ringkasan omzet, dan cetak ulang struk.
+  - Memantau seluruh transaksi kanal `toko` secara realtime (zona waktu lokal perangkat) dengan filter rentang waktu, filter metode bayar (Tunai / QRIS), pencarian invoice/obat, ringkasan omzet, dan cetak ulang struk.
 - **Pesanan Web Pelanggan & Scan QR (`WebOrdersScreen`, `QrScannerScreen`, `ProcessWebOrderDialog`)**:
   - **Notifikasi Realtime**: memutar bunyi lonceng (*chime*) seketika saat ada pesanan online masuk melalui Supabase Realtime.
-  - **Filter & Pencarian Lengkap**: tab status (`Semua`, `Belum Dibayar`, `Siap Diambil`, `Selesai`) beserta pencarian berdasarkan nomor invoice, nama pelanggan, nomor HP, atau nama obat, plus tombol chat WhatsApp dan pembatalan permanen pesanan.
-  - **Edit & Proses Pesanan "Bayar di Apotek" (`ProcessWebOrderDialog`)**: kasir dapat mengubah qty (*stepper*), menghapus item yang kosong, atau menambah obat baru sebelum menerima pembayaran (Tunai/QRIS) dan memotong stok aktual.
-  - **Scan QR Kamera & Input Manual (`QrScannerScreen`)**: scanner terintegrasi (`mobile_scanner`) dengan kontrol senter (*torch*) dan input manual nomor invoice/token QR.
-- **Struk Digital & PDF 80mm (`ReceiptDialog`, `PrinterService`)**:
-  - Pratinjau struk digital dan ekspor/cetak PDF format roll thermal **80mm** (`pdf` + `printing` + `share_plus`).
+  - **Filter & Pencarian Lengkap**: tab status (`Semua`, `Belum Dibayar`, `Siap Diambil`, `Sudah Selesai`) beserta pencarian berdasarkan nomor invoice, nama pelanggan, nomor HP, atau nama obat, plus tombol chat WhatsApp dan pembatalan permanen pesanan.
+  - **Edit & Proses Pesanan "Bayar di Apotek" (`ProcessWebOrderDialog`)**: kasir dapat mengubah qty (*stepper*), menghapus item yang kosong, atau menambah obat baru khusus untuk pesanan metode **Bayar di Apotek** sebelum menerima pembayaran (Tunai/QRIS) dan memotong stok aktual; pesanan Midtrans pending diarahkan ke **Cek Status Midtrans**.
+  - **Scan QR Kamera & Input Manual (`QrScannerScreen`)**: scanner terintegrasi (`mobile_scanner ^7.5.0`) dengan kontrol senter (*torch*), penanganan error kamera + tombol *Coba Lagi*, dan input manual nomor invoice/token QR.
+- **Struk Digital & PDF Thermal 80mm (`ReceiptDialog`, `PrinterService`)**:
+  - Pratinjau struk digital, tombol **Simpan PDF** langsung ke penyimpanan via Android File Manager, serta preview/cetak PDF format roll thermal **80mm** (`PdfPageFormat.roll80`) dengan alamat & nomor telepon apotek dinamis.
 - **Kelola Obat & Foto Storage (`ProductsScreen`, `ProductFormScreen`)**:
   - CRUD produk lengkap dengan unggah foto dari kamera/galeri ke Supabase Storage bucket `products` dan pembersihan otomatis gambar lama saat foto diubah atau produk dihapus.
 - **Laporan Penjualan & Ekspor Excel Profesional (`ReportsScreen`, `ExcelReportService`)**:
   - Analisis omzet gabungan kanal **Kasir Toko** dan **Pesanan Web** dengan filter rentang waktu & kanal.
   - Ekspor laporan **Excel (`.xlsx`) 3 sheet terstruktur**: `Ringkasan & Transaksi`, `Rincian Obat Terjual`, dan `Produk Terlaris`.
-- **Pengaturan Toko, Integrasi, Backup ZIP & Reset (`SettingsScreen`, `BackupService`)**:
-  - Sakelar **Buka/Tutup Apotek** dan **Penerimaan Pesanan Online** (khusus Kasir) yang tersinkron realtime ke website.
+- **Profil Apotek, Integrasi, Backup ZIP via File Manager, & Safety Reset (`SettingsScreen`, `BackupService`)**:
+  - Pengaturan **Profil & Kontak Apotek** (`store_address`, `store_phone`), sakelar **Buka/Tutup Apotek**, dan **Penerimaan Pesanan Online** yang tersinkron realtime ke website & struk.
   - Konfigurasi **Fonnte WhatsApp**, **SMTP Email**, dan **Midtrans** (lengkap dengan **Test Koneksi Midtrans**) yang tersimpan di `store_settings`.
-  - **Backup & Restore ZIP**: mengemas seluruh data tabel + file foto produk (`images/`) ke arsip `.zip` untuk dibagikan/disimpan, serta saat restore otomatis menghapus seluruh gambar lama di storage dan menggantinya dengan gambar dari file backup.
-  - **Factory Reset** untuk Super Admin (beserta pembersihan otomatis storage gambar).
+  - **Backup & Restore ZIP**: menyimpan file `.zip` (JSON + gambar `images/`) via Android File Manager (default folder Download), memvalidasi struktur payload backup secara ketat saat restore, menghapus gambar lama di storage lalu mengunggah ulang & menyinkronkan urutan `BIGSERIAL` (`sync_all_sequences()`).
+  - **Factory Reset Aman**: mewajibkan proses **backup ZIP keamanan** tersimpan lebih dulu ke penyimpanan perangkat sebelum reset database & storage dijalankan.
 
 ### 2. Portal Web Pelanggan (`web-supabase/`)
 
 - **Katalog Obat Digital & Status Apotek Realtime (`/`)**:
-  - Pencarian instan, filter kategori, pengurutan, pagination, serta sinkronisasi status buka/tutup apotek dan status pesanan online secara realtime.
-- **Autentikasi Pelanggan & Verifikasi OTP**:
-  - Registrasi, login (No HP atau Email), tambah/ubah kontak di halaman `/profile` (wajib verifikasi OTP ulang), serta lupa/reset password melalui OTP **WhatsApp (Fonnte)** atau **Email (SMTP)**.
+  - Pencarian instan, filter kategori yang tersinkron dengan Android POS, pengurutan, pagination, tampilan mobile responsif tanpa overflow, serta sinkronisasi alamat/kontak apotek dan status buka/tutup secara realtime.
+- **Autentikasi Pelanggan, OTP Ketat, & Auto-Logout Reset (`AuthContext`, `/api/auth/customer/*`)**:
+  - **Registrasi hanya selesai setelah OTP valid**: akun `customers` baru dibuat di database setelah verifikasi OTP berhasil (mencegah akun tersangkut bila OTP gagal).
+  - Verifikasi sesi aktif terhadap database saat halaman dimuat, tab difokuskan, dan melalui **Supabase Realtime** (`customers` / `store_settings`) tanpa polling berkala — sehingga akun otomatis keluar bila data pelanggan di-reset dari aplikasi kasir.
+  - Login (No HP atau Email), tambah/ubah kontak di halaman `/profile` (wajib OTP ulang), serta lupa/reset password via **WhatsApp (Fonnte)** atau **Email (SMTP)**.
 - **Opsi Pembayaran Fleksibel (`/checkout`)**:
   - **Bayar di Apotek (Kasir)**: buat pesanan langsung tanpa gateway online dan bayar di kasir (Tunai / QRIS).
-  - **Bayar Online (Midtrans Snap)**: pembayaran via QRIS, e-wallet, atau Virtual Account Bank (otomatis aktif jika kredensial Midtrans terkonfigurasi di `store_settings`).
+  - **Bayar Online (Midtrans Snap)**: pembayaran via QRIS, e-wallet, atau Virtual Account Bank (otomatis aktif jika kredensial Midtrans terkonfigurasi di `store_settings`, lengkap dengan `callbacks` asal domain dinamis).
 - **Halaman Pesanan Saya (`/orders` & `/orders/[invoice]`)**:
-  - Sinkronisasi status pesanan realtime dengan tab filter, tombol **Bayar Sekarang** untuk transaksi `pending`, persistensi instruksi & salin nomor **Virtual Account (VA)**, verifikasi pembayaran manual ke Midtrans, serta opsi batalkan pesanan.
+  - Query data live tanpa cache server (`force-no-store`), sinkronisasi realtime, tab filter status, tombol **Bayar Sekarang**, persistensi instruksi & salin nomor **Virtual Account (VA)**, verifikasi & pembersihan otomatis order Midtrans kadaluarsa (`midtrans-cleanup.ts`), serta opsi batalkan pesanan.
 - **QR Code & Slip Pengambilan Cetak (`QrPickupModal`)**:
-  - QR Code pengambilan obat lengkap dengan tampilan cetak khusus (`#pickup-print-slip`) satu halaman penuh untuk ditunjukkan ke kasir.
+  - QR Code pengambilan obat lengkap dengan alamat/kontak toko dinamis dan tampilan cetak khusus (`#pickup-print-slip`) satu halaman penuh untuk ditunjukkan ke kasir.
 
 ---
 
@@ -151,7 +155,7 @@ apotek-santosa-farma/
 ### C. Aplikasi Android POS (`android/`)
 
 1. **Persiapan Flutter**:
-   Pastikan Flutter SDK (versi >= 3.24) dan Android SDK telah terpasang:
+   Pastikan Flutter SDK (versi >= 3.24; teruji di Flutter 3.50 dengan Java 17 & Android SDK `compileSdk 36`) telah terpasang:
    ```bash
    cd android
    flutter pub get
