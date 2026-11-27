@@ -1,0 +1,5 @@
+-keep class androidx.camera.** { *; }
+-dontwarn androidx.camera.**
+-keep class dev.steenbakker.mobile_scanner.** { *; }
+-keep class com.google.mlkit.** { *; }
+-keep class com.google.android.libraries.barhopper.** { *; }

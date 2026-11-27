@@ -165,25 +165,45 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
                 children: [
                   MobileScanner(
                     controller: _controller,
-                    errorBuilder: (context, error, child) {
+                    errorBuilder: (context, error) {
+                      final isPermissionDenied =
+                          error.errorCode == MobileScannerErrorCode.permissionDenied;
+                      final detail = error.errorDetails?.message;
                       return Container(
                         color: const Color(0xFF0F172A),
                         padding: const EdgeInsets.all(24),
-                        child: const Center(
+                        child: Center(
                           child: Column(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Icon(Icons.videocam_off, size: 48, color: Colors.white70),
-                              SizedBox(height: 12),
+                              const Icon(Icons.videocam_off, size: 48, color: Colors.white70),
+                              const SizedBox(height: 12),
                               Text(
-                                'Kamera Tidak Dapat Diakses',
-                                style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
+                                isPermissionDenied
+                                    ? 'Izin Kamera Diperlukan'
+                                    : 'Kamera Tidak Dapat Diakses',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 14,
+                                ),
                               ),
-                              SizedBox(height: 6),
+                              const SizedBox(height: 6),
                               Text(
-                                'Pastikan izin kamera telah diberikan di pengaturan perangkat Anda, atau gunakan input kode manual di bawah.',
+                                isPermissionDenied
+                                    ? 'Pastikan izin kamera telah diberikan di pengaturan perangkat Anda, atau gunakan input kode manual di bawah.'
+                                    : 'Kode: ${error.errorCode.name}${detail != null && detail.isNotEmpty ? '\n$detail' : ''}\nAtau gunakan input kode manual di bawah.',
                                 textAlign: TextAlign.center,
-                                style: TextStyle(color: Colors.white60, fontSize: 12),
+                                style: const TextStyle(color: Colors.white60, fontSize: 12),
+                              ),
+                              const SizedBox(height: 12),
+                              OutlinedButton.icon(
+                                onPressed: () => _controller.start(),
+                                icon: const Icon(Icons.refresh, size: 16, color: Colors.white),
+                                label: const Text('Coba Lagi', style: TextStyle(color: Colors.white)),
+                                style: OutlinedButton.styleFrom(
+                                  side: const BorderSide(color: Colors.white38),
+                                ),
                               ),
                             ],
                           ),
