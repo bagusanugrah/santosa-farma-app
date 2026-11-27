@@ -15,9 +15,6 @@ Proyek ini terdiri dari **2 aplikasi utama** yang terhubung ke **1 pusat data Su
    - Dipakai oleh **Pelanggan** (`customer`) untuk melihat katalog obat, login/registrasi dengan OTP, memesan obat secara online, membayar via Midtrans Snap atau Bayar di Apotek, dan mendapatkan QR Code pengambilan obat.
    - Menggunakan Next.js API Routes sebagai backend serverless (menggunakan `supabaseAdmin` / Service Role Key) untuk autentikasi JWT, pengiriman OTP WhatsApp/Email, Midtrans Snap/Webhook, dan verifikasi stok.
 
-> [!NOTE]
-> Meskipun file `prompt-aplikasi-apotek-santosa-farma.md` di root sempat merujuk konsep awal (Laravel/Desktop/React Native), implementasi aktual yang aktif dan berjalan di repositori ini adalah **Flutter (`android/`) + Next.js (`web-supabase/`) + Supabase Cloud**.
-
 ### Diagram Keterhubungan Sistem
 
 ```text
