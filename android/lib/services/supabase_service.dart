@@ -947,10 +947,86 @@ class SupabaseService {
     };
   }
 
+  static const String expectedBackupAppId = 'Apotek Santosa Farma POS (Android Edition)';
+  static const Set<String> supportedBackupVersions = {'1.0.0'};
+  static const Map<String, List<String>> _requiredBackupTableColumns = {
+    'products': ['id', 'name', 'price', 'stock'],
+    'transactions': ['id', 'invoice_no', 'channel', 'payment_method', 'status', 'total'],
+    'transaction_items': ['id', 'transaction_id', 'product_name', 'qty', 'price', 'subtotal'],
+    'store_settings': ['id', 'is_open', 'online_orders_enabled'],
+    'customers': ['id', 'name'],
+  };
+
+  /// Memvalidasi secara ketat agar file backup benar-benar sesuai struktur export resmi.
+  /// Melempar [FormatException] sebelum menyentuh storage atau database jika tidak valid.
+  void validateBackupPayload(Map<String, dynamic> backupJson) {
+    final appId = backupJson['app'];
+    if (appId != expectedBackupAppId) {
+      throw const FormatException('Identitas aplikasi backup tidak sesuai (bukan file backup Apotek Santosa Farma POS).');
+    }
+
+    final version = backupJson['version'];
+    if (version is! String || !supportedBackupVersions.contains(version)) {
+      throw const FormatException('Versi format backup tidak dikenali atau tidak didukung.');
+    }
+
+    final exportedAt = backupJson['exported_at'];
+    if (exportedAt is! String || DateTime.tryParse(exportedAt) == null) {
+      throw const FormatException('Metadata waktu export (exported_at) tidak valid.');
+    }
+
+    final rawData = backupJson['data'];
+    if (rawData is! Map<String, dynamic>) {
+      throw const FormatException('Struktur data backup tidak valid (objek "data" tidak ditemukan).');
+    }
+
+    final expectedTables = _requiredBackupTableColumns.keys.toSet();
+    final actualTables = rawData.keys.toSet();
+    if (!actualTables.containsAll(expectedTables) || !expectedTables.containsAll(actualTables)) {
+      throw const FormatException('Daftar tabel di dalam file backup tidak sesuai dengan format export resmi.');
+    }
+
+    for (final entry in _requiredBackupTableColumns.entries) {
+      final tableName = entry.key;
+      final requiredCols = entry.value;
+      final tableRows = rawData[tableName];
+
+      if (tableRows is! List) {
+        throw FormatException('Data tabel "$tableName" harus berupa daftar (List).');
+      }
+
+      for (int i = 0; i < tableRows.length; i++) {
+        final row = tableRows[i];
+        if (row is! Map<String, dynamic>) {
+          throw FormatException('Baris ke-${i + 1} pada tabel "$tableName" tidak valid.');
+        }
+        for (final col in requiredCols) {
+          if (!row.containsKey(col) || row[col] == null) {
+            throw FormatException('Kolom wajib "$col" tidak ditemukan pada tabel "$tableName" baris ke-${i + 1}.');
+          }
+        }
+      }
+    }
+
+    final settingsRows = rawData['store_settings'] as List;
+    if (settingsRows.length > 1) {
+      throw const FormatException('Tabel "store_settings" tidak boleh memiliki lebih dari 1 baris.');
+    }
+    if (settingsRows.isNotEmpty) {
+      final firstSetting = settingsRows.first as Map<String, dynamic>;
+      if (firstSetting['is_open'] is! bool || firstSetting['online_orders_enabled'] is! bool) {
+        throw const FormatException('Tipe data status toko pada "store_settings" tidak valid.');
+      }
+    }
+  }
+
   Future<int> restoreBackupData(
     Map<String, dynamic> backupJson, {
     Map<String, Uint8List>? images,
   }) async {
+    // 0. Validasi ketat struktur backup SEBELUM menghapus gambar atau mengubah database
+    validateBackupPayload(backupJson);
+
     // 1. Hapus SELURUH gambar lama yang ada di storage agar tidak ada file terbengkalai
     final wipedCount = await clearAllProductImages();
 

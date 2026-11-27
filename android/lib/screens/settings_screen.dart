@@ -312,7 +312,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Future<void> _handleBackup() async {
     setState(() => _isBackingUp = true);
     try {
-      await BackupService.instance.shareBackupZip();
+      final savedPath = await BackupService.instance.saveBackupZipWithPicker();
+      if (savedPath != null && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Backup database ZIP berhasil disimpan!'),
+            backgroundColor: Color(0xFF0891B2),
+          ),
+        );
+      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -365,8 +373,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
       }
     } catch (e) {
       if (mounted) {
+        final msg = e.toString().replaceFirst('Exception: ', '').replaceFirst('FormatException: ', '');
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Gagal memulihkan data: $e'), backgroundColor: Colors.red),
+          SnackBar(content: Text('Gagal memulihkan data: $msg'), backgroundColor: Colors.red),
         );
       }
     } finally {
@@ -1050,7 +1059,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         const Text('Cadangan & Pemulihan Data', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 15)),
                         const SizedBox(height: 4),
                         const Text(
-                          'Amankan database transaksi, produk, dan pengaturan ke file ZIP atau simpan ke Google Drive.',
+                          'Amankan database transaksi, produk, foto obat, dan pengaturan ke file ZIP di penyimpanan HP.',
                           style: TextStyle(fontSize: 12, color: Color(0xFF64748B)),
                         ),
                         const Divider(height: 24),
@@ -1059,8 +1068,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           icon: Icons.cloud_upload_outlined,
                           iconColor: const Color(0xFF0891B2),
                           iconBg: const Color(0xFFECFEFF),
-                          title: 'Cadangkan Database (ZIP / Drive)',
-                          subtitle: 'Export seluruh data ke file ZIP dan bagikan ke Drive atau WhatsApp',
+                          title: 'Cadangkan Database (ZIP)',
+                          subtitle: 'Export seluruh data ke file ZIP dan simpan ke folder Download atau lokasi pilihan Anda',
                           actionButton: FilledButton.icon(
                             icon: _isBackingUp
                                 ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))

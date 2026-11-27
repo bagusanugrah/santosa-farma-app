@@ -12,7 +12,7 @@ class BackupService {
   static final BackupService instance = BackupService._internal();
   BackupService._internal();
 
-  Future<File> createBackupZip() async {
+  Future<({Uint8List bytes, String fileName})> _buildBackupZipBytes() async {
     final backupData = await SupabaseService.instance.exportBackupData();
     final jsonString = const JsonEncoder.withIndent('  ').convert(backupData);
     final jsonBytes = utf8.encode(jsonString);
@@ -46,13 +46,29 @@ class BackupService {
     }
 
     final zipEncoder = ZipEncoder();
-    final zipBytes = zipEncoder.encode(archive);
+    final zipBytes = Uint8List.fromList(zipEncoder.encode(archive) ?? []);
+    return (bytes: zipBytes, fileName: 'backup_santosa_farma_$dateStr.zip');
+  }
 
+  Future<File> createBackupZip() async {
+    final bundle = await _buildBackupZipBytes();
     final dir = await getApplicationDocumentsDirectory();
-    final zipFile = File('${dir.path}/backup_santosa_farma_$dateStr.zip');
-    await zipFile.writeAsBytes(zipBytes ?? []);
-
+    final zipFile = File('${dir.path}/${bundle.fileName}');
+    await zipFile.writeAsBytes(bundle.bytes);
     return zipFile;
+  }
+
+  /// Membuka File Manager sistem Android (default Download) untuk menyimpan file ZIP backup
+  /// sehingga pengguna tetap bisa mengganti folder penyimpanan bila diinginkan.
+  Future<String?> saveBackupZipWithPicker() async {
+    final bundle = await _buildBackupZipBytes();
+    return FilePicker.saveFile(
+      dialogTitle: 'Simpan Backup Database',
+      fileName: bundle.fileName,
+      type: FileType.custom,
+      allowedExtensions: const ['zip'],
+      bytes: bundle.bytes,
+    );
   }
 
   Future<void> shareBackupZip() async {
@@ -66,6 +82,9 @@ class BackupService {
     );
   }
 
+  static final RegExp _backupJsonNamePattern =
+      RegExp(r'^apotek_santosa_farma_backup_\d{8}_\d{6}\.json$');
+
   Future<int?> restoreFromPicker() async {
     final result = await FilePicker.pickFiles(
       type: FileType.custom,
@@ -77,35 +96,83 @@ class BackupService {
     }
 
     final filePath = result.files.single.path!;
-    final file = File(filePath);
+    final lowerPath = filePath.toLowerCase();
+    if (!lowerPath.endsWith('.zip') && !lowerPath.endsWith('.json')) {
+      throw Exception('Ekstensi file tidak didukung. Pilih file .zip atau .json hasil backup resmi.');
+    }
 
+    final file = File(filePath);
     Map<String, dynamic>? backupJson;
     final Map<String, Uint8List> images = {};
 
-    if (filePath.endsWith('.zip')) {
+    if (lowerPath.endsWith('.zip')) {
       final bytes = await file.readAsBytes();
-      final archive = ZipDecoder().decodeBytes(bytes);
+      final Archive archive;
+      try {
+        archive = ZipDecoder().decodeBytes(bytes);
+      } catch (_) {
+        throw Exception('File ZIP rusak atau bukan arsip ZIP yang valid.');
+      }
+
+      int jsonFileCount = 0;
       for (final archFile in archive) {
-        if (archFile.isFile) {
-          if (archFile.name.endsWith('.json')) {
-            final content = utf8.decode(archFile.content as List<int>);
-            backupJson = jsonDecode(content);
-          } else if (archFile.name.startsWith('images/')) {
-            final imgName = archFile.name.replaceFirst('images/', '');
-            if (imgName.isNotEmpty && !imgName.startsWith('.')) {
-              images[imgName] = Uint8List.fromList(archFile.content as List<int>);
-              debugPrint('[Restore ZIP] Ekstraksi gambar: $imgName (${images[imgName]!.length} bytes)');
-            }
+        if (!archFile.isFile) continue;
+
+        final entryName = archFile.name.replaceAll('\\', '/');
+        if (_backupJsonNamePattern.hasMatch(entryName)) {
+          jsonFileCount++;
+          if (jsonFileCount > 1) {
+            throw Exception('Arsip ZIP tidak valid: terdapat lebih dari satu file JSON backup.');
           }
+          try {
+            final content = utf8.decode(archFile.content as List<int>);
+            final decoded = jsonDecode(content);
+            if (decoded is! Map<String, dynamic>) {
+              throw Exception('Format isi JSON di dalam ZIP tidak valid.');
+            }
+            backupJson = decoded;
+          } catch (e) {
+            if (e is Exception) rethrow;
+            throw Exception('Gagal membaca data JSON di dalam file ZIP backup.');
+          }
+        } else if (entryName.startsWith('images/')) {
+          final imgName = entryName.substring('images/'.length);
+          final hasInvalidSegment = imgName.isEmpty ||
+              imgName.contains('/') ||
+              imgName.contains('..') ||
+              imgName.startsWith('.');
+          if (hasInvalidSegment) {
+            throw Exception('Struktur folder gambar di dalam ZIP tidak valid: $entryName');
+          }
+          images[imgName] = Uint8List.fromList(archFile.content as List<int>);
+          debugPrint('[Restore ZIP] Ekstraksi gambar: $imgName (${images[imgName]!.length} bytes)');
+        } else {
+          throw Exception('File tidak dikenal di dalam arsip ZIP: $entryName. Gunakan ZIP hasil export resmi.');
         }
       }
+
+      if (jsonFileCount != 1 || backupJson == null) {
+        throw Exception('Arsip ZIP bukan file backup resmi Apotek Santosa Farma (file JSON backup tidak ditemukan).');
+      }
     } else {
-      final content = await file.readAsString();
-      backupJson = jsonDecode(content);
+      try {
+        final content = await file.readAsString();
+        final decoded = jsonDecode(content);
+        if (decoded is! Map<String, dynamic>) {
+          throw Exception('Format file JSON tidak valid.');
+        }
+        backupJson = decoded;
+      } catch (e) {
+        if (e is Exception) rethrow;
+        throw Exception('File JSON rusak atau tidak dapat dibaca.');
+      }
     }
 
-    if (backupJson == null || backupJson['data'] == null) {
-      throw Exception('Format file backup tidak valid.');
+    // Validasi skema & header lengkap sebelum menyentuh storage / database
+    try {
+      SupabaseService.instance.validateBackupPayload(backupJson);
+    } on FormatException catch (e) {
+      throw Exception(e.message);
     }
 
     final cleanedCount = await SupabaseService.instance.restoreBackupData(
