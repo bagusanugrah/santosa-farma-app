@@ -53,9 +53,7 @@ Proyek ini terdiri dari **2 aplikasi utama** yang terhubung ke **1 pusat data Su
 apotek-santosa-farma/
 ├── DOCUMENTATION.md                              # Dokumentasi teknis menyeluruh (file ini)
 ├── README.md                                     # Ringkasan awal & panduan setup cepat
-├── supabase_schema.sql                           # Skema lengkap DB PostgreSQL, RLS, Realtime, Seeder
-├── supabase_migration_integration_settings.sql   # Migrasi kolom Fonnte, SMTP, Midtrans di store_settings
-├── supabase_migration_storage_rls.sql            # Migrasi bucket & RLS Storage 'products'
+├── supabase_schema.sql                           # Skema all-in-one DB PostgreSQL, RLS, Realtime, Storage, Seeder
 │
 ├── android/                                      # Aplikasi Android POS & Admin (Flutter)
 │   ├── .env.example                              # Template SUPABASE_URL, SUPABASE_ANON_KEY, BUCKET
@@ -144,7 +142,7 @@ apotek-santosa-farma/
 
 ## 3. Skema Database & Storage Supabase
 
-Definisi utama ada di `supabase_schema.sql`, ditambah 2 file migrasi (`supabase_migration_integration_settings.sql` dan `supabase_migration_storage_rls.sql`).
+Seluruh skema, migrasi kolom integrasi, kebijakan RLS Storage, Realtime, dan seeder awal sudah digabung menjadi **1 file SQL tunggal (idempotent)**: [`supabase_schema.sql`](supabase_schema.sql). Cukup jalankan satu kali di Supabase SQL Editor.
 
 ### 3.1 Daftar Tabel PostgreSQL (`public`)
 

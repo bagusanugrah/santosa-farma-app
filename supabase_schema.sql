@@ -1,5 +1,8 @@
 -- ============================================================
--- APOTEK SANTOSA FARMA — SUPABASE POSTGRESQL SCHEMA & SEEDER
+-- APOTEK SANTOSA FARMA — SUPABASE POSTGRESQL SCHEMA (ALL-IN-ONE)
+-- ============================================================
+-- Cukup jalankan FILE INI SAJA satu kali di Supabase SQL Editor
+-- (aman dijalankan pada database baru maupun database existing).
 -- ============================================================
 
 -- 1. EXTENSIONS
@@ -98,6 +101,19 @@ CREATE TABLE IF NOT EXISTS public.store_settings (
     CONSTRAINT single_store_setting CHECK (id = 1)
 );
 
+-- Pastikan kolom integrasi tersedia jika tabel store_settings sudah dibuat sebelumnya
+ALTER TABLE public.store_settings
+    ADD COLUMN IF NOT EXISTS fonnte_token TEXT DEFAULT '',
+    ADD COLUMN IF NOT EXISTS fonnte_url TEXT DEFAULT 'https://api.fonnte.com/send',
+    ADD COLUMN IF NOT EXISTS mail_host TEXT DEFAULT 'smtp.gmail.com',
+    ADD COLUMN IF NOT EXISTS mail_port INT DEFAULT 587,
+    ADD COLUMN IF NOT EXISTS mail_username TEXT DEFAULT '',
+    ADD COLUMN IF NOT EXISTS mail_password TEXT DEFAULT '',
+    ADD COLUMN IF NOT EXISTS mail_from_name TEXT DEFAULT 'Apotek Santosa Farma',
+    ADD COLUMN IF NOT EXISTS midtrans_client_key TEXT DEFAULT '',
+    ADD COLUMN IF NOT EXISTS midtrans_server_key TEXT DEFAULT '',
+    ADD COLUMN IF NOT EXISTS midtrans_is_production BOOLEAN DEFAULT FALSE;
+
 -- TRANSACTIONS (POS Kasir & Online Web)
 CREATE TABLE IF NOT EXISTS public.transactions (
     id BIGSERIAL PRIMARY KEY,
@@ -105,7 +121,7 @@ CREATE TABLE IF NOT EXISTS public.transactions (
     channel VARCHAR(20) NOT NULL DEFAULT 'toko', -- 'toko' or 'online'
     customer_id BIGINT REFERENCES public.customers(id) ON DELETE SET NULL,
     cashier_id BIGINT REFERENCES public.users(id) ON DELETE SET NULL,
-    payment_method VARCHAR(50) NOT NULL DEFAULT 'tunai', -- 'tunai', 'qris', 'kartu', 'va'
+    payment_method VARCHAR(50) NOT NULL DEFAULT 'tunai', -- 'tunai', 'qris', 'kartu', 'va', 'pharmacy'
     midtrans_order_id VARCHAR(100),
     midtrans_snap_token TEXT,
     midtrans_qris_url TEXT,
@@ -144,11 +160,25 @@ CREATE TABLE IF NOT EXISTS public.receipts (
 );
 
 -- ============================================================
--- 3. ENABLE SUPABASE REALTIME (Untuk Notifikasi Instan ke HP Kasir)
+-- 3. ENABLE SUPABASE REALTIME (Untuk Notifikasi Instan ke HP Kasir & Web)
 -- ============================================================
-ALTER PUBLICATION supabase_realtime ADD TABLE public.transactions;
-ALTER PUBLICATION supabase_realtime ADD TABLE public.store_settings;
-ALTER PUBLICATION supabase_realtime ADD TABLE public.products;
+DO $$
+BEGIN
+    ALTER PUBLICATION supabase_realtime ADD TABLE public.transactions;
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+DO $$
+BEGIN
+    ALTER PUBLICATION supabase_realtime ADD TABLE public.store_settings;
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+DO $$
+BEGIN
+    ALTER PUBLICATION supabase_realtime ADD TABLE public.products;
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
 -- ============================================================
 -- 4. ROW LEVEL SECURITY (RLS) POLICIES
@@ -163,11 +193,23 @@ ALTER TABLE public.otp_codes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.password_resets ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.receipts ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Public can view products" ON public.products;
+DROP POLICY IF EXISTS "Public can view store settings" ON public.store_settings;
+DROP POLICY IF EXISTS "Allow anon all on products" ON public.products;
+DROP POLICY IF EXISTS "Allow anon all on transactions" ON public.transactions;
+DROP POLICY IF EXISTS "Allow anon all on transaction_items" ON public.transaction_items;
+DROP POLICY IF EXISTS "Allow anon all on store_settings" ON public.store_settings;
+DROP POLICY IF EXISTS "Allow anon all on users" ON public.users;
+DROP POLICY IF EXISTS "Allow anon all on customers" ON public.customers;
+DROP POLICY IF EXISTS "Allow anon all on otp_codes" ON public.otp_codes;
+DROP POLICY IF EXISTS "Allow anon all on password_resets" ON public.password_resets;
+DROP POLICY IF EXISTS "Allow anon all on receipts" ON public.receipts;
+
 -- Allow public read access to catalog & store settings
 CREATE POLICY "Public can view products" ON public.products FOR SELECT USING (true);
 CREATE POLICY "Public can view store settings" ON public.store_settings FOR SELECT USING (true);
 
--- Allow full access for anon/service for now (can be tightened via API tokens)
+-- Allow full access for anon/service (keamanan staff/customer divalidasi di aplikasi)
 CREATE POLICY "Allow anon all on products" ON public.products FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Allow anon all on transactions" ON public.transactions FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Allow anon all on transaction_items" ON public.transaction_items FOR ALL USING (true) WITH CHECK (true);
@@ -179,12 +221,12 @@ CREATE POLICY "Allow anon all on password_resets" ON public.password_resets FOR 
 CREATE POLICY "Allow anon all on receipts" ON public.receipts FOR ALL USING (true) WITH CHECK (true);
 
 -- ============================================================
--- 5. INITIAL SEED DATA
+-- 5. INITIAL SEED DATA (Aman dijalankan ulang / tidak menimpa data existing)
 -- ============================================================
 
--- Staff Users (Password: password123 with bcrypt hash)
+-- Staff Users (Password default: password123 dengan bcrypt hash)
 INSERT INTO public.users (name, username, password, role)
-VALUES 
+VALUES
     ('Super Admin', 'admin', crypt('password123', gen_salt('bf')), 'super_admin'),
     ('Kasir', 'kasir', crypt('password123', gen_salt('bf')), 'admin_kasir')
 ON CONFLICT (username) DO NOTHING;
@@ -192,48 +234,66 @@ ON CONFLICT (username) DO NOTHING;
 -- Store Settings (Default Buka, Pesanan Online Nonaktif awal)
 INSERT INTO public.store_settings (id, is_open, online_orders_enabled, last_opened_at)
 VALUES (1, TRUE, FALSE, NOW())
-ON CONFLICT (id) DO UPDATE 
-SET is_open = EXCLUDED.is_open,
-    online_orders_enabled = EXCLUDED.online_orders_enabled;
+ON CONFLICT (id) DO NOTHING;
 
--- Initial Medicine Catalog
+-- Initial Medicine Catalog (Hanya diisi jika tabel products masih kosong)
 INSERT INTO public.products (name, category, price, stock, description)
-VALUES 
-    ('Amoxicillin 500mg Strip (10 Kaplet)', 'Antibiotik', 12000, 50, 'Antibiotik untuk mengobati infeksi bakteri.'),
-    ('Antasida Doen Tablet Kunyah', 'Pencernaan', 6000, 80, 'Meredakan sakit maag, asam lambung berlebih, dan nyeri ulu hati.'),
-    ('Betadine Antiseptic Solution 30ml', 'P3K', 32000, 35, 'Cairan antiseptik pembersih luka dan pencegah infeksi.'),
-    ('Bodrex Sakit Kepala Strip (20 Tablet)', 'Analgesik', 11000, 100, 'Meredakan sakit kepala, sakit gigi, dan penurun demam.'),
-    ('CDR Vitamin C Effervescent Rasa Jeruk (10 Tablet)', 'Vitamin', 48000, 40, 'Suplemen kalsium dan vitamin C, D, B6.'),
-    ('Combantrin Jeruk 125mg Suspensi 10ml', 'Obat Cacing', 21000, 25, 'Obat cacing untuk melumpuhkan dan membasmi cacing.'),
-    ('Decolgen Strip (4 Tablet)', 'Flu & Batuk', 4500, 75, 'Meringankan gejala flu, bersin-bersin, dan hidung tersumbat.'),
-    ('Diapet Kapsul (Box 25 Strip)', 'Pencernaan', 7000, 90, 'Membantu memadatkan feses dan meredakan diare.'),
-    ('Enervon-C Multivitamin Strip (4 Tablet)', 'Vitamin', 8500, 120, 'Kombinasi vitamin C dan B kompleks pemelihara daya tahan tubuh.'),
-    ('Hansaplast Plester Luka Standar (10 Lembar)', 'P3K', 7500, 150, 'Plester elastis pelindung luka dari kotoran dan kuman.'),
-    ('Imboost Force Tablet Strip (10 Kaplet)', 'Daya Tahan Tubuh', 85000, 30, 'Suplemen imunomodulator dengan Echinacea purpurea.'),
-    ('Minyak Kayu Putih Cap Lang 60ml', 'Minyak Angin', 24000, 60, 'Meredakan perut kembung, masuk angin, dan menghangatkan tubuh.')
-ON CONFLICT DO NOTHING;
+SELECT v.name, v.category, v.price, v.stock, v.description
+FROM (
+    VALUES
+        ('Amoxicillin 500mg Strip (10 Kaplet)', 'Antibiotik', 12000, 50, 'Antibiotik untuk mengobati infeksi bakteri.'),
+        ('Antasida Doen Tablet Kunyah', 'Pencernaan', 6000, 80, 'Meredakan sakit maag dan asam lambung berlebih, dan nyeri ulu hati.'),
+        ('Betadine Antiseptic Solution 30ml', 'P3K', 32000, 35, 'Cairan antiseptik pembersih luka dan pencegah infeksi.'),
+        ('Bodrex Sakit Kepala Strip (20 Tablet)', 'Analgesik', 11000, 100, 'Meredakan sakit kepala, sakit gigi, dan penurun demam.'),
+        ('CDR Vitamin C Effervescent Rasa Jeruk (10 Tablet)', 'Vitamin', 48000, 40, 'Suplemen kalsium dan vitamin C, D, B6.'),
+        ('Combantrin Jeruk 125mg Suspensi 10ml', 'Obat Cacing', 21000, 25, 'Obat cacing untuk melumpuhkan dan membasmi cacing.'),
+        ('Decolgen Strip (4 Tablet)', 'Flu & Batuk', 4500, 75, 'Meringankan gejala flu, bersin-bersin, dan hidung tersumbat.'),
+        ('Diapet Kapsul (Box 25 Strip)', 'Pencernaan', 7000, 90, 'Membantu memadatkan feses dan meredakan diare.'),
+        ('Enervon-C Multivitamin Strip (4 Tablet)', 'Vitamin', 8500, 120, 'Kombinasi vitamin C dan B kompleks pemelihara daya tahan tubuh.'),
+        ('Hansaplast Plester Luka Standar (10 Lembar)', 'P3K', 7500, 150, 'Plester elastis pelindung luka dari kotoran dan kuman.'),
+        ('Imboost Force Tablet Strip (10 Kaplet)', 'Daya Tahan Tubuh', 85000, 30, 'Suplemen imunomodulator dengan Echinacea purpurea.'),
+        ('Minyak Kayu Putih Cap Lang 60ml', 'Minyak Angin', 24000, 60, 'Meredakan perut kembung, masuk angin, dan menghangatkan tubuh.')
+) AS v(name, category, price, stock, description)
+WHERE NOT EXISTS (SELECT 1 FROM public.products LIMIT 1);
 
 -- ============================================================
 -- 6. STORAGE BUCKET & RLS POLICIES ('products')
 -- ============================================================
+-- (JANGAN masukkan 'ALTER TABLE storage.objects' karena tabel storage dimiliki oleh role internal Supabase)
 INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 VALUES (
     'products',
     'products',
     true,
-    5242880,
+    5242880, -- Maksimal 5MB per file foto
     ARRAY['image/jpeg', 'image/png', 'image/webp', 'image/jpg', 'image/gif']
 )
-ON CONFLICT (id) DO UPDATE 
+ON CONFLICT (id) DO UPDATE
 SET public = true,
-    file_size_limit = 5242880;
+    file_size_limit = 5242880,
+    allowed_mime_types = ARRAY['image/jpeg', 'image/png', 'image/webp', 'image/jpg', 'image/gif'];
 
 DROP POLICY IF EXISTS "Public View Products Storage" ON storage.objects;
 DROP POLICY IF EXISTS "Public Insert Products Storage" ON storage.objects;
 DROP POLICY IF EXISTS "Public Update Products Storage" ON storage.objects;
 DROP POLICY IF EXISTS "Public Delete Products Storage" ON storage.objects;
 
-CREATE POLICY "Public View Products Storage" ON storage.objects FOR SELECT TO public USING (bucket_id = 'products');
-CREATE POLICY "Public Insert Products Storage" ON storage.objects FOR INSERT TO public WITH CHECK (bucket_id = 'products');
-CREATE POLICY "Public Update Products Storage" ON storage.objects FOR UPDATE TO public USING (bucket_id = 'products');
-CREATE POLICY "Public Delete Products Storage" ON storage.objects FOR DELETE TO public USING (bucket_id = 'products');
+CREATE POLICY "Public View Products Storage"
+ON storage.objects FOR SELECT
+TO public
+USING (bucket_id = 'products');
+
+CREATE POLICY "Public Insert Products Storage"
+ON storage.objects FOR INSERT
+TO public
+WITH CHECK (bucket_id = 'products');
+
+CREATE POLICY "Public Update Products Storage"
+ON storage.objects FOR UPDATE
+TO public
+USING (bucket_id = 'products');
+
+CREATE POLICY "Public Delete Products Storage"
+ON storage.objects FOR DELETE
+TO public
+USING (bucket_id = 'products');

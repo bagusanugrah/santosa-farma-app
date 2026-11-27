@@ -34,9 +34,7 @@ apotek-santosa-farma/
 │   └── package.json
 │
 ├── DOCUMENTATION.md                            # Dokumentasi teknis menyeluruh (fitur, API, DB, alur bisnis)
-├── supabase_schema.sql                         # Skema PostgreSQL, RLS, Realtime, Storage & Seeder awal
-├── supabase_migration_integration_settings.sql # Migrasi kolom Fonnte WA, SMTP Email & Midtrans di store_settings
-└── supabase_migration_storage_rls.sql          # Migrasi kebijakan RLS bucket Storage 'products'
+└── supabase_schema.sql                         # Skema all-in-one PostgreSQL, RLS, Realtime, Storage & Seeder awal
 ```
 
 ---
@@ -105,11 +103,7 @@ apotek-santosa-farma/
 ### A. Setup Database & Storage Supabase
 
 1. Buka project dashboard di [Supabase](https://supabase.com).
-2. Jalankan perintah SQL dari [`supabase_schema.sql`](supabase_schema.sql) pada menu **SQL Editor**.
-3. Jika migrasi bertahap dibutuhkan pada database existing, jalankan juga:
-   - [`supabase_migration_integration_settings.sql`](supabase_migration_integration_settings.sql)
-   - [`supabase_migration_storage_rls.sql`](supabase_migration_storage_rls.sql)
-4. Pastikan **Supabase Realtime** aktif untuk tabel `public.transactions`, `public.store_settings`, dan `public.products`.
+2. Cukup jalankan **1 file saja**: salin & jalankan seluruh isi [`supabase_schema.sql`](supabase_schema.sql) di menu **SQL Editor** (sudah mencakup seluruh tabel, kolom integrasi Fonnte/SMTP/Midtrans, Realtime, RLS, seeder awal, dan Storage bucket `products`).
 
 ---
 
