@@ -380,20 +380,27 @@ class SupabaseService {
       imagePath = await uploadProductImage(file: imageFile, bytes: imageBytes, fileName: fileName);
     }
 
-    final res = await client
-        .from('products')
-        .insert({
-          'name': name.trim(),
-          'category': category,
-          'price': price,
-          'stock': stock,
-          'description': description,
-          'image': imagePath,
-        })
-        .select()
-        .single();
+    try {
+      final res = await client
+          .from('products')
+          .insert({
+            'name': name.trim(),
+            'category': category,
+            'price': price,
+            'stock': stock,
+            'description': description,
+            'image': imagePath,
+          })
+          .select()
+          .single();
 
-    return Product.fromMap(res);
+      return Product.fromMap(res);
+    } catch (e) {
+      if (imagePath != null) {
+        await deleteProductImage(imagePath);
+      }
+      rethrow;
+    }
   }
 
   Future<Product?> updateProduct(Product product, {File? imageFile, Uint8List? imageBytes, String? fileName}) async {
@@ -404,34 +411,41 @@ class SupabaseService {
       imagePath = await uploadProductImage(file: imageFile, bytes: imageBytes, fileName: fileName);
     }
 
-    final res = await client
-        .from('products')
-        .update({
-          'name': product.name.trim(),
-          'category': product.category,
-          'price': product.price,
-          'stock': product.stock,
-          'description': product.description,
-          'image': imagePath,
-          'updated_at': DateTime.now().toIso8601String(),
-        })
-        .eq('id', product.id)
-        .select()
-        .single();
+    try {
+      final res = await client
+          .from('products')
+          .update({
+            'name': product.name.trim(),
+            'category': product.category,
+            'price': product.price,
+            'stock': product.stock,
+            'description': product.description,
+            'image': imagePath,
+            'updated_at': DateTime.now().toIso8601String(),
+          })
+          .eq('id', product.id)
+          .select()
+          .single();
 
-    // Hapus gambar lama jika ada gambar baru yang diunggah dan gambar lama tidak dipakai obat lain
-    if (imagePath != null && oldImage != null && oldImage.isNotEmpty && oldImage != imagePath) {
-      try {
-        final other = await client.from('products').select('id').eq('image', oldImage).neq('id', product.id);
-        if ((other as List).isEmpty) {
-          await deleteProductImage(oldImage);
+      // Hapus gambar lama jika ada gambar baru yang diunggah dan gambar lama tidak dipakai obat lain
+      if (imagePath != null && oldImage != null && oldImage.isNotEmpty && oldImage != imagePath) {
+        try {
+          final other = await client.from('products').select('id').eq('image', oldImage).neq('id', product.id);
+          if ((other as List).isEmpty) {
+            await deleteProductImage(oldImage);
+          }
+        } catch (e) {
+          debugPrint('[updateProduct] Old image cleanup notice: $e');
         }
-      } catch (e) {
-        debugPrint('[updateProduct] Old image cleanup notice: $e');
       }
-    }
 
-    return Product.fromMap(res);
+      return Product.fromMap(res);
+    } catch (e) {
+      if (imagePath != null && imagePath != oldImage) {
+        await deleteProductImage(imagePath);
+      }
+      rethrow;
+    }
   }
 
   Future<void> deleteProduct(int id) async {
@@ -503,6 +517,34 @@ class SupabaseService {
     } catch (e) {
       debugPrint('[Supabase Storage Delete Error] $fileName: $e');
     }
+  }
+
+  /// Menghapus SELURUH file gambar di bucket storage produk (saat restore/reset)
+  Future<int> clearAllProductImages() async {
+    int totalDeleted = 0;
+    try {
+      while (true) {
+        final List<FileObject> storageFiles = await client.storage
+            .from(SupabaseConfig.productsBucket)
+            .list(searchOptions: const SearchOptions(limit: 1000));
+
+        final fileNames = storageFiles
+            .map((f) => f.name)
+            .where((name) => name.isNotEmpty && !name.startsWith('.'))
+            .toList();
+
+        if (fileNames.isEmpty) break;
+
+        await client.storage.from(SupabaseConfig.productsBucket).remove(fileNames);
+        totalDeleted += fileNames.length;
+        debugPrint('[Storage Clear] Menghapus ${fileNames.length} file dari storage');
+
+        if (fileNames.length < 1000) break;
+      }
+    } catch (e) {
+      debugPrint('[Storage Clear Error]: $e');
+    }
+    return totalDeleted;
   }
 
   /// Membersihkan seluruh gambar di storage Supabase yang tidak terhubung dengan produk apapun
@@ -913,7 +955,10 @@ class SupabaseService {
     Map<String, dynamic> backupJson, {
     Map<String, Uint8List>? images,
   }) async {
-    // 1. Pulihkan file biner gambar produk ke Supabase Storage (jika ada file di zip)
+    // 1. Hapus SELURUH gambar lama yang ada di storage agar tidak ada file terbengkalai
+    final wipedCount = await clearAllProductImages();
+
+    // 2. Upload seluruh file biner gambar produk hasil export ZIP ke Supabase Storage
     if (images != null && images.isNotEmpty) {
       for (final entry in images.entries) {
         final fileName = entry.key;
@@ -924,51 +969,64 @@ class SupabaseService {
             bytes,
             fileOptions: const FileOptions(cacheControl: '3600', upsert: true),
           );
-          debugPrint('[Restore Image] Berhasil memulihkan gambar ke storage: $fileName');
+          debugPrint('[Restore Image] Berhasil mengunggah gambar dari backup: $fileName');
         } catch (e) {
-          debugPrint('[Restore Image Error] Gagal memulihkan $fileName: $e');
+          debugPrint('[Restore Image Error] Gagal mengunggah $fileName: $e');
         }
       }
     }
 
     final data = backupJson['data'] as Map<String, dynamic>? ?? {};
 
-    // 2. Restore products
+    // 3. Restore products & hapus produk tambahan yang tidak ada di backup
     if (data['products'] != null && data['products'] is List) {
+      final backupProductIds = <int>{};
       for (final p in data['products']) {
         await client.from('products').upsert(p);
+        final idVal = p is Map ? (p['id'] is int ? p['id'] : int.tryParse(p['id']?.toString() ?? '')) : null;
+        if (idVal != null) {
+          backupProductIds.add(idVal);
+        }
+      }
+
+      final existingProducts = await client.from('products').select('id');
+      for (final row in (existingProducts as List)) {
+        final existingId = row['id'] is int ? row['id'] : int.tryParse(row['id']?.toString() ?? '');
+        if (existingId != null && !backupProductIds.contains(existingId)) {
+          await client.from('products').delete().eq('id', existingId);
+        }
       }
     }
 
-    // 3. Restore store settings
+    // 4. Restore store settings
     if (data['store_settings'] != null && data['store_settings'] is List && (data['store_settings'] as List).isNotEmpty) {
       await client.from('store_settings').upsert(data['store_settings'][0]);
     }
 
-    // 4. Restore transactions
+    // 5. Restore transactions
     if (data['transactions'] != null && data['transactions'] is List) {
       for (final t in data['transactions']) {
         await client.from('transactions').upsert(t);
       }
     }
 
-    // 5. Restore transaction items
+    // 6. Restore transaction items
     if (data['transaction_items'] != null && data['transaction_items'] is List) {
       for (final ti in data['transaction_items']) {
         await client.from('transaction_items').upsert(ti);
       }
     }
 
-    // 6. Restore customers
+    // 7. Restore customers
     if (data['customers'] != null && data['customers'] is List) {
       for (final c in data['customers']) {
         await client.from('customers').upsert(c);
       }
     }
 
-    // 7. Bersihkan seluruh file gambar orphan di storage yang tidak terhubung dengan tabel products
-    final cleanedCount = await cleanupOrphanProductImages();
-    return cleanedCount;
+    // 8. Jaring pengaman: pastikan hanya gambar yang terhubung ke products yang tersisa di storage
+    final extraOrphans = await cleanupOrphanProductImages();
+    return wipedCount + extraOrphans;
   }
 
   Future<void> factoryReset() async {
@@ -1005,7 +1063,7 @@ class SupabaseService {
 
     await client.from('products').insert(seedProducts);
 
-    // 4. Bersihkan file gambar custom di storage agar kembali fresh
-    await cleanupOrphanProductImages();
+    // 4. Hapus seluruh file gambar di storage agar kembali bersih total
+    await clearAllProductImages();
   }
 }

@@ -81,8 +81,8 @@ apotek-santosa-farma/
 - **Pengaturan Toko, Integrasi, Backup ZIP & Reset (`SettingsScreen`, `BackupService`)**:
   - Sakelar **Buka/Tutup Apotek** dan **Penerimaan Pesanan Online** (khusus Kasir) yang tersinkron realtime ke website.
   - Konfigurasi **Fonnte WhatsApp**, **SMTP Email**, dan **Midtrans** (lengkap dengan **Test Koneksi Midtrans**) yang tersimpan di `store_settings`.
-  - **Backup & Restore ZIP**: mengemas seluruh data tabel + file foto produk (`images/`) ke arsip `.zip` untuk dibagikan/disimpan, serta memulihkan database + foto storage disertai pembersihan gambar *orphan* otomatis.
-  - **Bersihkan Storage Orphan** & **Factory Reset** untuk Super Admin.
+  - **Backup & Restore ZIP**: mengemas seluruh data tabel + file foto produk (`images/`) ke arsip `.zip` untuk dibagikan/disimpan, serta saat restore otomatis menghapus seluruh gambar lama di storage dan menggantinya dengan gambar dari file backup.
+  - **Factory Reset** untuk Super Admin (beserta pembersihan otomatis storage gambar).
 
 ### 2. Portal Web Pelanggan (`web-supabase/`)
 

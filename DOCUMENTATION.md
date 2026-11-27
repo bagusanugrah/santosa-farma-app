@@ -203,7 +203,7 @@ Definisi utama ada di `supabase_schema.sql`, ditambah 2 file migrasi (`supabase_
   - **Super Admin (`role: 'super_admin'` atau `'admin'`):**
     1. **Katalog & Kelola Obat** (`ProductsScreen` + `ProductFormScreen`) — tambah, edit, hapus obat, upload foto (kamera/galeri).
     2. **Laporan Penjualan (Read-Only)** (`ReportsScreen`) — analitik omzet & export Excel `.xlsx`.
-    3. **Pengaturan Apotek & Sistem** (`SettingsScreen`) — profil, ubah password, konfigurasi integrasi (Fonnte WA, SMTP Email, Midtrans), Backup/Restore ZIP, Bersihkan Gambar Orphan Storage, dan Factory Reset.
+    3. **Pengaturan Apotek & Sistem** (`SettingsScreen`) — profil, ubah password, konfigurasi integrasi (Fonnte WA, SMTP Email, Midtrans), Backup/Restore ZIP (sinkronisasi penuh storage gambar), dan Factory Reset.
   - **Kasir Toko (`role: 'admin_kasir'`):**
     1. **Kasir POS Apotek** (`PosScreen`) — transaksi penjualan toko.
     2. **Transaksi Kasir (Toko)** (`CashierTransactionsScreen`) — riwayat & filter transaksi kanal `toko`.
@@ -268,9 +268,9 @@ Definisi utama ada di `supabase_schema.sql`, ditambah 2 file migrasi (`supabase_
   - Midtrans (`midtrans_client_key`, `midtrans_server_key`, `midtrans_is_production`) + tombol **Test Koneksi Midtrans**.
 - **Backup & Restore ZIP (`BackupService`):**
   - **Backup:** Mengekspor tabel `products`, `transactions`, `transaction_items`, `store_settings`, dan `customers` ke file JSON, serta mengunduh seluruh foto produk aktif ke folder `images/` di dalam file `.zip` (`backup_santosa_farma_YYYYMMDD_HHmmss.zip`).
-  - **Restore:** Menerima file `.zip` atau `.json`, mengunggah ulang file biner gambar ke Supabase Storage bucket `products` (`upsert: true`), melakukan `upsert` data ke seluruh tabel, dan menjalankan `cleanupOrphanProductImages()`.
-- **Bersihkan Storage Gambar Orphan (`cleanupOrphanProductImages`):** membandingkan file di bucket `products` dengan kolom `products.image`, lalu menghapus file yang tidak terpakai oleh produk mana pun.
-- **Factory Reset (`factoryReset`):** menghapus `transaction_items`, `transactions`, `otp_codes`, `password_resets`, mereset `store_settings`, mengisi ulang 12 produk seed standar, dan membersihkan gambar custom di storage.
+  - **Restore:** Menerima file `.zip` atau `.json`, menghapus seluruh gambar lama di Supabase Storage terlebih dahulu (`clearAllProductImages`), mengunggah ulang seluruh file biner gambar dari ZIP ke bucket `products`, menyinkronkan data tabel & katalog produk sesuai isi backup, lalu menjalankan `cleanupOrphanProductImages()` sebagai jaring pengaman.
+- **Pembersihan Storage Otomatis (`addProduct`, `updateProduct`, `deleteProduct`, `factoryReset`):** setiap perubahan foto obat, penghapusan obat, maupun Factory Reset otomatis menghapus gambar lama/tidak terpakai dari storage tanpa tombol manual.
+- **Factory Reset (`factoryReset`):** menghapus `transaction_items`, `transactions`, `otp_codes`, `password_resets`, mereset `store_settings`, mengisi ulang 12 produk seed standar, dan mengosongkan seluruh gambar di storage.
 
 ---
 
