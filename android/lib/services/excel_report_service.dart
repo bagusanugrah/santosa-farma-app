@@ -476,7 +476,7 @@ class ExcelReportService {
     sheet.merge(
       CellIndex.indexByColumnRow(columnIndex: 0, rowIndex: 1),
       CellIndex.indexByColumnRow(columnIndex: 6, rowIndex: 1),
-      customValue: TextCellValue('Periode: ${_getRangeLabel(selectedRange)} | Dicetak: ${DateFormat("dd/MM/yyyy HH:mm").format(DateTime.now())} WIB'),
+      customValue: TextCellValue('Periode: ${_getRangeLabel(selectedRange)} | Dicetak: ${DateFormat("dd/MM/yyyy HH:mm").format(DateTime.now())}'),
     );
     sheet.cell(CellIndex.indexByColumnRow(columnIndex: 0, rowIndex: 1)).cellStyle = CellStyle(
       italic: true,

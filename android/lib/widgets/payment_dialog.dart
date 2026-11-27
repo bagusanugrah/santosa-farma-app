@@ -757,7 +757,7 @@ class _PaymentDialogState extends State<PaymentDialog> with SingleTickerProvider
                   label: FittedBox(
                     fit: BoxFit.scaleDown,
                     child: Text(
-                      _isProcessing ? 'Memproses...' : 'Selesaikan Pembayaran & Cetak Struk',
+                      _isProcessing ? 'Memproses...' : 'Selesaikan Pembayaran',
                       style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
                     ),
                   ),

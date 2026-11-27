@@ -2,6 +2,16 @@ import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
 
 export const dynamic = 'force-dynamic';
+export const fetchCache = 'force-no-store';
+
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
 
 export async function GET(req: Request, { params }: { params: { id: string } }) {
   try {
@@ -15,6 +25,15 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
     if (error || !transaction) {
       return new NextResponse('Struk tidak ditemukan.', { status: 404 });
     }
+
+    const { data: storeSetting } = await supabaseAdmin
+      .from('store_settings')
+      .select('store_address, store_phone')
+      .eq('id', 1)
+      .maybeSingle();
+
+    const storeAddress = (storeSetting?.store_address || '').trim();
+    const storePhone = (storeSetting?.store_phone || '').trim();
 
     const itemsHtml = (transaction.items || [])
       .map(
@@ -85,8 +104,8 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
       <div class="receipt-card">
         <div style="text-align: center; margin-bottom: 16px;">
           <div style="font-size: 16px; font-weight: 800; color: #047857; text-transform: uppercase; letter-spacing: 0.5px;">Apotek Santosa Farma</div>
-          <div style="font-size: 11px; color: #64748b; margin-top: 2px;">Jl. Raya Jalancagak, Subang, Jawa Barat</div>
-          <div style="font-size: 11px; color: #64748b;">WhatsApp: 0812-3456-7890</div>
+          ${storeAddress ? `<div style="font-size: 11px; color: #64748b; margin-top: 2px;">${escapeHtml(storeAddress)}</div>` : ''}
+          ${storePhone ? `<div style="font-size: 11px; color: #64748b;">Telp/WA: ${escapeHtml(storePhone)}</div>` : ''}
         </div>
 
         <div style="border-top: 2px dashed #cbd5e1; border-bottom: 2px dashed #cbd5e1; padding: 10px 0; margin-bottom: 16px; font-size: 11px;">

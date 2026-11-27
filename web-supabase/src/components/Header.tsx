@@ -10,7 +10,7 @@ import { ShoppingBag, User, LogOut, Package, Store } from 'lucide-react';
 export default function Header() {
   const { user, logout } = useAuth();
   const { totalItems, setIsOpen } = useCart();
-  const { onlineOrdersEnabled } = useStoreStatus();
+  const { onlineOrdersEnabled, storeAddress } = useStoreStatus();
 
   return (
     <header className="bg-white border-b border-slate-200 sticky top-0 z-40 shadow-xs">
@@ -26,7 +26,11 @@ export default function Header() {
             <h1 className="font-extrabold text-slate-900 text-sm sm:text-lg leading-tight tracking-tight truncate group-hover:text-brand-600 transition">
               Apotek Santosa Farma
             </h1>
-            <p className="text-[11px] text-slate-500 font-medium hidden sm:block">Jalancagak, Subang</p>
+            {storeAddress && (
+              <p className="text-[11px] text-slate-500 font-medium hidden sm:block truncate max-w-[260px]">
+                {storeAddress}
+              </p>
+            )}
           </div>
         </Link>
 

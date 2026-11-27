@@ -83,19 +83,34 @@ export interface StoreStatus {
   has_midtrans?: boolean;
   last_opened_at?: string | null;
   last_closed_at?: string | null;
+  store_address?: string;
+  store_phone?: string;
   midtrans_client_key?: string;
   midtrans_is_production?: boolean;
 }
 
 export async function fetchStoreStatus(): Promise<StoreStatus> {
   try {
-    const { data, error } = await supabase
+    let { data, error } = await supabase
       .from('store_settings')
       .select(
-        'id, is_open, online_orders_enabled, last_opened_at, last_closed_at, midtrans_client_key, midtrans_is_production'
+        'id, is_open, online_orders_enabled, last_opened_at, last_closed_at, store_address, store_phone, midtrans_client_key, midtrans_is_production'
       )
       .eq('id', 1)
       .maybeSingle();
+
+    // Fallback query if store_address/store_phone columns are not migrated yet
+    if (error) {
+      const legacy = await supabase
+        .from('store_settings')
+        .select(
+          'id, is_open, online_orders_enabled, last_opened_at, last_closed_at, midtrans_client_key, midtrans_is_production'
+        )
+        .eq('id', 1)
+        .maybeSingle();
+      data = legacy.data ? { ...legacy.data, store_address: '', store_phone: '' } : null;
+      error = legacy.error;
+    }
 
     if (error || !data) {
       console.warn('Failed to load store settings from Supabase, using default:', error);
@@ -106,6 +121,8 @@ export async function fetchStoreStatus(): Promise<StoreStatus> {
         online_orders_enabled: false,
         is_online_active: false,
         has_midtrans: defaultClientKey.length >= 15,
+        store_address: '',
+        store_phone: '',
         midtrans_client_key: defaultClientKey,
         midtrans_is_production: process.env.NEXT_PUBLIC_MIDTRANS_IS_PRODUCTION === 'true',
       };
@@ -124,6 +141,8 @@ export async function fetchStoreStatus(): Promise<StoreStatus> {
       has_midtrans: hasValidMidtrans,
       last_opened_at: data.last_opened_at,
       last_closed_at: data.last_closed_at,
+      store_address: (data.store_address || '').trim(),
+      store_phone: (data.store_phone || '').trim(),
       midtrans_client_key: clientKey,
       midtrans_is_production: Boolean(data.midtrans_is_production),
     };

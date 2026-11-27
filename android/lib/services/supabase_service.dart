@@ -17,6 +17,9 @@ class SupabaseService {
 
   SupabaseClient get client => Supabase.instance.client;
 
+  /// Mengubah waktu lokal perangkat ke format ISO-8601 UTC (`...Z`) agar Supabase TIMESTAMPTZ akurat.
+  String _nowUtcIso() => DateTime.now().toUtc().toIso8601String();
+
   // Initialize Supabase in main.dart
   static Future<void> initialize() async {
     if (!SupabaseConfig.isConfigured) {
@@ -136,7 +139,7 @@ class SupabaseService {
     // 3. Simpan hash password baru ke Supabase
     await client.from('users').update({
       'password': hashedNew,
-      'updated_at': DateTime.now().toIso8601String(),
+      'updated_at': _nowUtcIso(),
     }).eq('id', userId);
   }
 
@@ -156,7 +159,7 @@ class SupabaseService {
   }
 
   Future<void> updateStoreStatus({required bool isOpen, required bool onlineOrdersEnabled}) async {
-    final now = DateTime.now().toIso8601String();
+    final now = _nowUtcIso();
     final updateData = {
       'is_open': isOpen,
       'online_orders_enabled': onlineOrdersEnabled,
@@ -315,6 +318,17 @@ class SupabaseService {
     }
   }
 
+  Future<void> updateStoreProfile({
+    required String storeAddress,
+    required String storePhone,
+  }) async {
+    await client.from('store_settings').update({
+      'store_address': storeAddress.trim(),
+      'store_phone': storePhone.trim(),
+      'updated_at': _nowUtcIso(),
+    }).eq('id', 1);
+  }
+
   Future<void> updateIntegrationSettings({
     required String fonnteToken,
     required String fonnteUrl,
@@ -327,7 +341,7 @@ class SupabaseService {
     required String midtransServerKey,
     required bool midtransIsProduction,
   }) async {
-    final now = DateTime.now().toIso8601String();
+    final now = _nowUtcIso();
     final updateData = {
       'fonnte_token': fonnteToken.trim(),
       'fonnte_url': fonnteUrl.trim(),
@@ -421,7 +435,7 @@ class SupabaseService {
             'stock': product.stock,
             'description': product.description,
             'image': imagePath,
-            'updated_at': DateTime.now().toIso8601String(),
+            'updated_at': _nowUtcIso(),
           })
           .eq('id', product.id)
           .select()
@@ -644,7 +658,7 @@ class SupabaseService {
       'amount_paid': amountPaid ?? total,
       'change_amount': changeAmount ?? 0,
       'cashier_id': cashierId,
-      'paid_at': now.toIso8601String(),
+      'paid_at': now.toUtc().toIso8601String(),
     };
 
     final trxRes = await client.from('transactions').insert(trxData).select().single();
@@ -691,7 +705,7 @@ class SupabaseService {
         .eq('channel', 'toko');
 
     if (fromDate != null) {
-      query = query.gte('created_at', fromDate.toIso8601String());
+      query = query.gte('created_at', fromDate.toUtc().toIso8601String());
     }
 
     final res = await query.order('id', ascending: false);
@@ -803,7 +817,7 @@ class SupabaseService {
     }
 
     // Mark as picked up (diambil)
-    final now = DateTime.now().toIso8601String();
+    final now = _nowUtcIso();
     final updated = await client
         .from('transactions')
         .update({
@@ -869,9 +883,9 @@ class SupabaseService {
       'change_amount': changeAmount ?? 0,
       'cashier_id': cashierId,
       'status': 'selesai',
-      'paid_at': now.toIso8601String(),
-      'picked_up_at': now.toIso8601String(),
-      'updated_at': now.toIso8601String(),
+      'paid_at': now.toUtc().toIso8601String(),
+      'picked_up_at': now.toUtc().toIso8601String(),
+      'updated_at': now.toUtc().toIso8601String(),
     };
 
     final updatedTrx = await client
@@ -899,10 +913,10 @@ class SupabaseService {
     var query = client.from('transactions').select('*, transaction_items(*)');
 
     if (fromDate != null) {
-      query = query.gte('created_at', fromDate.toIso8601String());
+      query = query.gte('created_at', fromDate.toUtc().toIso8601String());
     }
     if (toDate != null) {
-      query = query.lte('created_at', toDate.toIso8601String());
+      query = query.lte('created_at', toDate.toUtc().toIso8601String());
     }
 
     final res = await query.order('id', ascending: false);
@@ -922,7 +936,7 @@ class SupabaseService {
     return {
       'app': 'Apotek Santosa Farma POS (Android Edition)',
       'version': '1.0.0',
-      'exported_at': DateTime.now().toIso8601String(),
+      'exported_at': _nowUtcIso(),
       'data': {
         'products': products,
         'transactions': transactions,
@@ -1012,7 +1026,7 @@ class SupabaseService {
   }
 
   Future<void> factoryReset() async {
-    final now = DateTime.now().toIso8601String();
+    final now = _nowUtcIso();
 
     // 1. Hapus seluruh transaksi, item, OTP, reset password, pelanggan web, dan katalog obat
     await client.from('transaction_items').delete().neq('id', 0);

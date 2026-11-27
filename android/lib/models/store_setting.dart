@@ -5,6 +5,10 @@ class StoreSetting {
   final DateTime? lastOpenedAt;
   final DateTime? lastClosedAt;
 
+  // Profil & Kontak Apotek
+  final String storeAddress;
+  final String storePhone;
+
   // WhatsApp Fonnte Gateway
   final String fonnteToken;
   final String fonnteUrl;
@@ -27,6 +31,8 @@ class StoreSetting {
     required this.onlineOrdersEnabled,
     this.lastOpenedAt,
     this.lastClosedAt,
+    this.storeAddress = '',
+    this.storePhone = '',
     this.fonnteToken = '',
     this.fonnteUrl = 'https://api.fonnte.com/send',
     this.mailHost = 'smtp.gmail.com',
@@ -49,8 +55,10 @@ class StoreSetting {
       id: map['id'] is int ? map['id'] : (int.tryParse(map['id']?.toString() ?? '1') ?? 1),
       isOpen: map['is_open'] == true,
       onlineOrdersEnabled: map['online_orders_enabled'] == true,
-      lastOpenedAt: map['last_opened_at'] != null ? DateTime.tryParse(map['last_opened_at']) : null,
-      lastClosedAt: map['last_closed_at'] != null ? DateTime.tryParse(map['last_closed_at']) : null,
+      lastOpenedAt: map['last_opened_at'] != null ? DateTime.tryParse(map['last_opened_at'].toString())?.toLocal() : null,
+      lastClosedAt: map['last_closed_at'] != null ? DateTime.tryParse(map['last_closed_at'].toString())?.toLocal() : null,
+      storeAddress: map['store_address']?.toString() ?? '',
+      storePhone: map['store_phone']?.toString() ?? '',
       fonnteToken: map['fonnte_token']?.toString() ?? '',
       fonnteUrl: map['fonnte_url']?.toString() ?? 'https://api.fonnte.com/send',
       mailHost: map['mail_host']?.toString() ?? 'smtp.gmail.com',
@@ -70,6 +78,8 @@ class StoreSetting {
     bool? onlineOrdersEnabled,
     DateTime? lastOpenedAt,
     DateTime? lastClosedAt,
+    String? storeAddress,
+    String? storePhone,
     String? fonnteToken,
     String? fonnteUrl,
     String? mailHost,
@@ -87,6 +97,8 @@ class StoreSetting {
       onlineOrdersEnabled: onlineOrdersEnabled ?? this.onlineOrdersEnabled,
       lastOpenedAt: lastOpenedAt ?? this.lastOpenedAt,
       lastClosedAt: lastClosedAt ?? this.lastClosedAt,
+      storeAddress: storeAddress ?? this.storeAddress,
+      storePhone: storePhone ?? this.storePhone,
       fonnteToken: fonnteToken ?? this.fonnteToken,
       fonnteUrl: fonnteUrl ?? this.fonnteUrl,
       mailHost: mailHost ?? this.mailHost,
@@ -104,8 +116,10 @@ class StoreSetting {
     return {
       'is_open': isOpen,
       'online_orders_enabled': onlineOrdersEnabled,
-      'last_opened_at': lastOpenedAt?.toIso8601String(),
-      'last_closed_at': lastClosedAt?.toIso8601String(),
+      'last_opened_at': lastOpenedAt?.toUtc().toIso8601String(),
+      'last_closed_at': lastClosedAt?.toUtc().toIso8601String(),
+      'store_address': storeAddress,
+      'store_phone': storePhone,
       'fonnte_token': fonnteToken,
       'fonnte_url': fonnteUrl,
       'mail_host': mailHost,

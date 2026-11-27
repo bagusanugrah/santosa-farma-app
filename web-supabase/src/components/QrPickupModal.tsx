@@ -5,6 +5,7 @@ import { QRCodeSVG } from 'qrcode.react';
 import { X, QrCode, Printer, CheckCircle2 } from 'lucide-react';
 import { Transaction, TransactionItem } from '@/lib/api';
 import { supabase } from '@/lib/supabase';
+import { useStoreStatus } from '@/context/StoreStatusContext';
 
 interface QrPickupModalProps {
   isOpen: boolean;
@@ -13,6 +14,7 @@ interface QrPickupModalProps {
 }
 
 export default function QrPickupModal({ isOpen, onClose, transaction }: QrPickupModalProps) {
+  const { storeAddress, storePhone } = useStoreStatus();
   const [items, setItems] = useState<TransactionItem[]>(transaction?.items || []);
 
   useEffect(() => {
@@ -48,7 +50,6 @@ export default function QrPickupModal({ isOpen, onClose, transaction }: QrPickup
     year: 'numeric',
     hour: '2-digit',
     minute: '2-digit',
-    timeZone: 'Asia/Jakarta',
   });
 
   return (
@@ -178,12 +179,12 @@ export default function QrPickupModal({ isOpen, onClose, transaction }: QrPickup
             <h1 className="text-xl font-black tracking-wide text-slate-900 uppercase">
               Apotek Santosa Farma
             </h1>
-            <p className="text-xs text-slate-600 mt-0.5">
-              Pertigaan Jl. Raya Jalancagak, Subang, Jawa Barat 41281
-            </p>
-            <p className="text-xs text-slate-600">
-              Telepon: (0260) 123456 | WhatsApp: 0877-7403-8395
-            </p>
+            {storeAddress && (
+              <p className="text-xs text-slate-600 mt-0.5">{storeAddress}</p>
+            )}
+            {storePhone && (
+              <p className="text-xs text-slate-600">Telp/WA: {storePhone}</p>
+            )}
           </div>
           <div className="text-right">
             <div className="inline-block px-3 py-1 bg-slate-100 border border-slate-300 rounded-lg text-xs font-black uppercase tracking-wider text-slate-900">

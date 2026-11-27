@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:pdf/pdf.dart';
 import 'package:printing/printing.dart';
+import 'package:provider/provider.dart';
 import '../models/transaction.dart';
+import '../providers/store_provider.dart';
 import '../services/printer_service.dart';
 
 class ReceiptDialog extends StatelessWidget {
@@ -14,6 +16,9 @@ class ReceiptDialog extends StatelessWidget {
   Widget build(BuildContext context) {
     final currency = NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ', decimalDigits: 0);
     final dateFormat = DateFormat('dd MMMM yyyy HH:mm', 'id_ID');
+    final storeSetting = context.watch<StoreProvider>().setting;
+    final storeAddress = storeSetting.storeAddress.trim();
+    final storePhone = storeSetting.storePhone.trim();
 
     return AlertDialog(
       title: Row(
@@ -52,12 +57,26 @@ class ReceiptDialog extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 // Header
-                const Center(
+                Center(
                   child: Column(
                     children: [
-                      Text('APOTEK SANTOSA FARMA', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 15)),
-                      SizedBox(height: 2),
-                      Text('Jl. Raya Jalancagak, Subang', style: TextStyle(fontSize: 11, color: Color(0xFF64748B))),
+                      const Text('APOTEK SANTOSA FARMA', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 15)),
+                      if (storeAddress.isNotEmpty) ...[
+                        const SizedBox(height: 2),
+                        Text(
+                          storeAddress,
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(fontSize: 11, color: Color(0xFF64748B)),
+                        ),
+                      ],
+                      if (storePhone.isNotEmpty) ...[
+                        const SizedBox(height: 2),
+                        Text(
+                          'Telp/WA: $storePhone',
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(fontSize: 11, color: Color(0xFF64748B)),
+                        ),
+                      ],
                     ],
                   ),
                 ),
@@ -176,7 +195,11 @@ class ReceiptDialog extends StatelessWidget {
           icon: const Icon(Icons.share, size: 18),
           label: const Text('Bagikan'),
           onPressed: () {
-            PrinterService.instance.shareReceiptPdf(transaction);
+            PrinterService.instance.shareReceiptPdf(
+              transaction,
+              storeAddress: storeAddress,
+              storePhone: storePhone,
+            );
           },
         ),
         OutlinedButton.icon(
@@ -184,7 +207,11 @@ class ReceiptDialog extends StatelessWidget {
           label: const Text('Simpan PDF'),
           onPressed: () async {
             try {
-              final savedPath = await PrinterService.instance.saveReceiptPdf(transaction);
+              final savedPath = await PrinterService.instance.saveReceiptPdf(
+                transaction,
+                storeAddress: storeAddress,
+                storePhone: storePhone,
+              );
               if (savedPath != null && context.mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
@@ -214,7 +241,11 @@ class ReceiptDialog extends StatelessWidget {
                     title: Text('Struk ${transaction.invoiceNo}'),
                   ),
                   body: PdfPreview(
-                    build: (_) => PrinterService.instance.generateReceiptPdf(transaction),
+                    build: (_) => PrinterService.instance.generateReceiptPdf(
+                      transaction,
+                      storeAddress: storeAddress,
+                      storePhone: storePhone,
+                    ),
                     initialPageFormat: PdfPageFormat.roll80,
                     canChangePageFormat: false,
                     canChangeOrientation: false,

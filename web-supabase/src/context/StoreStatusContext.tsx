@@ -10,6 +10,8 @@ interface StoreStatusContextType {
   onlineOrdersEnabled: boolean;
   hasMidtrans: boolean;
   loading: boolean;
+  storeAddress: string;
+  storePhone: string;
   midtransClientKey: string;
   midtransIsProduction: boolean;
   refreshStatus: () => Promise<void>;
@@ -21,6 +23,8 @@ const defaultStatus: StoreStatus = {
   online_orders_enabled: false,
   is_online_active: false,
   has_midtrans: (process.env.NEXT_PUBLIC_MIDTRANS_CLIENT_KEY || '').length >= 15,
+  store_address: '',
+  store_phone: '',
   midtrans_client_key: process.env.NEXT_PUBLIC_MIDTRANS_CLIENT_KEY || '',
   midtrans_is_production: false,
 };
@@ -31,6 +35,8 @@ const StoreStatusContext = createContext<StoreStatusContextType>({
   onlineOrdersEnabled: false,
   hasMidtrans: false,
   loading: true,
+  storeAddress: '',
+  storePhone: '',
   midtransClientKey: process.env.NEXT_PUBLIC_MIDTRANS_CLIENT_KEY || '',
   midtransIsProduction: false,
   refreshStatus: async () => {},
@@ -76,6 +82,14 @@ export const StoreStatusProvider: React.FC<{ children: React.ReactNode }> = ({ c
                 has_midtrans: hasMidtrans,
                 last_opened_at: payload.new.last_opened_at,
                 last_closed_at: payload.new.last_closed_at,
+                store_address:
+                  typeof payload.new.store_address === 'string'
+                    ? payload.new.store_address.trim()
+                    : prev.store_address || '',
+                store_phone:
+                  typeof payload.new.store_phone === 'string'
+                    ? payload.new.store_phone.trim()
+                    : prev.store_phone || '',
                 midtrans_client_key: clientKey,
                 midtrans_is_production:
                   typeof payload.new.midtrans_is_production === 'boolean'
@@ -115,6 +129,8 @@ export const StoreStatusProvider: React.FC<{ children: React.ReactNode }> = ({ c
         onlineOrdersEnabled: status.online_orders_enabled,
         hasMidtrans: Boolean(status.has_midtrans ?? ((status.midtrans_client_key || '').length >= 15)),
         loading,
+        storeAddress: (status.store_address || '').trim(),
+        storePhone: (status.store_phone || '').trim(),
         midtransClientKey:
           status.midtrans_client_key || process.env.NEXT_PUBLIC_MIDTRANS_CLIENT_KEY || '',
         midtransIsProduction: Boolean(status.midtrans_is_production),

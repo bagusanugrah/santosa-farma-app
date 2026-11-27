@@ -83,6 +83,9 @@ CREATE TABLE IF NOT EXISTS public.store_settings (
     online_orders_enabled BOOLEAN NOT NULL DEFAULT FALSE,
     last_opened_at TIMESTAMPTZ,
     last_closed_at TIMESTAMPTZ,
+    -- Profil & Kontak Apotek (Alamat punya default, No Telp/WA kosong hingga diisi admin)
+    store_address TEXT DEFAULT 'Pertigaan Jl. Raya Jalancagak, Subang, Jawa Barat',
+    store_phone TEXT DEFAULT '',
     -- WhatsApp Fonnte Gateway
     fonnte_token TEXT DEFAULT '',
     fonnte_url TEXT DEFAULT 'https://api.fonnte.com/send',
@@ -103,6 +106,8 @@ CREATE TABLE IF NOT EXISTS public.store_settings (
 
 -- Pastikan kolom integrasi tersedia jika tabel store_settings sudah dibuat sebelumnya
 ALTER TABLE public.store_settings
+    ADD COLUMN IF NOT EXISTS store_address TEXT DEFAULT 'Pertigaan Jl. Raya Jalancagak, Subang, Jawa Barat',
+    ADD COLUMN IF NOT EXISTS store_phone TEXT DEFAULT '',
     ADD COLUMN IF NOT EXISTS fonnte_token TEXT DEFAULT '',
     ADD COLUMN IF NOT EXISTS fonnte_url TEXT DEFAULT 'https://api.fonnte.com/send',
     ADD COLUMN IF NOT EXISTS mail_host TEXT DEFAULT 'smtp.gmail.com',

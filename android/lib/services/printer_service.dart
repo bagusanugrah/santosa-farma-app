@@ -7,6 +7,7 @@ import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import '../models/transaction.dart';
+import 'supabase_service.dart';
 
 class PrinterService {
   static final PrinterService instance = PrinterService._internal();
@@ -19,7 +20,20 @@ class PrinterService {
   Future<Uint8List> generateReceiptPdf(
     TransactionModel trx, {
     PdfPageFormat? pageFormat,
+    String? storeAddress,
+    String? storePhone,
   }) async {
+    String resolvedAddress = (storeAddress ?? '').trim();
+    String resolvedPhone = (storePhone ?? '').trim();
+
+    if (storeAddress == null || storePhone == null) {
+      try {
+        final setting = await SupabaseService.instance.getStoreSetting();
+        resolvedAddress = (storeAddress ?? setting.storeAddress).trim();
+        resolvedPhone = (storePhone ?? setting.storePhone).trim();
+      } catch (_) {}
+    }
+
     final pdf = pw.Document();
 
     pw.Font? regularFont;
@@ -61,17 +75,20 @@ class PrinterService {
               ),
               textAlign: pw.TextAlign.center,
             ),
-            pw.SizedBox(height: 2),
-            pw.Text(
-              'Pertigaan Jl. Raya Jalancagak, Subang',
-              style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey700),
-              textAlign: pw.TextAlign.center,
-            ),
-            pw.Text(
-              'Telp/WA: 0857-2227-0120 | IG: @santosafarma',
-              style: const pw.TextStyle(fontSize: 7, color: PdfColors.grey700),
-              textAlign: pw.TextAlign.center,
-            ),
+            if (resolvedAddress.isNotEmpty) ...[
+              pw.SizedBox(height: 2),
+              pw.Text(
+                resolvedAddress,
+                style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey700),
+                textAlign: pw.TextAlign.center,
+              ),
+            ],
+            if (resolvedPhone.isNotEmpty)
+              pw.Text(
+                'Telp/WA: $resolvedPhone',
+                style: const pw.TextStyle(fontSize: 7, color: PdfColors.grey700),
+                textAlign: pw.TextAlign.center,
+              ),
           ],
         ),
       ),
@@ -226,18 +243,34 @@ class PrinterService {
   }
 
   /// 1. Cetak Struk via Spooler Android (tetap memaksa layout ukuran struk 80mm)
-  Future<void> printReceipt(TransactionModel trx) async {
+  Future<void> printReceipt(
+    TransactionModel trx, {
+    String? storeAddress,
+    String? storePhone,
+  }) async {
     await Printing.layoutPdf(
       format: PdfPageFormat.roll80,
       dynamicLayout: false,
-      onLayout: (PdfPageFormat format) async => generateReceiptPdf(trx),
+      onLayout: (PdfPageFormat format) async => generateReceiptPdf(
+        trx,
+        storeAddress: storeAddress,
+        storePhone: storePhone,
+      ),
       name: 'Struk_${trx.invoiceNo}.pdf',
     );
   }
 
   /// 2. Simpan File PDF Ukuran Struk Asli (80mm) lewat File Picker Android
-  Future<String?> saveReceiptPdf(TransactionModel trx) async {
-    final pdfBytes = await generateReceiptPdf(trx);
+  Future<String?> saveReceiptPdf(
+    TransactionModel trx, {
+    String? storeAddress,
+    String? storePhone,
+  }) async {
+    final pdfBytes = await generateReceiptPdf(
+      trx,
+      storeAddress: storeAddress,
+      storePhone: storePhone,
+    );
     return FilePicker.saveFile(
       dialogTitle: 'Simpan Struk PDF',
       fileName: 'Struk_${trx.invoiceNo}.pdf',
@@ -248,8 +281,16 @@ class PrinterService {
   }
 
   /// 3. Download / Simpan Langsung File PDF ke Folder Dokumen HP
-  Future<File> downloadReceiptPdf(TransactionModel trx) async {
-    final pdfBytes = await generateReceiptPdf(trx);
+  Future<File> downloadReceiptPdf(
+    TransactionModel trx, {
+    String? storeAddress,
+    String? storePhone,
+  }) async {
+    final pdfBytes = await generateReceiptPdf(
+      trx,
+      storeAddress: storeAddress,
+      storePhone: storePhone,
+    );
     final dir = await getApplicationDocumentsDirectory();
     final file = File('${dir.path}/Struk_${trx.invoiceNo}.pdf');
     await file.writeAsBytes(pdfBytes);
@@ -257,8 +298,16 @@ class PrinterService {
   }
 
   /// 4. Bagikan Dokumen Asli PDF Ukuran Struk (80mm) ke WhatsApp, Email, Telegram, dll.
-  Future<void> shareReceiptPdf(TransactionModel trx) async {
-    final pdfBytes = await generateReceiptPdf(trx);
+  Future<void> shareReceiptPdf(
+    TransactionModel trx, {
+    String? storeAddress,
+    String? storePhone,
+  }) async {
+    final pdfBytes = await generateReceiptPdf(
+      trx,
+      storeAddress: storeAddress,
+      storePhone: storePhone,
+    );
     await Printing.sharePdf(
       bytes: pdfBytes,
       filename: 'Struk_${trx.invoiceNo}.pdf',

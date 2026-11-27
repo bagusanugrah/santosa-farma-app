@@ -52,8 +52,8 @@ class Product {
       stock: map['stock'] is int ? map['stock'] : int.tryParse(map['stock']?.toString() ?? '0') ?? 0,
       description: map['description'],
       image: map['image'],
-      createdAt: map['created_at'] != null ? DateTime.tryParse(map['created_at']) : null,
-      updatedAt: map['updated_at'] != null ? DateTime.tryParse(map['updated_at']) : null,
+      createdAt: map['created_at'] != null ? DateTime.tryParse(map['created_at'].toString())?.toLocal() : null,
+      updatedAt: map['updated_at'] != null ? DateTime.tryParse(map['updated_at'].toString())?.toLocal() : null,
     );
   }
 

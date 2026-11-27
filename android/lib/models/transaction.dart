@@ -107,11 +107,12 @@ class TransactionModel {
               : double.tryParse(map['change_amount'].toString()))
           : null,
       qrToken: map['qr_token'],
-      paidAt: map['paid_at'] != null ? DateTime.tryParse(map['paid_at']) : null,
-      pickedUpAt: map['picked_up_at'] != null ? DateTime.tryParse(map['picked_up_at']) : null,
-      createdAt: map['created_at'] != null
-          ? DateTime.tryParse(map['created_at']) ?? DateTime.now()
-          : DateTime.now(),
+      paidAt: map['paid_at'] != null ? DateTime.tryParse(map['paid_at'].toString())?.toLocal() : null,
+      pickedUpAt: map['picked_up_at'] != null ? DateTime.tryParse(map['picked_up_at'].toString())?.toLocal() : null,
+      createdAt: (map['created_at'] != null
+              ? DateTime.tryParse(map['created_at'].toString())?.toLocal()
+              : null) ??
+          DateTime.now(),
       items: parsedItems,
       customerName: custName,
       customerPhone: custPhone,

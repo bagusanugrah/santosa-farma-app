@@ -26,6 +26,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool _obscureNewPassword = true;
   bool _obscureConfirmPassword = true;
 
+  // Store Profile Controllers (Khusus Super Admin)
+  late final TextEditingController _storeAddressCtrl;
+  late final TextEditingController _storePhoneCtrl;
+  bool _isSavingStoreProfile = false;
+
   // Integration Controllers (Khusus Super Admin)
   late final TextEditingController _fonnteTokenCtrl;
   late final TextEditingController _fonnteUrlCtrl;
@@ -51,6 +56,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _newPasswordCtrl = TextEditingController();
     _confirmPasswordCtrl = TextEditingController();
 
+    _storeAddressCtrl = TextEditingController();
+    _storePhoneCtrl = TextEditingController();
+
     _fonnteTokenCtrl = TextEditingController();
     _fonnteUrlCtrl = TextEditingController();
     _mailHostCtrl = TextEditingController();
@@ -69,6 +77,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
       final storeProvider = context.watch<StoreProvider>();
       if (!storeProvider.isLoading) {
         final setting = storeProvider.setting;
+        _storeAddressCtrl.text = setting.storeAddress;
+        _storePhoneCtrl.text = setting.storePhone;
         _fonnteTokenCtrl.text = setting.fonnteToken;
         _fonnteUrlCtrl.text = setting.fonnteUrl;
         _mailHostCtrl.text = setting.mailHost;
@@ -89,6 +99,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _oldPasswordCtrl.dispose();
     _newPasswordCtrl.dispose();
     _confirmPasswordCtrl.dispose();
+
+    _storeAddressCtrl.dispose();
+    _storePhoneCtrl.dispose();
 
     _fonnteTokenCtrl.dispose();
     _fonnteUrlCtrl.dispose();
@@ -171,6 +184,39 @@ class _SettingsScreenState extends State<SettingsScreen> {
       }
     } finally {
       if (mounted) setState(() => _isChangingPassword = false);
+    }
+  }
+
+  // ==========================================
+  // PROFIL & KONTAK APOTEK (SUPER ADMIN)
+  // ==========================================
+  Future<void> _handleSaveStoreProfile() async {
+    setState(() => _isSavingStoreProfile = true);
+    try {
+      await context.read<StoreProvider>().updateStoreProfile(
+            storeAddress: _storeAddressCtrl.text,
+            storePhone: _storePhoneCtrl.text,
+          );
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Alamat & nomor kontak apotek berhasil disimpan!'),
+            backgroundColor: Color(0xFF0891B2),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Gagal menyimpan profil apotek: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isSavingStoreProfile = false);
     }
   }
 
@@ -751,8 +797,80 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
               const SizedBox(height: 16),
 
-              // 5. Khusus Super Admin: Pengaturan Integrasi & Cadangan
+              // 5. Khusus Super Admin: Profil Apotek, Integrasi & Cadangan
               if (isSuperAdmin) ...[
+                // Profil & Kontak Apotek Card
+                Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(20),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFECFEFF),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: const Icon(Icons.storefront, color: Color(0xFF0891B2), size: 20),
+                            ),
+                            const SizedBox(width: 12),
+                            const Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Profil & Kontak Apotek',
+                                    style: TextStyle(fontWeight: FontWeight.w900, fontSize: 15),
+                                  ),
+                                  Text(
+                                    'Ditampilkan di struk PDF, slip pengambilan, dan website. Kosongkan jika tidak ingin ditampilkan.',
+                                    style: TextStyle(fontSize: 11, color: Color(0xFF64748B)),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                        const Divider(height: 24),
+                        _buildConfigField(
+                          controller: _storeAddressCtrl,
+                          label: 'Alamat Apotek',
+                          hint: 'Kosongkan jika alamat tidak ingin ditampilkan',
+                        ),
+                        _buildConfigField(
+                          controller: _storePhoneCtrl,
+                          label: 'No. Telepon / WhatsApp Apotek',
+                          hint: 'Belum diatur (kosongkan jika tidak ingin ditampilkan)',
+                          keyboardType: TextInputType.phone,
+                        ),
+                        const SizedBox(height: 4),
+                        SizedBox(
+                          width: double.infinity,
+                          child: FilledButton.icon(
+                            style: FilledButton.styleFrom(
+                              backgroundColor: const Color(0xFF0891B2),
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                            ),
+                            icon: _isSavingStoreProfile
+                                ? const SizedBox(
+                                    width: 16,
+                                    height: 16,
+                                    child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                                  )
+                                : const Icon(Icons.save, size: 18),
+                            label: Text(_isSavingStoreProfile ? 'Menyimpan...' : 'Simpan Profil Apotek'),
+                            onPressed: _isSavingStoreProfile ? null : _handleSaveStoreProfile,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+
                 // Super Admin Integration Settings Card
                 Card(
                   child: Padding(

@@ -102,6 +102,17 @@ class StoreProvider extends ChangeNotifier {
     );
   }
 
+  Future<void> updateStoreProfile({
+    required String storeAddress,
+    required String storePhone,
+  }) async {
+    await SupabaseService.instance.updateStoreProfile(
+      storeAddress: storeAddress,
+      storePhone: storePhone,
+    );
+    await loadStatus();
+  }
+
   Future<void> updateIntegrationSettings({
     required String fonnteToken,
     required String fonnteUrl,
