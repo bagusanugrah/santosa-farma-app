@@ -3,11 +3,20 @@ import { createClient } from '@supabase/supabase-js';
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://nykoitxkyyhwvtrndyrb.supabase.co';
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'sb_publishable_c2EG8EOdDmUiPDZkd1ymXg_nW5DIP-M';
 
+const noStoreFetch: typeof fetch = (input, init = {}) =>
+  fetch(input, {
+    ...init,
+    cache: 'no-store',
+  });
+
 // Standard client for public & authenticated frontend operations
 export const supabase = createClient<any>(supabaseUrl, supabaseAnonKey, {
   auth: {
     persistSession: true,
     autoRefreshToken: true,
+  },
+  global: {
+    fetch: noStoreFetch,
   },
 });
 
@@ -21,6 +30,9 @@ export const supabaseAdmin = createClient<any>(
     auth: {
       persistSession: false,
       autoRefreshToken: false,
+    },
+    global: {
+      fetch: noStoreFetch,
     },
   }
 );

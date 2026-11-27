@@ -2,6 +2,22 @@ import crypto from 'crypto';
 import { supabaseAdmin } from './supabase';
 import { IntegrationSettings } from './settings';
 
+export function getRequestOrigin(req: Request): string {
+  const forwardedHost = req.headers.get('x-forwarded-host')?.split(',')[0]?.trim();
+  const forwardedProto = req.headers.get('x-forwarded-proto')?.split(',')[0]?.trim();
+  if (forwardedHost) {
+    const proto = forwardedProto || 'https';
+    return `${proto}://${forwardedHost}`;
+  }
+  const host = req.headers.get('host')?.trim();
+  if (host) {
+    const isLocal = host.includes('localhost') || host.startsWith('127.0.0.1');
+    const proto = forwardedProto || (isLocal ? 'http' : 'https');
+    return `${proto}://${host}`;
+  }
+  return new URL(req.url).origin;
+}
+
 export function isPharmacyPaymentMethod(method?: string | null): boolean {
   return method === 'pharmacy' || method === 'bayar_di_apotek';
 }

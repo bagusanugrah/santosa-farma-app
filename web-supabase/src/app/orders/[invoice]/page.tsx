@@ -37,6 +37,28 @@ export default function OrderDetailPage() {
 
   const fetchOrder = async () => {
     try {
+      // 1. Direct Supabase query first so newly created orders are immediately visible
+      const { data: directTrx, error: directErr } = await supabase
+        .from('transactions')
+        .select('*, items:transaction_items(*)')
+        .eq('invoice_no', invoiceNo)
+        .eq('customer_id', user?.id)
+        .not('status', 'in', '("dibatalkan","expired","gagal")')
+        .maybeSingle();
+
+      if (!directErr && directTrx) {
+        setOrder(directTrx as any);
+        if (
+          directTrx.status === 'pending' &&
+          directTrx.payment_method !== 'pharmacy' &&
+          directTrx.payment_method !== 'bayar_di_apotek'
+        ) {
+          fetchPaymentInfo();
+        }
+        return;
+      }
+
+      // 2. Fallback via authenticated server API
       if (token) {
         const res = await fetch(`${API_BASE_URL}/transactions/customer/my-orders?_t=${Date.now()}`, {
           cache: 'no-store',
@@ -61,26 +83,7 @@ export default function OrderDetailPage() {
         }
       }
 
-      const { data: directTrx, error: directErr } = await supabase
-        .from('transactions')
-        .select('*, items:transaction_items(*)')
-        .eq('invoice_no', invoiceNo)
-        .eq('customer_id', user?.id)
-        .not('status', 'in', '("dibatalkan","expired","gagal")')
-        .maybeSingle();
-
-      if (!directErr && directTrx) {
-        setOrder(directTrx as any);
-        if (
-          directTrx.status === 'pending' &&
-          directTrx.payment_method !== 'pharmacy' &&
-          directTrx.payment_method !== 'bayar_di_apotek'
-        ) {
-          fetchPaymentInfo();
-        }
-      } else {
-        setOrder(null);
-      }
+      setOrder(null);
     } catch (err) {
       console.error('Error fetching order detail', err);
     } finally {

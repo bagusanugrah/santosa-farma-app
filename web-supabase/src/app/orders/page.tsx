@@ -38,7 +38,21 @@ export default function MyOrdersPage() {
   const fetchOrders = useCallback(async () => {
     if (!user) return;
     try {
-      // 1. Prefer server API when authenticated so expired Midtrans orders are auto-cleaned
+      // 1. Direct Supabase query first (always live & fresh, bypasses Vercel API/Data Cache)
+      const { data: directData, error: directErr } = await supabase
+        .from('transactions')
+        .select('*, items:transaction_items(*)')
+        .eq('customer_id', user.id)
+        .not('status', 'in', '("dibatalkan","expired","gagal")')
+        .order('id', { ascending: false });
+
+      if (!directErr && directData && directData.length > 0) {
+        setOrders(directData as any);
+        loadPendingPaymentDetails(directData as any);
+        return;
+      }
+
+      // 2. Fallback / server sync via API route when authenticated
       if (token) {
         const res = await fetch(`${API_BASE_URL}/transactions/customer/my-orders?_t=${Date.now()}`, {
           cache: 'no-store',
@@ -56,15 +70,7 @@ export default function MyOrdersPage() {
         }
       }
 
-      // 2. Direct Supabase query fallback
-      const { data: directData, error: directErr } = await supabase
-        .from('transactions')
-        .select('*, items:transaction_items(*)')
-        .eq('customer_id', user.id)
-        .not('status', 'in', '("dibatalkan","expired","gagal")')
-        .order('id', { ascending: false });
-
-      if (!directErr && directData) {
+      if (directData) {
         setOrders(directData as any);
         loadPendingPaymentDetails(directData as any);
       }

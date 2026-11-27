@@ -3,6 +3,7 @@ import crypto from 'crypto';
 import { supabaseAdmin } from '@/lib/supabase';
 import { getCustomerFromAuthHeader } from '@/lib/server-auth';
 import { getIntegrationSettings } from '@/lib/settings';
+import { getRequestOrigin } from '@/lib/midtrans-cleanup';
 
 export async function POST(req: Request) {
   try {
@@ -187,6 +188,8 @@ export async function POST(req: Request) {
       ? 'https://app.midtrans.com/snap/v1/transactions'
       : 'https://app.sandbox.midtrans.com/snap/v1/transactions';
 
+    const origin = getRequestOrigin(req);
+    const finishUrl = `${origin}/orders/${encodeURIComponent(invoiceNo)}`;
     const midtransPayload = {
       transaction_details: {
         order_id: invoiceNo,
@@ -202,6 +205,11 @@ export async function POST(req: Request) {
         first_name: customer.name,
         email: customer.email || 'pelanggan@santosa.id',
         phone: customer.phone || '08123456789',
+      },
+      callbacks: {
+        finish: finishUrl,
+        error: finishUrl,
+        pending: finishUrl,
       },
     };
 

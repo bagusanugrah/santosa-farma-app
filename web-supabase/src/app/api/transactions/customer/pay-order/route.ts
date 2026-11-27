@@ -2,7 +2,10 @@ import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
 import { getCustomerFromAuthHeader } from '@/lib/server-auth';
 import { getIntegrationSettings } from '@/lib/settings';
-import { syncAndCleanPendingMidtransOrder } from '@/lib/midtrans-cleanup';
+import {
+  getRequestOrigin,
+  syncAndCleanPendingMidtransOrder,
+} from '@/lib/midtrans-cleanup';
 
 export const dynamic = 'force-dynamic';
 
@@ -93,6 +96,8 @@ export async function POST(req: Request) {
 
     let snapToken = trx.midtrans_snap_token;
     if (!snapToken && serverKey) {
+      const origin = getRequestOrigin(req);
+      const finishUrl = `${origin}/orders/${encodeURIComponent(trx.invoice_no)}`;
       try {
         const snapRes = await fetch(`${snapBaseUrl}/snap/v1/transactions`, {
           method: 'POST',
@@ -110,6 +115,11 @@ export async function POST(req: Request) {
               first_name: customer.name || 'Pelanggan',
               email: customer.email || 'customer@santosa.com',
               phone: customer.phone || '081234567890',
+            },
+            callbacks: {
+              finish: finishUrl,
+              error: finishUrl,
+              pending: finishUrl,
             },
           }),
         });
