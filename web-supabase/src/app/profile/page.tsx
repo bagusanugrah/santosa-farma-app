@@ -220,10 +220,10 @@ export default function ProfilePage() {
           <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-brand-600 text-white font-black text-xl sm:text-2xl flex items-center justify-center shadow-md flex-shrink-0">
             {user.name.charAt(0).toUpperCase()}
           </div>
-          <div>
-            <h2 className="text-lg sm:text-xl font-bold text-slate-900">{user.name}</h2>
+          <div className="min-w-0 flex-1">
+            <h2 className="text-lg sm:text-xl font-bold text-slate-900 break-words">{user.name}</h2>
             <p className="text-xs text-slate-500 flex items-center space-x-1 mt-0.5">
-              <ShieldCheck className="w-4 h-4 text-emerald-600" />
+              <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
               <span>Akun Pelanggan Apotek Santosa Farma</span>
             </p>
           </div>
@@ -233,18 +233,18 @@ export default function ProfilePage() {
         <form onSubmit={handleUpdateName} className="space-y-4 pt-4 border-t border-slate-100">
           <div>
             <label className="block text-xs font-bold text-slate-700 mb-1.5">Nama Lengkap</label>
-            <div className="flex items-center space-x-2 sm:space-x-3">
+            <div className="flex items-center gap-2 sm:gap-3">
               <input
                 type="text"
                 required
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className="flex-1 px-4 py-2.5 text-base sm:text-sm bg-slate-50 border border-slate-200 focus:bg-white focus:border-brand-500 rounded-xl outline-none transition font-medium"
+                className="flex-1 min-w-0 w-full px-3.5 sm:px-4 py-2.5 text-base sm:text-sm bg-slate-50 border border-slate-200 focus:bg-white focus:border-brand-500 rounded-xl outline-none transition font-medium"
               />
               <button
                 type="submit"
                 disabled={updatingName || name === user.name}
-                className="px-4 py-2.5 bg-slate-900 hover:bg-slate-800 disabled:opacity-40 text-white font-bold text-xs rounded-xl transition flex items-center space-x-1.5 shadow-sm whitespace-nowrap"
+                className="px-3.5 sm:px-4 py-2.5 bg-slate-900 hover:bg-slate-800 disabled:opacity-40 text-white font-bold text-xs rounded-xl transition flex items-center justify-center space-x-1.5 shadow-sm whitespace-nowrap shrink-0"
               >
                 <Save className="w-3.5 h-3.5" />
                 <span>{updatingName ? 'Menyimpan...' : 'Simpan'}</span>
@@ -278,20 +278,20 @@ export default function ProfilePage() {
 
         {/* WhatsApp Contact */}
         <div className="space-y-3">
-          <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200/80 flex items-center justify-between flex-wrap gap-3">
-            <div className="flex items-center space-x-3">
+          <div className="p-3.5 sm:p-4 bg-slate-50 rounded-2xl border border-slate-200/80 flex items-center justify-between flex-wrap gap-3">
+            <div className="flex items-center space-x-3 min-w-0 flex-1">
               <div className="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center flex-shrink-0">
                 <Smartphone className="w-5 h-5" />
               </div>
-              <div>
+              <div className="min-w-0 flex-1">
                 <span className="text-[11px] font-bold text-slate-500 block">Nomor WhatsApp</span>
-                <span className="text-sm font-extrabold text-slate-900">
+                <span className="text-sm font-extrabold text-slate-900 break-all block">
                   {user.phone || 'Belum ditambahkan'}
                 </span>
               </div>
             </div>
 
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center flex-wrap gap-2">
               {user.phone && user.phone_verified ? (
                 <span className="inline-flex items-center space-x-1 px-3 py-1 bg-emerald-100 text-emerald-800 rounded-full text-xs font-bold border border-emerald-200">
                   <CheckCircle className="w-3.5 h-3.5" />
@@ -322,9 +322,9 @@ export default function ProfilePage() {
 
           {/* Edit WhatsApp Form */}
           {editingPhone && (
-            <div className="p-4 bg-brand-50/50 rounded-2xl border border-brand-200 space-y-3 animate-fade-in">
-              <div className="flex items-center justify-between">
-                <label className="block text-xs font-bold text-slate-800">
+            <div className="p-3.5 sm:p-4 bg-brand-50/50 rounded-2xl border border-brand-200 space-y-3 animate-fade-in">
+              <div className="flex items-start justify-between gap-2">
+                <label className="block text-xs font-bold text-slate-800 leading-snug">
                   Ganti Nomor WhatsApp Baru (Wajib Verifikasi OTP)
                 </label>
                 <button
@@ -333,24 +333,24 @@ export default function ProfilePage() {
                     setEditingPhone(false);
                     setPhoneInput('');
                   }}
-                  className="text-slate-400 hover:text-slate-600 p-1"
+                  className="text-slate-400 hover:text-slate-600 p-1 shrink-0"
                 >
                   <X className="w-4 h-4" />
                 </button>
               </div>
-              <div className="flex items-center space-x-2">
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
                 <input
                   type="tel"
                   value={phoneInput}
                   onChange={(e) => setPhoneInput(e.target.value)}
                   placeholder="081234567890 (Nomor baru)"
-                  className="flex-1 px-3 py-2 text-sm bg-white border border-slate-300 rounded-xl focus:border-brand-500 outline-none"
+                  className="w-full min-w-0 flex-1 px-3 py-2.5 sm:py-2 text-base sm:text-sm bg-white border border-slate-300 rounded-xl focus:border-brand-500 outline-none"
                 />
                 <button
                   type="button"
                   onClick={() => handleRequestChangeContact('phone', phoneInput)}
                   disabled={addingContact || !phoneInput.trim()}
-                  className="px-4 py-2 bg-brand-600 hover:bg-brand-700 disabled:opacity-50 text-white font-bold text-xs rounded-xl shadow-sm transition whitespace-nowrap"
+                  className="w-full sm:w-auto px-4 py-2.5 sm:py-2 bg-brand-600 hover:bg-brand-700 disabled:opacity-50 text-white font-bold text-xs rounded-xl shadow-sm transition whitespace-nowrap shrink-0 flex items-center justify-center"
                 >
                   {addingContact ? 'Mengirim...' : 'Kirim OTP'}
                 </button>
@@ -360,23 +360,23 @@ export default function ProfilePage() {
 
           {/* Add Phone if not present */}
           {!user.phone && (
-            <div className="p-4 bg-brand-50/50 rounded-2xl border border-brand-200 space-y-3">
+            <div className="p-3.5 sm:p-4 bg-brand-50/50 rounded-2xl border border-brand-200 space-y-3">
               <label className="block text-xs font-bold text-slate-800">
                 + Hubungkan Nomor WhatsApp (Wajib Verifikasi OTP)
               </label>
-              <div className="flex items-center space-x-2">
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
                 <input
                   type="tel"
                   value={phoneInput}
                   onChange={(e) => setPhoneInput(e.target.value)}
                   placeholder="081234567890"
-                  className="flex-1 px-3 py-2 text-sm bg-white border border-slate-300 rounded-xl focus:border-brand-500 outline-none"
+                  className="w-full min-w-0 flex-1 px-3 py-2.5 sm:py-2 text-base sm:text-sm bg-white border border-slate-300 rounded-xl focus:border-brand-500 outline-none"
                 />
                 <button
                   type="button"
                   onClick={() => handleRequestChangeContact('phone', phoneInput)}
                   disabled={addingContact || !phoneInput.trim()}
-                  className="px-4 py-2 bg-brand-600 hover:bg-brand-700 disabled:opacity-50 text-white font-bold text-xs rounded-xl shadow-sm transition whitespace-nowrap"
+                  className="w-full sm:w-auto px-4 py-2.5 sm:py-2 bg-brand-600 hover:bg-brand-700 disabled:opacity-50 text-white font-bold text-xs rounded-xl shadow-sm transition whitespace-nowrap shrink-0 flex items-center justify-center"
                 >
                   {addingContact ? 'Mengirim...' : 'Kirim OTP'}
                 </button>
@@ -387,20 +387,20 @@ export default function ProfilePage() {
 
         {/* Email Contact */}
         <div className="space-y-3">
-          <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200/80 flex items-center justify-between flex-wrap gap-3">
-            <div className="flex items-center space-x-3">
+          <div className="p-3.5 sm:p-4 bg-slate-50 rounded-2xl border border-slate-200/80 flex items-center justify-between flex-wrap gap-3">
+            <div className="flex items-center space-x-3 min-w-0 flex-1">
               <div className="w-10 h-10 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center flex-shrink-0">
                 <Mail className="w-5 h-5" />
               </div>
-              <div>
+              <div className="min-w-0 flex-1">
                 <span className="text-[11px] font-bold text-slate-500 block">Alamat Email</span>
-                <span className="text-sm font-extrabold text-slate-900">
+                <span className="text-sm font-extrabold text-slate-900 break-all block">
                   {user.email || 'Belum ditambahkan'}
                 </span>
               </div>
             </div>
 
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center flex-wrap gap-2">
               {user.email && user.email_verified ? (
                 <span className="inline-flex items-center space-x-1 px-3 py-1 bg-emerald-100 text-emerald-800 rounded-full text-xs font-bold border border-emerald-200">
                   <CheckCircle className="w-3.5 h-3.5" />
@@ -431,9 +431,9 @@ export default function ProfilePage() {
 
           {/* Edit Email Form */}
           {editingEmail && (
-            <div className="p-4 bg-brand-50/50 rounded-2xl border border-brand-200 space-y-3 animate-fade-in">
-              <div className="flex items-center justify-between">
-                <label className="block text-xs font-bold text-slate-800">
+            <div className="p-3.5 sm:p-4 bg-brand-50/50 rounded-2xl border border-brand-200 space-y-3 animate-fade-in">
+              <div className="flex items-start justify-between gap-2">
+                <label className="block text-xs font-bold text-slate-800 leading-snug">
                   Ganti Alamat Email Baru (Wajib Verifikasi OTP)
                 </label>
                 <button
@@ -442,24 +442,24 @@ export default function ProfilePage() {
                     setEditingEmail(false);
                     setEmailInput('');
                   }}
-                  className="text-slate-400 hover:text-slate-600 p-1"
+                  className="text-slate-400 hover:text-slate-600 p-1 shrink-0"
                 >
                   <X className="w-4 h-4" />
                 </button>
               </div>
-              <div className="flex items-center space-x-2">
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
                 <input
                   type="email"
                   value={emailInput}
                   onChange={(e) => setEmailInput(e.target.value)}
                   placeholder="nama@domain.com (Email baru)"
-                  className="flex-1 px-3 py-2 text-sm bg-white border border-slate-300 rounded-xl focus:border-brand-500 outline-none"
+                  className="w-full min-w-0 flex-1 px-3 py-2.5 sm:py-2 text-base sm:text-sm bg-white border border-slate-300 rounded-xl focus:border-brand-500 outline-none"
                 />
                 <button
                   type="button"
                   onClick={() => handleRequestChangeContact('email', emailInput)}
                   disabled={addingContact || !emailInput.trim()}
-                  className="px-4 py-2 bg-brand-600 hover:bg-brand-700 disabled:opacity-50 text-white font-bold text-xs rounded-xl shadow-sm transition whitespace-nowrap"
+                  className="w-full sm:w-auto px-4 py-2.5 sm:py-2 bg-brand-600 hover:bg-brand-700 disabled:opacity-50 text-white font-bold text-xs rounded-xl shadow-sm transition whitespace-nowrap shrink-0 flex items-center justify-center"
                 >
                   {addingContact ? 'Mengirim...' : 'Kirim OTP'}
                 </button>
@@ -469,23 +469,23 @@ export default function ProfilePage() {
 
           {/* Add Email if not present */}
           {!user.email && (
-            <div className="p-4 bg-brand-50/50 rounded-2xl border border-brand-200 space-y-3">
+            <div className="p-3.5 sm:p-4 bg-brand-50/50 rounded-2xl border border-brand-200 space-y-3">
               <label className="block text-xs font-bold text-slate-800">
                 + Hubungkan Alamat Email (Wajib Verifikasi OTP)
               </label>
-              <div className="flex items-center space-x-2">
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
                 <input
                   type="email"
                   value={emailInput}
                   onChange={(e) => setEmailInput(e.target.value)}
                   placeholder="nama@domain.com"
-                  className="flex-1 px-3 py-2 text-sm bg-white border border-slate-300 rounded-xl focus:border-brand-500 outline-none"
+                  className="w-full min-w-0 flex-1 px-3 py-2.5 sm:py-2 text-base sm:text-sm bg-white border border-slate-300 rounded-xl focus:border-brand-500 outline-none"
                 />
                 <button
                   type="button"
                   onClick={() => handleRequestChangeContact('email', emailInput)}
                   disabled={addingContact || !emailInput.trim()}
-                  className="px-4 py-2 bg-brand-600 hover:bg-brand-700 disabled:opacity-50 text-white font-bold text-xs rounded-xl shadow-sm transition whitespace-nowrap"
+                  className="w-full sm:w-auto px-4 py-2.5 sm:py-2 bg-brand-600 hover:bg-brand-700 disabled:opacity-50 text-white font-bold text-xs rounded-xl shadow-sm transition whitespace-nowrap shrink-0 flex items-center justify-center"
                 >
                   {addingContact ? 'Mengirim...' : 'Kirim OTP'}
                 </button>
@@ -599,7 +599,7 @@ export default function ProfilePage() {
             <button
               type="submit"
               disabled={passwordLoading || !currentPassword || !newPassword || !confirmPassword}
-              className="px-6 py-2.5 bg-brand-600 hover:bg-brand-700 disabled:opacity-40 text-white font-bold text-xs rounded-xl transition flex items-center space-x-1.5 shadow-sm shadow-brand-600/20"
+              className="w-full sm:w-auto px-6 py-2.5 bg-brand-600 hover:bg-brand-700 disabled:opacity-40 text-white font-bold text-xs rounded-xl transition flex items-center justify-center space-x-1.5 shadow-sm shadow-brand-600/20"
             >
               <Lock className="w-3.5 h-3.5" />
               <span>{passwordLoading ? 'Menyimpan...' : 'Perbarui Password'}</span>

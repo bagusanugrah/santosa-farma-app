@@ -319,10 +319,10 @@ export default function OrderDetailPage() {
         <span>Kembali ke Pesanan Saya</span>
       </Link>
 
-      <div className="bg-white rounded-3xl border border-slate-200 p-6 sm:p-8 shadow-sm space-y-6">
-        <div className="flex items-center justify-between border-b border-slate-100 pb-4">
-          <div>
-            <h2 className="text-xl font-extrabold text-slate-900">{order.invoice_no}</h2>
+      <div className="bg-white rounded-2xl sm:rounded-3xl border border-slate-200 p-4 sm:p-8 shadow-sm space-y-5 sm:space-y-6">
+        <div className="flex items-start justify-between flex-wrap gap-2 border-b border-slate-100 pb-4">
+          <div className="min-w-0">
+            <h2 className="text-lg sm:text-xl font-extrabold text-slate-900 break-all">{order.invoice_no}</h2>
             <p className="text-xs text-slate-400 mt-0.5">
               {new Date(order.created_at).toLocaleDateString('id-ID', {
                 day: 'numeric',
@@ -334,7 +334,7 @@ export default function OrderDetailPage() {
             </p>
           </div>
           <span
-            className={`px-3 py-1 rounded-full text-xs font-bold uppercase ${
+            className={`px-3 py-1 rounded-full text-xs font-bold uppercase shrink-0 ${
               order.status === 'paid'
                 ? 'bg-emerald-100 text-emerald-800'
                 : order.status === 'pending'
@@ -372,16 +372,16 @@ export default function OrderDetailPage() {
               </div>
 
               {paymentDetails?.va_number ? (
-                <div className="flex items-center justify-between bg-white border border-amber-200 rounded-xl px-4 py-2.5">
-                  <div>
+                <div className="flex items-center justify-between gap-2 flex-wrap bg-white border border-amber-200 rounded-xl px-3.5 sm:px-4 py-2.5">
+                  <div className="min-w-0">
                     <span className="text-[10px] text-slate-400 block font-medium">Nomor Virtual Account</span>
-                    <span className="text-base sm:text-lg font-black tracking-wider font-mono text-slate-900">
+                    <span className="text-base sm:text-lg font-black tracking-wider font-mono text-slate-900 break-all">
                       {paymentDetails.va_number}
                     </span>
                   </div>
                   <button
                     onClick={() => copyToClipboard(paymentDetails.va_number)}
-                    className="px-3 py-1.5 bg-amber-50 hover:bg-amber-100 active:bg-amber-200 border border-amber-200 rounded-lg text-amber-900 text-xs font-bold transition flex items-center space-x-1"
+                    className="px-3 py-1.5 bg-amber-50 hover:bg-amber-100 active:bg-amber-200 border border-amber-200 rounded-lg text-amber-900 text-xs font-bold transition flex items-center space-x-1 shrink-0"
                   >
                     {copiedVa ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
                     <span>{copiedVa ? 'Tersalin' : 'Salin'}</span>
@@ -416,7 +416,7 @@ export default function OrderDetailPage() {
               )}
 
               {/* Action Buttons in Order Detail */}
-              <div className="pt-2 flex items-center space-x-2 flex-wrap gap-y-2">
+              <div className="pt-2 flex items-center flex-wrap gap-2">
                 <button
                   onClick={handlePayOnline}
                   disabled={paying}
@@ -470,12 +470,12 @@ export default function OrderDetailPage() {
           <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider">Daftar Obat</h4>
           <div className="divide-y divide-slate-100">
             {order.items?.map((item) => (
-              <div key={item.id} className="py-2.5 flex items-center justify-between text-xs">
-                <div>
-                  <span className="font-bold text-slate-800">{item.product_name}</span>
+              <div key={item.id} className="py-2.5 flex items-center justify-between gap-3 text-xs">
+                <div className="min-w-0 flex-1">
+                  <span className="font-bold text-slate-800 break-words">{item.product_name}</span>
                   <span className="text-slate-400 block">{item.qty} x Rp {Number(item.price).toLocaleString('id-ID')}</span>
                 </div>
-                <span className="font-extrabold text-slate-900">
+                <span className="font-extrabold text-slate-900 shrink-0">
                   Rp {Number(item.subtotal).toLocaleString('id-ID')}
                 </span>
               </div>
