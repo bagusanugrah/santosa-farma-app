@@ -1,6 +1,10 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
-import { hashPassword, getPhoneVariants } from '@/lib/server-auth';
+import {
+  hashPassword,
+  findCustomerByContact,
+  signRegistrationJwt,
+} from '@/lib/server-auth';
 import { sendOtpNotification } from '@/lib/notifications';
 
 export async function POST(req: Request) {
@@ -48,25 +52,7 @@ export async function POST(req: Request) {
     }
 
     // Check uniqueness (case-insensitive email or Indonesian phone variants)
-    let existing = null;
-    if (type === 'phone') {
-      const { data } = await supabaseAdmin
-        .from('customers')
-        .select('id')
-        .in('phone', getPhoneVariants(target))
-        .limit(1)
-        .maybeSingle();
-      existing = data;
-    } else {
-      const { data } = await supabaseAdmin
-        .from('customers')
-        .select('id')
-        .ilike('email', target)
-        .limit(1)
-        .maybeSingle();
-      existing = data;
-    }
-
+    const existing = await findCustomerByContact(type, target);
     if (existing) {
       return NextResponse.json(
         {
@@ -79,55 +65,64 @@ export async function POST(req: Request) {
 
     const hashedPassword = await hashPassword(password);
 
-    const newCustomerData: any = {
-      name: name.trim(),
-      password: hashedPassword,
-    };
-    if (type === 'phone') {
-      newCustomerData.phone = target;
-    } else {
-      newCustomerData.email = target;
-    }
+    // Generate 6 digit OTP WITHOUT inserting into `customers` yet.
+    // Akun baru hanya dibuat di database setelah OTP berhasil diverifikasi.
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString(); // 10 minutes
 
-    const { data: insertedCustomer, error: insertErr } = await supabaseAdmin
-      .from('customers')
-      .insert(newCustomerData)
-      .select()
+    const { data: insertedOtp, error: otpErr } = await supabaseAdmin
+      .from('otp_codes')
+      .insert({
+        customer_id: null,
+        type,
+        target,
+        code,
+        expires_at: expiresAt,
+      })
+      .select('id')
       .single();
 
-    if (insertErr || !insertedCustomer) {
+    if (otpErr || !insertedOtp) {
       return NextResponse.json(
-        { status: 'error', message: insertErr?.message || 'Gagal membuat akun.' },
+        { status: 'error', message: otpErr?.message || 'Gagal menyiapkan kode OTP.' },
         { status: 500 }
       );
     }
 
-    // Generate 6 digit OTP
-    const code = Math.floor(100000 + Math.random() * 900000).toString();
-    const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString(); // 10 minutes
+    // Send actual WhatsApp or Email message; rollback OTP if delivery failed
+    const sent = await sendOtpNotification(target, type, code);
+    if (!sent) {
+      await supabaseAdmin.from('otp_codes').delete().eq('id', insertedOtp.id);
+      return NextResponse.json(
+        {
+          status: 'error',
+          message:
+            type === 'phone'
+              ? 'Gagal mengirim kode OTP ke WhatsApp. Pastikan nomor aktif dan gateway WhatsApp sudah dikonfigurasi.'
+              : 'Gagal mengirim kode OTP ke Email. Pastikan alamat email valid dan konfigurasi email aktif.',
+        },
+        { status: 502 }
+      );
+    }
 
-    await supabaseAdmin.from('otp_codes').insert({
-      customer_id: insertedCustomer.id,
+    const registrationToken = signRegistrationJwt({
+      name: name.trim(),
       type,
       target,
-      code,
-      expires_at: expiresAt,
+      passwordHash: hashedPassword,
     });
-
-    // Send actual WhatsApp or Email message
-    await sendOtpNotification(target, type, code);
 
     return NextResponse.json(
       {
         status: 'success',
-        message: `Registrasi berhasil. Kode OTP telah dikirimkan ke ${type === 'phone' ? 'WhatsApp' : 'email'} ${target}.`,
+        message: `Kode OTP telah dikirimkan ke ${type === 'phone' ? 'WhatsApp' : 'email'} ${target}. Verifikasi OTP untuk menyelesaikan pendaftaran.`,
         data: {
-          customer_id: insertedCustomer.id,
+          registration_token: registrationToken,
           target,
           type,
         },
       },
-      { status: 201 }
+      { status: 200 }
     );
   } catch (err: any) {
     return NextResponse.json(

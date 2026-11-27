@@ -42,16 +42,40 @@ export async function POST(req: Request) {
     const code = Math.floor(100000 + Math.random() * 900000).toString();
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
 
-    await supabaseAdmin.from('otp_codes').insert({
-      customer_id: customer?.id || null,
-      type,
-      target: normalizedTarget,
-      code,
-      expires_at: expiresAt,
-    });
+    const { data: insertedOtp, error: otpErr } = await supabaseAdmin
+      .from('otp_codes')
+      .insert({
+        customer_id: customer?.id || null,
+        type,
+        target: normalizedTarget,
+        code,
+        expires_at: expiresAt,
+      })
+      .select('id')
+      .single();
 
-    // Send actual WhatsApp or Email message
-    await sendOtpNotification(normalizedTarget, type, code);
+    if (otpErr || !insertedOtp) {
+      return NextResponse.json(
+        { status: 'error', message: otpErr?.message || 'Gagal menyiapkan kode OTP.' },
+        { status: 500 }
+      );
+    }
+
+    // Send actual WhatsApp or Email message; delete OTP record if delivery fails
+    const sent = await sendOtpNotification(normalizedTarget, type, code);
+    if (!sent) {
+      await supabaseAdmin.from('otp_codes').delete().eq('id', insertedOtp.id);
+      return NextResponse.json(
+        {
+          status: 'error',
+          message:
+            type === 'phone'
+              ? 'Gagal mengirim ulang OTP ke WhatsApp. Pastikan gateway WhatsApp aktif.'
+              : 'Gagal mengirim ulang OTP ke Email. Pastikan konfigurasi SMTP email aktif.',
+        },
+        { status: 502 }
+      );
+    }
 
     return NextResponse.json({
       status: 'success',

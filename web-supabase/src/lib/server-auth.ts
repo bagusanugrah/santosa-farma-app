@@ -11,6 +11,13 @@ export interface CustomerPayload {
   phone?: string | null;
 }
 
+export interface PendingRegistrationPayload {
+  name: string;
+  type: 'phone' | 'email';
+  target: string;
+  passwordHash: string;
+}
+
 export function signCustomerJwt(customer: CustomerPayload): string {
   return jwt.sign(
     {
@@ -23,6 +30,60 @@ export function signCustomerJwt(customer: CustomerPayload): string {
     JWT_SECRET,
     { expiresIn: '30d' }
   );
+}
+
+export function signRegistrationJwt(payload: PendingRegistrationPayload): string {
+  return jwt.sign(
+    {
+      ...payload,
+      purpose: 'pending_registration',
+    },
+    JWT_SECRET,
+    { expiresIn: '30m' }
+  );
+}
+
+export function verifyRegistrationJwt(token: string): PendingRegistrationPayload | null {
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET) as any;
+    if (
+      !decoded ||
+      decoded.purpose !== 'pending_registration' ||
+      !decoded.name ||
+      !decoded.target ||
+      !decoded.passwordHash ||
+      (decoded.type !== 'phone' && decoded.type !== 'email')
+    ) {
+      return null;
+    }
+    return {
+      name: String(decoded.name),
+      type: decoded.type,
+      target: String(decoded.target),
+      passwordHash: String(decoded.passwordHash),
+    };
+  } catch {
+    return null;
+  }
+}
+
+export async function findCustomerByContact(type: 'phone' | 'email', target: string): Promise<any | null> {
+  if (type === 'phone') {
+    const { data } = await supabaseAdmin
+      .from('customers')
+      .select('*')
+      .in('phone', getPhoneVariants(target))
+      .limit(1)
+      .maybeSingle();
+    return data || null;
+  }
+  const { data } = await supabaseAdmin
+    .from('customers')
+    .select('*')
+    .ilike('email', target)
+    .limit(1)
+    .maybeSingle();
+  return data || null;
 }
 
 export async function hashPassword(plain: string): Promise<string> {

@@ -1,11 +1,17 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
-import { getCustomerFromAuthHeader, signCustomerJwt, getPhoneVariants } from '@/lib/server-auth';
+import {
+  getCustomerFromAuthHeader,
+  signCustomerJwt,
+  getPhoneVariants,
+  findCustomerByContact,
+  verifyRegistrationJwt,
+} from '@/lib/server-auth';
 
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { target, code, type } = body;
+    const { target, code, type, registration_token } = body;
 
     if (!target || !code || !type || !['phone', 'email'].includes(type)) {
       return NextResponse.json(
@@ -21,6 +27,7 @@ export async function POST(req: Request) {
     let otpQuery = supabaseAdmin
       .from('otp_codes')
       .select('*')
+      .eq('type', type)
       .eq('code', cleanCode)
       .is('verified_at', null)
       .gte('expires_at', new Date().toISOString())
@@ -42,70 +49,119 @@ export async function POST(req: Request) {
       );
     }
 
-    // Mark OTP as verified
-    await supabaseAdmin
-      .from('otp_codes')
-      .update({ verified_at: new Date().toISOString() })
-      .eq('id', validOtp.id);
-
-    // Find customer: prefer logged-in customer (for add-contact), then validOtp.customer_id, then target match
-    let customer = await getCustomerFromAuthHeader(req);
-
-    if (!customer && validOtp.customer_id) {
-      const { data: c } = await supabaseAdmin
-        .from('customers')
-        .select('*')
-        .eq('id', validOtp.customer_id)
-        .maybeSingle();
-      customer = c;
-    }
-
-    if (!customer) {
-      if (type === 'phone') {
-        const { data } = await supabaseAdmin
-          .from('customers')
-          .select('*')
-          .in('phone', getPhoneVariants(normalizedTarget))
-          .limit(1)
-          .maybeSingle();
-        customer = data;
-      } else {
-        const { data } = await supabaseAdmin
-          .from('customers')
-          .select('*')
-          .ilike('email', normalizedTarget)
-          .limit(1)
-          .maybeSingle();
-        customer = data;
-      }
-    }
-
-    if (!customer) {
-      return NextResponse.json(
-        { status: 'error', message: 'Akun pelanggan tidak ditemukan.' },
-        { status: 404 }
-      );
-    }
-
-    // Update verified timestamp
     const now = new Date().toISOString();
-    const updateData: any = { updated_at: now };
-    if (type === 'phone') {
-      updateData.phone = normalizedTarget;
-      updateData.phone_verified_at = now;
+    let finalCustomer: any = null;
+
+    if (registration_token && typeof registration_token === 'string') {
+      // Flow registrasi baru: akun hanya dibuat SETELAH OTP lolos verifikasi
+      const pendingReg = verifyRegistrationJwt(registration_token);
+      if (!pendingReg || pendingReg.type !== type) {
+        return NextResponse.json(
+          { status: 'error', message: 'Token pendaftaran tidak valid atau telah kadaluarsa. Silakan daftar ulang.' },
+          { status: 400 }
+        );
+      }
+
+      const targetMatches =
+        type === 'email'
+          ? pendingReg.target.toLowerCase() === normalizedTarget
+          : getPhoneVariants(normalizedTarget).includes(pendingReg.target);
+      if (!targetMatches) {
+        return NextResponse.json(
+          { status: 'error', message: 'Target verifikasi OTP tidak sesuai dengan data pendaftaran.' },
+          { status: 400 }
+        );
+      }
+
+      const alreadyExists = await findCustomerByContact(type, pendingReg.target);
+      if (alreadyExists) {
+        return NextResponse.json(
+          {
+            status: 'error',
+            message: `${type === 'phone' ? 'Nomor WhatsApp' : 'Alamat email'} sudah terdaftar. Silakan login.`,
+          },
+          { status: 422 }
+        );
+      }
+
+      const newCustomerData: any = {
+        name: pendingReg.name,
+        password: pendingReg.passwordHash,
+      };
+      if (type === 'phone') {
+        newCustomerData.phone = pendingReg.target;
+        newCustomerData.phone_verified_at = now;
+      } else {
+        newCustomerData.email = pendingReg.target;
+        newCustomerData.email_verified_at = now;
+      }
+
+      const { data: insertedCustomer, error: insertErr } = await supabaseAdmin
+        .from('customers')
+        .insert(newCustomerData)
+        .select()
+        .single();
+
+      if (insertErr || !insertedCustomer) {
+        return NextResponse.json(
+          { status: 'error', message: insertErr?.message || 'Gagal menyelesaikan pembuatan akun.' },
+          { status: 500 }
+        );
+      }
+
+      finalCustomer = insertedCustomer;
+
+      await supabaseAdmin
+        .from('otp_codes')
+        .update({ verified_at: now, customer_id: finalCustomer.id })
+        .eq('id', validOtp.id);
     } else {
-      updateData.email = normalizedTarget;
-      updateData.email_verified_at = now;
+      // Flow akun existing (add-contact di profil atau login akun belum terverifikasi)
+      let customer = await getCustomerFromAuthHeader(req);
+
+      if (!customer && validOtp.customer_id) {
+        const { data: c } = await supabaseAdmin
+          .from('customers')
+          .select('*')
+          .eq('id', validOtp.customer_id)
+          .maybeSingle();
+        customer = c;
+      }
+
+      if (!customer) {
+        customer = await findCustomerByContact(type, normalizedTarget);
+      }
+
+      if (!customer) {
+        return NextResponse.json(
+          { status: 'error', message: 'Sesi pendaftaran tidak ditemukan atau sudah berakhir. Silakan daftar ulang.' },
+          { status: 404 }
+        );
+      }
+
+      await supabaseAdmin
+        .from('otp_codes')
+        .update({ verified_at: now })
+        .eq('id', validOtp.id);
+
+      const updateData: any = { updated_at: now };
+      if (type === 'phone') {
+        updateData.phone = normalizedTarget;
+        updateData.phone_verified_at = now;
+      } else {
+        updateData.email = normalizedTarget;
+        updateData.email_verified_at = now;
+      }
+
+      const { data: updatedCustomer } = await supabaseAdmin
+        .from('customers')
+        .update(updateData)
+        .eq('id', customer.id)
+        .select()
+        .single();
+
+      finalCustomer = updatedCustomer || customer;
     }
-
-    const { data: updatedCustomer, error: updateErr } = await supabaseAdmin
-      .from('customers')
-      .update(updateData)
-      .eq('id', customer.id)
-      .select()
-      .single();
-
-    const finalCustomer = updatedCustomer || customer;
 
     const token = signCustomerJwt({
       id: finalCustomer.id,

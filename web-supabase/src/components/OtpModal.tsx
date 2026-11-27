@@ -11,9 +11,18 @@ interface OtpModalProps {
   type: 'phone' | 'email';
   onSuccess: (data: any) => void;
   authToken?: string | null;
+  registrationToken?: string | null;
 }
 
-export default function OtpModal({ isOpen, onClose, target, type, onSuccess, authToken }: OtpModalProps) {
+export default function OtpModal({
+  isOpen,
+  onClose,
+  target,
+  type,
+  onSuccess,
+  authToken,
+  registrationToken,
+}: OtpModalProps) {
   const [code, setCode] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -55,7 +64,12 @@ export default function OtpModal({ isOpen, onClose, target, type, onSuccess, aut
       const res = await fetch(`${API_BASE_URL}/auth/customer/verify-otp`, {
         method: 'POST',
         headers,
-        body: JSON.stringify({ target, code, type }),
+        body: JSON.stringify({
+          target,
+          code,
+          type,
+          ...(registrationToken ? { registration_token: registrationToken } : {}),
+        }),
       });
       const data = await res.json();
       if (!res.ok) {

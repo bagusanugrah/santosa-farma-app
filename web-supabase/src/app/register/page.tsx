@@ -23,6 +23,7 @@ export default function CustomerRegisterPage() {
   const [error, setError] = useState('');
 
   const [showOtpModal, setShowOtpModal] = useState(false);
+  const [registrationToken, setRegistrationToken] = useState<string | null>(null);
 
   useEffect(() => {
     if (authLoading) return;
@@ -92,7 +93,8 @@ export default function CustomerRegisterPage() {
         throw new Error(json.message || Object.values(json.errors || {})[0] as string || 'Registrasi gagal.');
       }
 
-      // Open OTP Modal
+      // Open OTP Modal only after OTP was successfully dispatched; account is not created yet
+      setRegistrationToken(json.data?.registration_token || null);
       setShowOtpModal(true);
     } catch (err: any) {
       setError(err.message);
@@ -225,9 +227,13 @@ export default function CustomerRegisterPage() {
 
       <OtpModal
         isOpen={showOtpModal}
-        onClose={() => setShowOtpModal(false)}
+        onClose={() => {
+          setShowOtpModal(false);
+          setRegistrationToken(null);
+        }}
         target={target.trim()}
         type={registerType}
+        registrationToken={registrationToken}
         onSuccess={handleOtpVerified}
       />
     </div>
