@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'package:intl/intl.dart';
 import 'package:path_provider/path_provider.dart';
@@ -31,24 +32,16 @@ class PrinterService {
       debugPrint('[PDF Font Warning]: $e');
     }
 
-    final targetFormat = pageFormat ?? PdfPageFormat.roll80;
-    final isThermal = targetFormat.width <= 95 * PdfPageFormat.mm;
+    // Selalu gunakan ukuran kertas struk thermal (default 80mm, tinggi mengikuti isi struk)
+    // agar tidak melebar ke ukuran A4/Letter meskipun dipanggil dari spooler sistem.
+    final bool isThermalParam =
+        pageFormat != null && pageFormat.width <= 95 * PdfPageFormat.mm;
+    final targetFormat = isThermalParam ? pageFormat : PdfPageFormat.roll80;
     final useMultiPage = !targetFormat.height.isInfinite;
 
-    // Pada kertas lebar (misal ISO A4/Letter di Print Spooler Android),
-    // pusatkan struk secara simetris di tengah halaman agar tidak menceng ke kiri.
-    final double receiptWidth = isThermal
-        ? (targetFormat.width - 24).clamp(120.0, targetFormat.width)
-        : (targetFormat.width * 0.62).clamp(240.0, 360.0);
-    final double sideMargin = isThermal
-        ? 12.0
-        : ((targetFormat.width - receiptWidth) / 2).clamp(20.0, targetFormat.width / 3);
-    final double verticalMargin = isThermal ? 14.0 : 28.0;
-    final double fontScale = isThermal ? 1.0 : 1.35;
-
-    final pageMargin = pw.EdgeInsets.symmetric(
-      horizontal: sideMargin,
-      vertical: verticalMargin,
+    const pageMargin = pw.EdgeInsets.symmetric(
+      horizontal: 10.0,
+      vertical: 12.0,
     );
     final theme = pw.ThemeData.withFont(
       base: regularFont,
@@ -63,55 +56,55 @@ class PrinterService {
             pw.Text(
               'APOTEK SANTOSA FARMA',
               style: pw.TextStyle(
-                fontSize: 12 * fontScale,
+                fontSize: 12,
                 fontWeight: pw.FontWeight.bold,
               ),
               textAlign: pw.TextAlign.center,
             ),
-            pw.SizedBox(height: 2 * fontScale),
+            pw.SizedBox(height: 2),
             pw.Text(
               'Pertigaan Jl. Raya Jalancagak, Subang',
-              style: pw.TextStyle(fontSize: 8 * fontScale, color: PdfColors.grey700),
+              style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey700),
               textAlign: pw.TextAlign.center,
             ),
             pw.Text(
               'Telp/WA: 0857-2227-0120 | IG: @santosafarma',
-              style: pw.TextStyle(fontSize: 7 * fontScale, color: PdfColors.grey700),
+              style: const pw.TextStyle(fontSize: 7, color: PdfColors.grey700),
               textAlign: pw.TextAlign.center,
             ),
           ],
         ),
       ),
-      pw.SizedBox(height: 6 * fontScale),
+      pw.SizedBox(height: 6),
       pw.Divider(thickness: 0.8, borderStyle: pw.BorderStyle.dashed),
 
       // Metadata Transaksi
-      _pdfRow('No. Invoice', trx.invoiceNo, isBold: true, fontSize: 7.5 * fontScale),
-      _pdfRow('Waktu', dateFormat.format(trx.createdAt), fontSize: 7.5 * fontScale),
+      _pdfRow('No. Invoice', trx.invoiceNo, isBold: true, fontSize: 7.5),
+      _pdfRow('Waktu', dateFormat.format(trx.createdAt), fontSize: 7.5),
       _pdfRow(
         'Kanal',
         trx.channel == 'online' ? 'PESANAN WEB' : 'KASIR TOKO',
-        fontSize: 7.5 * fontScale,
+        fontSize: 7.5,
       ),
-      _pdfRow('Metode', trx.paymentMethod.toUpperCase(), isBold: true, fontSize: 7.5 * fontScale),
+      _pdfRow('Metode', trx.paymentMethod.toUpperCase(), isBold: true, fontSize: 7.5),
       if (trx.customerName != null && trx.customerName!.isNotEmpty)
-        _pdfRow('Pelanggan', trx.customerName!, fontSize: 7.5 * fontScale),
+        _pdfRow('Pelanggan', trx.customerName!, fontSize: 7.5),
       if (trx.cashierId != null)
-        _pdfRow('ID Kasir', '#${trx.cashierId}', fontSize: 7.5 * fontScale),
+        _pdfRow('ID Kasir', '#${trx.cashierId}', fontSize: 7.5),
 
       pw.Divider(thickness: 0.8, borderStyle: pw.BorderStyle.dashed),
-      pw.SizedBox(height: 4 * fontScale),
+      pw.SizedBox(height: 4),
 
       // Daftar Item Obat
       ...trx.items.map((item) {
         return pw.Padding(
-          padding: pw.EdgeInsets.symmetric(vertical: 2.5 * fontScale),
+          padding: const pw.EdgeInsets.symmetric(vertical: 2.5),
           child: pw.Column(
             crossAxisAlignment: pw.CrossAxisAlignment.stretch,
             children: [
               pw.Text(
                 item.productName,
-                style: pw.TextStyle(fontSize: 8.5 * fontScale, fontWeight: pw.FontWeight.bold),
+                style: pw.TextStyle(fontSize: 8.5, fontWeight: pw.FontWeight.bold),
               ),
               pw.SizedBox(height: 1.5),
               pw.Row(
@@ -120,13 +113,13 @@ class PrinterService {
                   pw.Expanded(
                     child: pw.Text(
                       '${item.qty} x ${currencyFormat.format(item.price)}',
-                      style: pw.TextStyle(fontSize: 8 * fontScale, color: PdfColors.grey800),
+                      style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey800),
                     ),
                   ),
                   pw.SizedBox(width: 8),
                   pw.Text(
                     currencyFormat.format(item.subtotal),
-                    style: pw.TextStyle(fontSize: 8 * fontScale, fontWeight: pw.FontWeight.bold),
+                    style: pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold),
                   ),
                 ],
               ),
@@ -135,24 +128,24 @@ class PrinterService {
         );
       }),
 
-      pw.SizedBox(height: 4 * fontScale),
+      pw.SizedBox(height: 4),
       pw.Divider(thickness: 0.8, borderStyle: pw.BorderStyle.dashed),
 
       // Rincian Pembayaran & Kembalian
-      _pdfRow('TOTAL', currencyFormat.format(trx.total), isBold: true, fontSize: 10 * fontScale),
+      _pdfRow('TOTAL', currencyFormat.format(trx.total), isBold: true, fontSize: 10),
       if (trx.amountPaid != null && trx.amountPaid! > 0) ...[
-        _pdfRow('Tunai Diterima', currencyFormat.format(trx.amountPaid!), fontSize: 7.5 * fontScale),
+        _pdfRow('Tunai Diterima', currencyFormat.format(trx.amountPaid!), fontSize: 7.5),
         _pdfRow(
           'Kembalian',
           currencyFormat.format(trx.changeAmount ?? 0),
           isBold: true,
-          fontSize: 7.5 * fontScale,
+          fontSize: 7.5,
         ),
       ],
-      _pdfRow('Status', 'LUNAS', isBold: true, fontSize: 7.5 * fontScale),
+      _pdfRow('Status', 'LUNAS', isBold: true, fontSize: 7.5),
 
       pw.Divider(thickness: 0.8, borderStyle: pw.BorderStyle.dashed),
-      pw.SizedBox(height: 6 * fontScale),
+      pw.SizedBox(height: 6),
 
       // Footer Struk
       pw.Center(
@@ -160,19 +153,19 @@ class PrinterService {
           children: [
             pw.Text(
               'Terima Kasih Atas Kunjungan Anda',
-              style: pw.TextStyle(fontSize: 8 * fontScale, fontWeight: pw.FontWeight.bold),
+              style: pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold),
               textAlign: pw.TextAlign.center,
             ),
-            pw.SizedBox(height: 2 * fontScale),
+            pw.SizedBox(height: 2),
             pw.Text(
               'Semoga Lekas Sembuh & Sehat Selalu',
-              style: pw.TextStyle(fontSize: 7 * fontScale, color: PdfColors.grey700),
+              style: const pw.TextStyle(fontSize: 7, color: PdfColors.grey700),
               textAlign: pw.TextAlign.center,
             ),
-            pw.SizedBox(height: 3 * fontScale),
+            pw.SizedBox(height: 3),
             pw.Text(
               'Obat yang dibeli tidak dapat ditukar/dikembalikan',
-              style: pw.TextStyle(fontSize: 6 * fontScale, color: PdfColors.grey600),
+              style: const pw.TextStyle(fontSize: 6, color: PdfColors.grey600),
               textAlign: pw.TextAlign.center,
             ),
           ],
@@ -232,16 +225,29 @@ class PrinterService {
     );
   }
 
-  /// 1. Cetak Struk via Spooler Android (Bisa pilih Printer Fisik atau "Simpan sebagai PDF / Download")
+  /// 1. Cetak Struk via Spooler Android (tetap memaksa layout ukuran struk 80mm)
   Future<void> printReceipt(TransactionModel trx) async {
     await Printing.layoutPdf(
-      onLayout: (PdfPageFormat format) async =>
-          generateReceiptPdf(trx, pageFormat: format),
+      format: PdfPageFormat.roll80,
+      dynamicLayout: false,
+      onLayout: (PdfPageFormat format) async => generateReceiptPdf(trx),
       name: 'Struk_${trx.invoiceNo}.pdf',
     );
   }
 
-  /// 2. Download / Simpan Langsung File PDF ke Folder Dokumen HP
+  /// 2. Simpan File PDF Ukuran Struk Asli (80mm) lewat File Picker Android
+  Future<String?> saveReceiptPdf(TransactionModel trx) async {
+    final pdfBytes = await generateReceiptPdf(trx);
+    return FilePicker.saveFile(
+      dialogTitle: 'Simpan Struk PDF',
+      fileName: 'Struk_${trx.invoiceNo}.pdf',
+      type: FileType.custom,
+      allowedExtensions: const ['pdf'],
+      bytes: pdfBytes,
+    );
+  }
+
+  /// 3. Download / Simpan Langsung File PDF ke Folder Dokumen HP
   Future<File> downloadReceiptPdf(TransactionModel trx) async {
     final pdfBytes = await generateReceiptPdf(trx);
     final dir = await getApplicationDocumentsDirectory();
@@ -250,7 +256,7 @@ class PrinterService {
     return file;
   }
 
-  /// 3. Bagikan Dokumen Asli PDF (Bukan Teks Mentah) ke WhatsApp, Email, Telegram, dll.
+  /// 4. Bagikan Dokumen Asli PDF Ukuran Struk (80mm) ke WhatsApp, Email, Telegram, dll.
   Future<void> shareReceiptPdf(TransactionModel trx) async {
     final pdfBytes = await generateReceiptPdf(trx);
     await Printing.sharePdf(

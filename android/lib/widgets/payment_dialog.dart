@@ -50,6 +50,16 @@ class _PaymentDialogState extends State<PaymentDialog> with SingleTickerProvider
   bool _isDownloadingQr = false;
   String _qrisPaymentStatus = 'idle'; // 'idle', 'generating', 'waiting', 'paid', 'failed'
   String? _qrisErrorMsg;
+  String _midtransServerKey = '';
+  bool _midtransIsProduction = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final setting = context.read<StoreProvider>().setting;
+    _midtransServerKey = setting.midtransServerKey;
+    _midtransIsProduction = setting.midtransIsProduction;
+  }
 
   @override
   void initState() {
@@ -66,40 +76,61 @@ class _PaymentDialogState extends State<PaymentDialog> with SingleTickerProvider
     });
   }
 
+  /// Membatalkan transaksi QRIS Midtrans yang masih menunggu jika beralih ke tunai / dialog ditutup.
+  Future<void> _cancelPendingQris({bool updateState = true}) async {
+    _statusPollingTimer?.cancel();
+    _statusPollingTimer = null;
+
+    final orderIdToCancel = _qrisOrderId;
+    final wasPaid = _qrisPaymentStatus == 'paid';
+
+    if (updateState && mounted) {
+      setState(() {
+        _qrisOrderId = null;
+        _qrisString = null;
+        _isLoadingQris = false;
+        _qrisPaymentStatus = 'idle';
+        _qrisErrorMsg = null;
+      });
+    } else {
+      _qrisOrderId = null;
+      _qrisString = null;
+      _isLoadingQris = false;
+      _qrisPaymentStatus = 'idle';
+      _qrisErrorMsg = null;
+    }
+
+    if (orderIdToCancel != null && !wasPaid && _midtransServerKey.trim().isNotEmpty) {
+      await SupabaseService.instance.cancelMidtransTransaction(
+        orderId: orderIdToCancel,
+        serverKey: _midtransServerKey,
+        isProduction: _midtransIsProduction,
+      );
+    }
+  }
+
   void _handleTabChange() {
     if (!mounted) return;
-    setState(() {});
     if (_tabController.index == 1) {
+      setState(() {});
       if (_qrisString == null && !_isLoadingQris) {
         _initQrisCharge();
       } else if (_qrisOrderId != null && _statusPollingTimer == null && _qrisPaymentStatus != 'paid') {
         _startPollingPaymentStatus();
       }
     } else {
-      _statusPollingTimer?.cancel();
-      _statusPollingTimer = null;
+      unawaited(_cancelPendingQris());
     }
   }
 
   @override
   void dispose() {
-    _statusPollingTimer?.cancel();
     _tabController.removeListener(_handleTabChange);
     _tabController.dispose();
     _cashController.dispose();
 
     // Auto cancel pending Midtrans QRIS charge when dialog is closed before payment
-    if (_qrisOrderId != null && _qrisPaymentStatus != 'paid') {
-      final orderIdToCancel = _qrisOrderId!;
-      try {
-        final storeSetting = context.read<StoreProvider>().setting;
-        SupabaseService.instance.cancelMidtransTransaction(
-          orderId: orderIdToCancel,
-          serverKey: storeSetting.midtransServerKey,
-          isProduction: storeSetting.midtransIsProduction,
-        );
-      } catch (_) {}
-    }
+    unawaited(_cancelPendingQris(updateState: false));
 
     super.dispose();
   }
@@ -108,28 +139,42 @@ class _PaymentDialogState extends State<PaymentDialog> with SingleTickerProvider
 
   Future<void> _initQrisCharge() async {
     final storeProvider = context.read<StoreProvider>();
-    if (!storeProvider.isMidtransValid) return;
+    if (!storeProvider.isMidtransValid || _isLoadingQris) return;
+
+    final now = DateTime.now();
+    final dateStr = DateFormat('yyyyMMddHHmmss').format(now);
+    final randomSuffix = (100 + (now.microsecond % 900)).toString();
+    final generatedOrderId = 'POS-QRIS-$dateStr-$randomSuffix';
 
     setState(() {
       _isLoadingQris = true;
       _qrisPaymentStatus = 'generating';
       _qrisErrorMsg = null;
+      _qrisOrderId = generatedOrderId;
     });
-
-    final now = DateTime.now();
-    final dateStr = DateFormat('yyyyMMddHHmmss').format(now);
-    final randomSuffix = (100 + (now.microsecond % 900)).toString();
-    _qrisOrderId = 'POS-QRIS-$dateStr-$randomSuffix';
 
     try {
       final res = await SupabaseService.instance.createMidtransQrisCharge(
-        orderId: _qrisOrderId!,
+        orderId: generatedOrderId,
         grossAmount: widget.grandTotal.toInt(),
         serverKey: storeProvider.setting.midtransServerKey,
         isProduction: storeProvider.setting.midtransIsProduction,
       );
 
-      if (!mounted) return;
+      // Jika kasir sudah berpindah ke tab Tunai / menutup dialog saat request masih berjalan,
+      // batalkan QRIS yang baru terlanjur dibuat di Midtrans agar tidak menggantung.
+      if (!mounted || _tabController.index != 1 || _qrisOrderId != generatedOrderId) {
+        if (res != null && _midtransServerKey.trim().isNotEmpty) {
+          unawaited(
+            SupabaseService.instance.cancelMidtransTransaction(
+              orderId: generatedOrderId,
+              serverKey: _midtransServerKey,
+              isProduction: _midtransIsProduction,
+            ),
+          );
+        }
+        return;
+      }
 
       if (res != null && res['qr_string'] != null) {
         setState(() {
@@ -142,14 +187,16 @@ class _PaymentDialogState extends State<PaymentDialog> with SingleTickerProvider
         setState(() {
           _isLoadingQris = false;
           _qrisPaymentStatus = 'failed';
+          _qrisOrderId = null;
           _qrisErrorMsg = 'Gagal membuat QRIS Midtrans. Pastikan koneksi internet stabil.';
         });
       }
     } catch (e) {
-      if (!mounted) return;
+      if (!mounted || _tabController.index != 1 || _qrisOrderId != generatedOrderId) return;
       setState(() {
         _isLoadingQris = false;
         _qrisPaymentStatus = 'failed';
+        _qrisOrderId = null;
         _qrisErrorMsg = 'Kesalahan saat menghubungi Midtrans: $e';
       });
     }
@@ -163,7 +210,8 @@ class _PaymentDialogState extends State<PaymentDialog> with SingleTickerProvider
   }
 
   Future<void> _checkPaymentStatus({bool silent = false}) async {
-    if (!mounted || _isProcessing || _qrisOrderId == null) return;
+    final checkedOrderId = _qrisOrderId;
+    if (!mounted || _isProcessing || checkedOrderId == null) return;
 
     if (!silent) {
       setState(() => _isCheckingStatus = true);
@@ -173,12 +221,12 @@ class _PaymentDialogState extends State<PaymentDialog> with SingleTickerProvider
 
     try {
       final res = await SupabaseService.instance.checkMidtransStatus(
-        orderId: _qrisOrderId!,
+        orderId: checkedOrderId,
         serverKey: storeProvider.setting.midtransServerKey,
         isProduction: storeProvider.setting.midtransIsProduction,
       );
 
-      if (!mounted) return;
+      if (!mounted || _qrisOrderId != checkedOrderId) return;
 
       final status = res?['transaction_status']?.toString().toLowerCase();
       final fraudStatus = res?['fraud_status']?.toString().toLowerCase();
@@ -319,15 +367,9 @@ class _PaymentDialogState extends State<PaymentDialog> with SingleTickerProvider
     final posProvider = context.read<PosProvider>();
     final authProvider = context.read<AuthProvider>();
 
-    // If paying cash and a QRIS charge was previously created, cancel the pending QRIS
-    if (method == 'tunai' && _qrisOrderId != null && _qrisPaymentStatus != 'paid') {
-      final orderIdToCancel = _qrisOrderId!;
-      final storeSetting = context.read<StoreProvider>().setting;
-      SupabaseService.instance.cancelMidtransTransaction(
-        orderId: orderIdToCancel,
-        serverKey: storeSetting.midtransServerKey,
-        isProduction: storeSetting.midtransIsProduction,
-      );
+    // If paying cash and a QRIS charge was previously created, cancel the pending QRIS first
+    if (method == 'tunai') {
+      await _cancelPendingQris();
     }
 
     try {

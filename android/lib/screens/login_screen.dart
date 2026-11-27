@@ -109,7 +109,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                     const SizedBox(height: 4),
                     const Text(
-                      'Aplikasi Kasir POS & Pemesanan Online',
+                      'Aplikasi Kasir POS',
                       textAlign: TextAlign.center,
                       style: TextStyle(fontSize: 12, color: Color(0xFF64748B)),
                     ),

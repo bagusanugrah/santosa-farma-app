@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:pdf/pdf.dart';
+import 'package:printing/printing.dart';
 import '../models/transaction.dart';
 import '../services/printer_service.dart';
 
@@ -172,17 +174,57 @@ class ReceiptDialog extends StatelessWidget {
       actions: [
         OutlinedButton.icon(
           icon: const Icon(Icons.share, size: 18),
-          label: const Text('Bagikan PDF'),
+          label: const Text('Bagikan'),
           onPressed: () {
             PrinterService.instance.shareReceiptPdf(transaction);
           },
         ),
+        OutlinedButton.icon(
+          icon: const Icon(Icons.download, size: 18),
+          label: const Text('Simpan PDF'),
+          onPressed: () async {
+            try {
+              final savedPath = await PrinterService.instance.saveReceiptPdf(transaction);
+              if (savedPath != null && context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Struk PDF (${transaction.invoiceNo}) berhasil disimpan.'),
+                    backgroundColor: const Color(0xFF0891B2),
+                  ),
+                );
+              }
+            } catch (e) {
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Gagal menyimpan struk PDF: $e'), backgroundColor: Colors.red),
+                );
+              }
+            }
+          },
+        ),
         FilledButton.icon(
           style: FilledButton.styleFrom(backgroundColor: const Color(0xFF0891B2)),
-          icon: const Icon(Icons.picture_as_pdf, size: 18),
-          label: const Text('Cetak / Simpan PDF'),
+          icon: const Icon(Icons.print, size: 18),
+          label: const Text('Preview / Cetak'),
           onPressed: () {
-            PrinterService.instance.printReceipt(transaction);
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => Scaffold(
+                  appBar: AppBar(
+                    title: Text('Struk ${transaction.invoiceNo}'),
+                  ),
+                  body: PdfPreview(
+                    build: (_) => PrinterService.instance.generateReceiptPdf(transaction),
+                    initialPageFormat: PdfPageFormat.roll80,
+                    canChangePageFormat: false,
+                    canChangeOrientation: false,
+                    canDebug: false,
+                    dynamicLayout: false,
+                    pdfFileName: 'Struk_${transaction.invoiceNo}.pdf',
+                  ),
+                ),
+              ),
+            );
           },
         ),
         TextButton(
