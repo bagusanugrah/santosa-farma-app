@@ -334,7 +334,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       builder: (_) => AlertDialog(
         title: const Text('⚠️ PERINGATAN: Reset Pabrik', style: TextStyle(color: Colors.red)),
         content: const Text(
-          'Tindakan ini akan MENGHAPUS SEMUA TRANSAKSI dan mereset katalog obat ke data pabrik bawaan. '
+          'Tindakan ini akan MENGHAPUS SEMUA TRANSAKSI, akun pelanggan web, seluruh katalog obat & fotonya di storage, serta konfigurasi Midtrans. '
           'Tindakan ini TIDAK DAPAT DIBATALKAN!\n\nApakah Anda benar-benar yakin?',
         ),
         actions: [
@@ -354,9 +354,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
     try {
       await SupabaseService.instance.factoryReset();
       if (mounted) {
+        _midtransClientKeyCtrl.clear();
+        _midtransServerKeyCtrl.clear();
+        setState(() => _midtransIsProduction = false);
+        await context.read<StoreProvider>().loadStatus();
+      }
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Reset pabrik selesai. Seluruh data transaksi dibersihkan.'),
+            content: Text('Reset pabrik selesai. Transaksi, pelanggan, produk, dan Midtrans telah dibersihkan.'),
             backgroundColor: Colors.red,
           ),
         );
@@ -969,7 +975,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           iconBg: const Color(0xFFFEF2F2),
                           title: 'Reset Pabrik (Factory Reset)',
                           titleColor: Colors.red,
-                          subtitle: 'Hapus seluruh transaksi dan kembalikan stok obat ke data awal',
+                          subtitle: 'Hapus transaksi, pelanggan web, seluruh obat & foto, serta konfigurasi Midtrans',
                           actionButton: FilledButton(
                             style: FilledButton.styleFrom(backgroundColor: Colors.red),
                             onPressed: _isResetting ? null : _handleFactoryReset,

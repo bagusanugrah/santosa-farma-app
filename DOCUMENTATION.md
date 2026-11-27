@@ -270,7 +270,7 @@ Definisi utama ada di `supabase_schema.sql`, ditambah 2 file migrasi (`supabase_
   - **Backup:** Mengekspor tabel `products`, `transactions`, `transaction_items`, `store_settings`, dan `customers` ke file JSON, serta mengunduh seluruh foto produk aktif ke folder `images/` di dalam file `.zip` (`backup_santosa_farma_YYYYMMDD_HHmmss.zip`).
   - **Restore:** Menerima file `.zip` atau `.json`, menghapus seluruh gambar lama di Supabase Storage terlebih dahulu (`clearAllProductImages`), mengunggah ulang seluruh file biner gambar dari ZIP ke bucket `products`, menyinkronkan data tabel & katalog produk sesuai isi backup, lalu menjalankan `cleanupOrphanProductImages()` sebagai jaring pengaman.
 - **Pembersihan Storage Otomatis (`addProduct`, `updateProduct`, `deleteProduct`, `factoryReset`):** setiap perubahan foto obat, penghapusan obat, maupun Factory Reset otomatis menghapus gambar lama/tidak terpakai dari storage tanpa tombol manual.
-- **Factory Reset (`factoryReset`):** menghapus `transaction_items`, `transactions`, `otp_codes`, `password_resets`, mereset `store_settings`, mengisi ulang 12 produk seed standar, dan mengosongkan seluruh gambar di storage.
+- **Factory Reset (`factoryReset`):** menghapus `transaction_items`, `transactions`, `otp_codes`, `password_resets`, `customers`, dan seluruh `products`, mereset status `store_settings` serta mengosongkan konfigurasi Midtrans (tetap mempertahankan `users`, Fonnte WA, dan SMTP Email), serta mengosongkan seluruh gambar di storage.
 
 ---
 

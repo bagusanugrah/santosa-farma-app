@@ -1030,40 +1030,28 @@ class SupabaseService {
   }
 
   Future<void> factoryReset() async {
-    // 1. Delete all transactions and items
+    final now = DateTime.now().toIso8601String();
+
+    // 1. Hapus seluruh transaksi, item, OTP, reset password, pelanggan web, dan katalog obat
     await client.from('transaction_items').delete().neq('id', 0);
     await client.from('transactions').delete().neq('id', 0);
     await client.from('otp_codes').delete().neq('id', 0);
     await client.from('password_resets').delete().neq('id', 0);
+    await client.from('customers').delete().neq('id', 0);
+    await client.from('products').delete().neq('id', 0);
 
-    // 2. Reset store settings
+    // 2. Reset status toko & hapus konfigurasi Midtrans (tetap pertahankan Fonnte & SMTP)
     await client.from('store_settings').update({
       'is_open': true,
       'online_orders_enabled': false,
-      'last_opened_at': DateTime.now().toIso8601String(),
+      'last_opened_at': now,
+      'midtrans_client_key': '',
+      'midtrans_server_key': '',
+      'midtrans_is_production': false,
+      'updated_at': now,
     }).eq('id', 1);
 
-    // 3. Reset product stock to standard seed
-    await client.from('products').delete().neq('id', 0);
-
-    final seedProducts = [
-      {'name': 'Amoxicillin 500mg Strip (10 Kaplet)', 'category': 'Antibiotik', 'price': 12000, 'stock': 50, 'description': 'Antibiotik untuk mengobati infeksi bakteri.'},
-      {'name': 'Antasida Doen Tablet Kunyah', 'category': 'Pencernaan', 'price': 6000, 'stock': 80, 'description': 'Meredakan sakit maag dan asam lambung.'},
-      {'name': 'Betadine Antiseptic Solution 30ml', 'category': 'P3K', 'price': 32000, 'stock': 35, 'description': 'Cairan antiseptik pembersih luka.'},
-      {'name': 'Bodrex Sakit Kepala Strip (20 Tablet)', 'category': 'Analgesik', 'price': 11000, 'stock': 100, 'description': 'Meredakan sakit kepala dan penurun demam.'},
-      {'name': 'CDR Vitamin C Effervescent (10 Tablet)', 'category': 'Vitamin', 'price': 48000, 'stock': 40, 'description': 'Suplemen kalsium dan vitamin C, D, B6.'},
-      {'name': 'Combantrin Jeruk 125mg Suspensi 10ml', 'category': 'Obat Cacing', 'price': 21000, 'stock': 25, 'description': 'Obat cacing untuk membasmi cacing.'},
-      {'name': 'Decolgen Strip (4 Tablet)', 'category': 'Flu & Batuk', 'price': 4500, 'stock': 75, 'description': 'Meringankan gejala flu dan hidung tersumbat.'},
-      {'name': 'Diapet Kapsul (Box 25 Strip)', 'category': 'Pencernaan', 'price': 7000, 'stock': 90, 'description': 'Membantu memadatkan feses dan meredakan diare.'},
-      {'name': 'Enervon-C Multivitamin Strip (4 Tablet)', 'category': 'Vitamin', 'price': 8500, 'stock': 120, 'description': 'Kombinasi vitamin C dan B kompleks.'},
-      {'name': 'Hansaplast Plester Luka (10 Lembar)', 'category': 'P3K', 'price': 7500, 'stock': 150, 'description': 'Plester elastis pelindung luka.'},
-      {'name': 'Imboost Force Tablet Strip (10 Kaplet)', 'category': 'Daya Tahan Tubuh', 'price': 85000, 'stock': 30, 'description': 'Suplemen imunomodulator.'},
-      {'name': 'Minyak Kayu Putih Cap Lang 60ml', 'category': 'Minyak Angin', 'price': 24000, 'stock': 60, 'description': 'Meredakan perut kembung dan masuk angin.'},
-    ];
-
-    await client.from('products').insert(seedProducts);
-
-    // 4. Hapus seluruh file gambar di storage agar kembali bersih total
+    // 3. Hapus seluruh file gambar di storage agar kembali bersih total
     await clearAllProductImages();
   }
 }
