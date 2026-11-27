@@ -479,17 +479,28 @@ class _WebOrdersScreenState extends State<WebOrdersScreen> with SingleTickerProv
                                               onPressed: () => _confirmDeleteOrder(context, order, webOrdersProvider),
                                             ),
                                             const SizedBox(width: 4),
-                                            FilledButton.icon(
-                                              icon: const Icon(Icons.point_of_sale, size: 16),
-                                              label: const Text('Edit & Bayar di Kasir'),
-                                              style: FilledButton.styleFrom(backgroundColor: const Color(0xFF0891B2)),
-                                              onPressed: () {
-                                                showDialog(
-                                                  context: context,
-                                                  builder: (_) => ProcessWebOrderDialog(order: order),
-                                                );
-                                              },
-                                            ),
+                                            if (order.isPayAtPharmacy)
+                                              FilledButton.icon(
+                                                icon: const Icon(Icons.point_of_sale, size: 16),
+                                                label: const Text('Edit & Bayar di Kasir'),
+                                                style: FilledButton.styleFrom(backgroundColor: const Color(0xFF0891B2)),
+                                                onPressed: () {
+                                                  showDialog(
+                                                    context: context,
+                                                    builder: (_) => ProcessWebOrderDialog(order: order),
+                                                  );
+                                                },
+                                              )
+                                            else
+                                              OutlinedButton.icon(
+                                                icon: const Icon(Icons.sync, size: 16),
+                                                label: const Text('Cek Status Midtrans'),
+                                                style: OutlinedButton.styleFrom(
+                                                  foregroundColor: const Color(0xFFB45309),
+                                                  side: const BorderSide(color: Color(0xFFFCD34D)),
+                                                ),
+                                                onPressed: () => webOrdersProvider.loadOrders(),
+                                              ),
                                           ],
                                           if (order.status == 'paid')
                                             FilledButton.icon(

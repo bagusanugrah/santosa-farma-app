@@ -65,13 +65,27 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
         return;
       }
 
-      // 2. If order is PENDING (Bayar di Apotek) -> Open ProcessWebOrderDialog for review & edit!
+      // 2. If order is PENDING -> Only Bayar di Kasir can be edited/paid at cashier
       if (trx.status == 'pending') {
-        Navigator.of(context).pop();
-        showDialog(
-          context: context,
-          builder: (_) => ProcessWebOrderDialog(order: trx),
-        );
+        if (trx.isPayAtPharmacy) {
+          Navigator.of(context).pop();
+          showDialog(
+            context: context,
+            builder: (_) => ProcessWebOrderDialog(order: trx),
+          );
+        } else {
+          await context.read<WebOrdersProvider>().loadOrders();
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(
+                  'Pesanan ${trx.invoiceNo} menunggu pembayaran online (Midtrans) dan tidak bisa diproses di kasir.',
+                ),
+                backgroundColor: Colors.orange[800],
+              ),
+            );
+          }
+        }
         return;
       }
 
