@@ -185,6 +185,12 @@ BEGIN
 EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
 
+DO $$
+BEGIN
+    ALTER PUBLICATION supabase_realtime ADD TABLE public.customers;
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
 -- ============================================================
 -- 4. ROW LEVEL SECURITY (RLS) POLICIES
 -- ============================================================

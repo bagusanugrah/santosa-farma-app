@@ -3,26 +3,42 @@ import { supabaseAdmin } from '@/lib/supabase';
 import { getCustomerFromAuthHeader } from '@/lib/server-auth';
 
 export const dynamic = 'force-dynamic';
+export const fetchCache = 'force-no-store';
 
 export async function GET(req: Request) {
   try {
     const customer = await getCustomerFromAuthHeader(req);
     if (!customer) {
-      return NextResponse.json({ status: 'error', message: 'Unauthenticated.' }, { status: 401 });
+      return NextResponse.json(
+        { status: 'error', message: 'Unauthenticated.' },
+        {
+          status: 401,
+          headers: {
+            'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0',
+          },
+        }
+      );
     }
 
-    return NextResponse.json({
-      status: 'success',
-      data: {
-        id: customer.id,
-        name: customer.name,
-        phone: customer.phone,
-        phone_verified: Boolean(customer.phone_verified_at),
-        email: customer.email,
-        email_verified: Boolean(customer.email_verified_at),
-        created_at: customer.created_at,
+    return NextResponse.json(
+      {
+        status: 'success',
+        data: {
+          id: customer.id,
+          name: customer.name,
+          phone: customer.phone,
+          phone_verified: Boolean(customer.phone_verified_at),
+          email: customer.email,
+          email_verified: Boolean(customer.email_verified_at),
+          created_at: customer.created_at,
+        },
       },
-    });
+      {
+        headers: {
+          'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0',
+        },
+      }
+    );
   } catch (err: any) {
     return NextResponse.json(
       { status: 'error', message: err.message || 'Terjadi kesalahan server.' },
