@@ -163,18 +163,19 @@ export default function CatalogPage() {
             </div>
 
             {/* Sorting & Per Page controls */}
-            <div className="flex items-center space-x-2 sm:space-x-3 w-full md:w-auto justify-between sm:justify-end">
+            <div className="flex flex-wrap items-center justify-between sm:justify-end gap-2 sm:gap-3 w-full md:w-auto">
               {/* Sort selector */}
-              <div className="flex items-center space-x-1.5 sm:space-x-2 text-xs font-semibold text-slate-600">
-                <SlidersHorizontal className="w-3.5 h-3.5 text-slate-400" />
-                <span>Urutkan:</span>
+              <div className="flex items-center gap-1.5 sm:gap-2 text-xs font-semibold text-slate-600 min-w-0 flex-1 sm:flex-initial">
+                <SlidersHorizontal className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                <span className="sr-only sm:not-sr-only shrink-0">Urutkan:</span>
                 <select
+                  aria-label="Urutkan produk"
                   value={sort}
                   onChange={(e) => {
                     setSort(e.target.value);
                     setPage(1);
                   }}
-                  className="bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 font-medium text-xs text-slate-800 outline-none focus:border-brand-500"
+                  className="bg-slate-50 border border-slate-200 rounded-lg px-2 sm:px-2.5 py-1.5 font-medium text-xs text-slate-800 outline-none focus:border-brand-500 min-w-0 w-full sm:w-auto truncate"
                 >
                   <option value="alphabet">Abjad (A - Z)</option>
                   <option value="name_desc">Abjad (Z - A)</option>
@@ -185,9 +186,10 @@ export default function CatalogPage() {
               </div>
 
               {/* Per Page (10 / 25 / 50 / 100) */}
-              <div className="flex items-center space-x-1.5 sm:space-x-2 text-xs font-semibold text-slate-600 border-l border-slate-200 pl-2 sm:pl-3">
-                <span>Tampil:</span>
+              <div className="flex items-center gap-1.5 sm:gap-2 text-xs font-semibold text-slate-600 shrink-0 sm:border-l sm:border-slate-200 sm:pl-3">
+                <span className="shrink-0">Tampil:</span>
                 <select
+                  aria-label="Jumlah produk per halaman"
                   value={perPage}
                   onChange={(e) => handlePerPageChange(Number(e.target.value))}
                   className="bg-slate-50 border border-slate-200 rounded-lg px-2 py-1.5 font-medium text-xs text-slate-800 outline-none focus:border-brand-500"

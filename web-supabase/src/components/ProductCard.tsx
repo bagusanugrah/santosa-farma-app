@@ -45,25 +45,27 @@ export default function ProductCard({
           <span className="text-[11px] sm:text-xs font-medium text-slate-400">Apotek Santosa</span>
         </div>
 
-        {/* Category Badge */}
-        {product.category && (
-          <span className="absolute top-2 left-2 sm:top-2.5 sm:left-2.5 bg-white/95 backdrop-blur-sm text-slate-700 text-[10px] sm:text-[11px] font-semibold px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-md sm:rounded-lg border border-slate-200/60 shadow-xs truncate max-w-[100px] sm:max-w-none">
-            {product.category}
-          </span>
-        )}
+        {/* Top Badges */}
+        <div className="absolute top-2 inset-x-2 sm:top-2.5 sm:inset-x-2.5 flex items-start justify-between gap-1.5 pointer-events-none">
+          {product.category && (
+            <span className="bg-white/95 backdrop-blur-sm text-slate-700 text-[10px] sm:text-[11px] font-semibold px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-md sm:rounded-lg border border-slate-200/60 shadow-xs truncate min-w-0">
+              {product.category}
+            </span>
+          )}
 
-        {/* Stock Badge */}
-        <span
-          className={`absolute top-2 right-2 sm:top-2.5 sm:right-2.5 text-[10px] sm:text-[11px] font-bold px-1.5 py-0.5 sm:px-2 rounded-md sm:rounded-lg ${
-            isOutOfStock
-              ? 'bg-rose-100 text-rose-700 border border-rose-200'
-              : product.stock < 10
-              ? 'bg-amber-100 text-amber-800 border border-amber-200'
-              : 'bg-emerald-100 text-emerald-800 border border-emerald-200'
-          }`}
-        >
-          {isOutOfStock ? 'Habis' : `Stok: ${product.stock}`}
-        </span>
+          {/* Stock Badge */}
+          <span
+            className={`ml-auto shrink-0 text-[10px] sm:text-[11px] font-bold px-1.5 py-0.5 sm:px-2 rounded-md sm:rounded-lg ${
+              isOutOfStock
+                ? 'bg-rose-100 text-rose-700 border border-rose-200'
+                : product.stock < 10
+                ? 'bg-amber-100 text-amber-800 border border-amber-200'
+                : 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+            }`}
+          >
+            {isOutOfStock ? 'Habis' : `Stok: ${product.stock}`}
+          </span>
+        </div>
       </div>
 
       {/* Product Details */}
