@@ -389,15 +389,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
       builder: (_) => AlertDialog(
         title: const Text('⚠️ PERINGATAN: Reset Pabrik', style: TextStyle(color: Colors.red)),
         content: const Text(
-          'Tindakan ini akan MENGHAPUS SEMUA TRANSAKSI, akun pelanggan web, seluruh katalog obat & fotonya di storage, serta konfigurasi Midtrans. '
-          'Tindakan ini TIDAK DAPAT DIBATALKAN!\n\nApakah Anda benar-benar yakin?',
+          'Tindakan ini akan MENGHAPUS SEMUA TRANSAKSI, akun pelanggan web, seluruh katalog obat & fotonya di storage, serta konfigurasi Midtrans.\n\n'
+          'Sebagai pengaman, aplikasi akan membackup seluruh data ke file ZIP (default folder Download) terlebih dahulu sebelum reset dijalankan. '
+          'Jika penyimpanan backup dibatalkan, reset tidak akan dilakukan.',
         ),
         actions: [
           TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('Batal')),
           FilledButton(
             style: FilledButton.styleFrom(backgroundColor: Colors.red),
             onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Ya, Reset Semua Data'),
+            child: const Text('Backup & Reset Data'),
           ),
         ],
       ),
@@ -407,6 +408,22 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
     setState(() => _isResetting = true);
     try {
+      // Wajib simpan backup pengaman terlebih dahulu sebelum menghapus data
+      final backupPath = await BackupService.instance.saveBackupZipWithPicker(
+        fileNamePrefix: 'backup_sebelum_reset',
+        dialogTitle: 'Simpan Backup Pengaman Sebelum Reset',
+      );
+      if (backupPath == null) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Reset pabrik dibatalkan karena file backup pengaman belum disimpan.'),
+            ),
+          );
+        }
+        return;
+      }
+
       await SupabaseService.instance.factoryReset();
       if (mounted) {
         _midtransClientKeyCtrl.clear();
@@ -417,7 +434,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Reset pabrik selesai. Transaksi, pelanggan, produk, dan Midtrans telah dibersihkan.'),
+            content: Text('Backup pengaman tersimpan & reset pabrik selesai.'),
             backgroundColor: Colors.red,
           ),
         );

@@ -1020,12 +1020,20 @@ class SupabaseService {
     }
   }
 
+  int? _parseIntId(dynamic raw) {
+    if (raw == null) return null;
+    if (raw is int) return raw;
+    return int.tryParse(raw.toString());
+  }
+
   Future<int> restoreBackupData(
     Map<String, dynamic> backupJson, {
     Map<String, Uint8List>? images,
   }) async {
     // 0. Validasi ketat struktur backup SEBELUM menghapus gambar atau mengubah database
     validateBackupPayload(backupJson);
+
+    final data = backupJson['data'] as Map<String, dynamic>;
 
     // 1. Hapus SELURUH gambar lama yang ada di storage agar tidak ada file terbengkalai
     final wipedCount = await clearAllProductImages();
@@ -1048,55 +1056,79 @@ class SupabaseService {
       }
     }
 
-    final data = backupJson['data'] as Map<String, dynamic>? ?? {};
+    // 3. Bersihkan data lama dengan urutan child -> parent agar bebas bentrok FK/UNIQUE
+    await client.from('otp_codes').delete().neq('id', 0);
+    await client.from('password_resets').delete().neq('id', 0);
+    await client.from('transaction_items').delete().neq('id', 0);
+    await client.from('transactions').delete().neq('id', 0);
+    await client.from('customers').delete().neq('id', 0);
+    await client.from('products').delete().neq('id', 0);
 
-    // 3. Restore products & hapus produk tambahan yang tidak ada di backup
-    if (data['products'] != null && data['products'] is List) {
-      final backupProductIds = <int>{};
-      for (final p in data['products']) {
-        await client.from('products').upsert(p);
-        final idVal = p is Map ? (p['id'] is int ? p['id'] : int.tryParse(p['id']?.toString() ?? '')) : null;
-        if (idVal != null) {
-          backupProductIds.add(idVal);
-        }
-      }
-
-      final existingProducts = await client.from('products').select('id');
-      for (final row in (existingProducts as List)) {
-        final existingId = row['id'] is int ? row['id'] : int.tryParse(row['id']?.toString() ?? '');
-        if (existingId != null && !backupProductIds.contains(existingId)) {
-          await client.from('products').delete().eq('id', existingId);
-        }
-      }
+    // 4. Restore dalam urutan strict parent -> child:
+    //    store_settings -> products -> customers -> transactions -> transaction_items
+    final settingsList = data['store_settings'] as List;
+    if (settingsList.isNotEmpty) {
+      await client.from('store_settings').upsert(settingsList.first);
     }
 
-    // 4. Restore store settings
-    if (data['store_settings'] != null && data['store_settings'] is List && (data['store_settings'] as List).isNotEmpty) {
-      await client.from('store_settings').upsert(data['store_settings'][0]);
+    final restoredProductIds = <int>{};
+    for (final rawProd in (data['products'] as List)) {
+      final prodRow = Map<String, dynamic>.from(rawProd as Map);
+      await client.from('products').upsert(prodRow);
+      final pid = _parseIntId(prodRow['id']);
+      if (pid != null) restoredProductIds.add(pid);
     }
 
-    // 5. Restore transactions
-    if (data['transactions'] != null && data['transactions'] is List) {
-      for (final t in data['transactions']) {
-        await client.from('transactions').upsert(t);
+    final restoredCustomerIds = <int>{};
+    for (final rawCust in (data['customers'] as List)) {
+      final custRow = Map<String, dynamic>.from(rawCust as Map);
+      await client.from('customers').upsert(custRow);
+      final cid = _parseIntId(custRow['id']);
+      if (cid != null) restoredCustomerIds.add(cid);
+    }
+
+    final existingUsers = await client.from('users').select('id');
+    final existingUserIds = <int>{
+      for (final u in (existingUsers as List))
+        if (_parseIntId(u['id']) != null) _parseIntId(u['id'])!,
+    };
+
+    final restoredTransactionIds = <int>{};
+    for (final rawTrx in (data['transactions'] as List)) {
+      final trxRow = Map<String, dynamic>.from(rawTrx as Map);
+      final custId = _parseIntId(trxRow['customer_id']);
+      if (custId != null && !restoredCustomerIds.contains(custId)) {
+        trxRow['customer_id'] = null;
       }
-    }
-
-    // 6. Restore transaction items
-    if (data['transaction_items'] != null && data['transaction_items'] is List) {
-      for (final ti in data['transaction_items']) {
-        await client.from('transaction_items').upsert(ti);
+      final cashierId = _parseIntId(trxRow['cashier_id']);
+      if (cashierId != null && !existingUserIds.contains(cashierId)) {
+        trxRow['cashier_id'] = null;
       }
+
+      await client.from('transactions').upsert(trxRow);
+      final tid = _parseIntId(trxRow['id']);
+      if (tid != null) restoredTransactionIds.add(tid);
     }
 
-    // 7. Restore customers
-    if (data['customers'] != null && data['customers'] is List) {
-      for (final c in data['customers']) {
-        await client.from('customers').upsert(c);
+    for (final rawItem in (data['transaction_items'] as List)) {
+      final itemRow = Map<String, dynamic>.from(rawItem as Map);
+      final trxId = _parseIntId(itemRow['transaction_id']);
+      if (trxId == null || !restoredTransactionIds.contains(trxId)) {
+        continue;
       }
+      final prodId = _parseIntId(itemRow['product_id']);
+      if (prodId != null && !restoredProductIds.contains(prodId)) {
+        itemRow['product_id'] = null;
+      }
+      await client.from('transaction_items').upsert(itemRow);
     }
 
-    // 8. Jaring pengaman: pastikan hanya gambar yang terhubung ke products yang tersisa di storage
+    // 5. Sinkronkan sequence BIGSERIAL bila dijalankan pada schema yang mendukung fungsi RPC
+    try {
+      await client.rpc('sync_all_sequences');
+    } catch (_) {}
+
+    // 6. Jaring pengaman: pastikan hanya gambar yang terhubung ke products yang tersisa di storage
     final extraOrphans = await cleanupOrphanProductImages();
     return wipedCount + extraOrphans;
   }

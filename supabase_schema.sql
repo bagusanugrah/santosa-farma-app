@@ -302,3 +302,19 @@ CREATE POLICY "Public Delete Products Storage"
 ON storage.objects FOR DELETE
 TO public
 USING (bucket_id = 'products');
+
+-- ============================================================
+-- 7. HELPER FUNCTION: SINKRONISASI SEQUENCE SETELAH RESTORE
+-- ============================================================
+CREATE OR REPLACE FUNCTION public.sync_all_sequences()
+RETURNS VOID
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+BEGIN
+    PERFORM setval(pg_get_serial_sequence('public.products', 'id'), COALESCE((SELECT MAX(id) FROM public.products), 1), (SELECT EXISTS (SELECT 1 FROM public.products)));
+    PERFORM setval(pg_get_serial_sequence('public.customers', 'id'), COALESCE((SELECT MAX(id) FROM public.customers), 1), (SELECT EXISTS (SELECT 1 FROM public.customers)));
+    PERFORM setval(pg_get_serial_sequence('public.transactions', 'id'), COALESCE((SELECT MAX(id) FROM public.transactions), 1), (SELECT EXISTS (SELECT 1 FROM public.transactions)));
+    PERFORM setval(pg_get_serial_sequence('public.transaction_items', 'id'), COALESCE((SELECT MAX(id) FROM public.transaction_items), 1), (SELECT EXISTS (SELECT 1 FROM public.transaction_items)));
+END;
+$$;

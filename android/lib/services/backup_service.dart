@@ -12,7 +12,9 @@ class BackupService {
   static final BackupService instance = BackupService._internal();
   BackupService._internal();
 
-  Future<({Uint8List bytes, String fileName})> _buildBackupZipBytes() async {
+  Future<({Uint8List bytes, String fileName})> _buildBackupZipBytes({
+    String fileNamePrefix = 'backup_santosa_farma',
+  }) async {
     final backupData = await SupabaseService.instance.exportBackupData();
     final jsonString = const JsonEncoder.withIndent('  ').convert(backupData);
     final jsonBytes = utf8.encode(jsonString);
@@ -47,7 +49,7 @@ class BackupService {
 
     final zipEncoder = ZipEncoder();
     final zipBytes = Uint8List.fromList(zipEncoder.encode(archive) ?? []);
-    return (bytes: zipBytes, fileName: 'backup_santosa_farma_$dateStr.zip');
+    return (bytes: zipBytes, fileName: '${fileNamePrefix}_$dateStr.zip');
   }
 
   Future<File> createBackupZip() async {
@@ -60,10 +62,13 @@ class BackupService {
 
   /// Membuka File Manager sistem Android (default Download) untuk menyimpan file ZIP backup
   /// sehingga pengguna tetap bisa mengganti folder penyimpanan bila diinginkan.
-  Future<String?> saveBackupZipWithPicker() async {
-    final bundle = await _buildBackupZipBytes();
+  Future<String?> saveBackupZipWithPicker({
+    String fileNamePrefix = 'backup_santosa_farma',
+    String dialogTitle = 'Simpan Backup Database',
+  }) async {
+    final bundle = await _buildBackupZipBytes(fileNamePrefix: fileNamePrefix);
     return FilePicker.saveFile(
-      dialogTitle: 'Simpan Backup Database',
+      dialogTitle: dialogTitle,
       fileName: bundle.fileName,
       type: FileType.custom,
       allowedExtensions: const ['zip'],
