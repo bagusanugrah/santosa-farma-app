@@ -701,14 +701,6 @@ class SupabaseService {
   // ==========================================
   // WEB ORDERS (Pesanan Online Realtime)
   // ==========================================
-  DateTime? _parseMidtransExpiry(String? raw) {
-    if (raw == null || raw.trim().isEmpty) return null;
-    final trimmed = raw.trim();
-    final hasTz = RegExp(r'([zZ]|[+-]\d{2}:?\d{2})$').hasMatch(trimmed);
-    final isoLike = trimmed.contains('T') ? trimmed : trimmed.replaceFirst(' ', 'T');
-    return DateTime.tryParse(hasTz ? isoLike : '$isoLike+07:00');
-  }
-
   Future<List<TransactionModel>> getWebOrders() async {
     final res = await client
         .from('transactions')
@@ -719,7 +711,7 @@ class SupabaseService {
 
     final orders = (res as List).map((t) => TransactionModel.fromMap(t)).toList();
 
-    // Auto-cleanup pesanan Midtrans yang sudah melewati batas bayar (expired/cancel/deny)
+    // Auto-cleanup pesanan Midtrans yang dilaporkan expire/cancel/deny oleh Midtrans
     final pendingOnline = orders.where((o) =>
         o.status == 'expired' ||
         o.status == 'gagal' ||
@@ -755,21 +747,11 @@ class SupabaseService {
           );
           if (statusData != null) {
             final tStatus = (statusData['transaction_status'] ?? '').toString();
-            final expiryTime = _parseMidtransExpiry(statusData['expiry_time']?.toString());
-            final isPaid = tStatus == 'settlement' || tStatus == 'capture';
             final isExpiredOrFailed = tStatus == 'expire' ||
                 tStatus == 'cancel' ||
-                tStatus == 'deny' ||
-                (!isPaid && expiryTime != null && !expiryTime.isAfter(DateTime.now()));
+                tStatus == 'deny';
 
             if (isExpiredOrFailed) {
-              if (tStatus == 'pending') {
-                await cancelMidtransTransaction(
-                  orderId: order.invoiceNo,
-                  serverKey: storeSetting.midtransServerKey,
-                  isProduction: storeSetting.midtransIsProduction,
-                );
-              }
               await cancelWebOrder(order.id);
               removedIds.add(order.id);
             }

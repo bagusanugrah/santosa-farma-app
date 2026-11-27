@@ -6,17 +6,6 @@ export function isPharmacyPaymentMethod(method?: string | null): boolean {
   return method === 'pharmacy' || method === 'bayar_di_apotek';
 }
 
-export function parseMidtransExpiryMs(expiryTime?: string | null): number | null {
-  if (!expiryTime || typeof expiryTime !== 'string') return null;
-  const trimmed = expiryTime.trim();
-  if (!trimmed) return null;
-  const hasTz = /[zZ]|[+-]\d{2}:?\d{2}$/.test(trimmed);
-  const isoLike = trimmed.includes('T') ? trimmed : trimmed.replace(' ', 'T');
-  const normalized = hasTz ? isoLike : `${isoLike}+07:00`;
-  const ms = Date.parse(normalized);
-  return Number.isNaN(ms) ? null : ms;
-}
-
 export function isMidtransStatusPaid(midtransData: any): boolean {
   const tStatus = midtransData?.transaction_status;
   const fStatus = midtransData?.fraud_status;
@@ -28,17 +17,7 @@ export function isMidtransStatusPaid(midtransData: any): boolean {
 
 export function isMidtransStatusExpiredOrFailed(midtransData: any): boolean {
   const tStatus = midtransData?.transaction_status;
-  if (['expire', 'cancel', 'deny'].includes(tStatus)) {
-    return true;
-  }
-  if (isMidtransStatusPaid(midtransData)) {
-    return false;
-  }
-  const expiryMs = parseMidtransExpiryMs(midtransData?.expiry_time);
-  if (expiryMs !== null && expiryMs <= Date.now()) {
-    return true;
-  }
-  return false;
+  return ['expire', 'cancel', 'deny'].includes(tStatus);
 }
 
 export function mapMidtransPaymentMethod(
@@ -211,11 +190,6 @@ export async function syncAndCleanPendingMidtransOrder(
       const midtransData = await midtransRes.json();
 
       if (midtransData?.status_code === '404') {
-        const createdMs = Date.parse(trx.created_at || '');
-        if (!Number.isNaN(createdMs) && Date.now() - createdMs > 24 * 60 * 60 * 1000) {
-          await deletePendingTransaction(trx.id);
-          return { state: 'deleted' };
-        }
         return { state: 'pending', paymentDetails: null };
       }
 
@@ -233,20 +207,6 @@ export async function syncAndCleanPendingMidtransOrder(
       }
 
       if (isMidtransStatusExpiredOrFailed(midtransData)) {
-        if (midtransData?.transaction_status === 'pending') {
-          try {
-            await fetch(
-              `${statusBaseUrl}/v2/${encodeURIComponent(trx.invoice_no)}/cancel`,
-              {
-                method: 'POST',
-                headers: {
-                  Accept: 'application/json',
-                  Authorization: authHeader,
-                },
-              }
-            );
-          } catch (_) {}
-        }
         await deletePendingTransaction(trx.id);
         return { state: 'deleted' };
       }
@@ -255,14 +215,6 @@ export async function syncAndCleanPendingMidtransOrder(
         state: 'pending',
         paymentDetails: extractMidtransPaymentDetails(midtransData),
       };
-    }
-
-    if (midtransRes.status === 404) {
-      const createdMs = Date.parse(trx.created_at || '');
-      if (!Number.isNaN(createdMs) && Date.now() - createdMs > 24 * 60 * 60 * 1000) {
-        await deletePendingTransaction(trx.id);
-        return { state: 'deleted' };
-      }
     }
   } catch (err) {
     console.error('[syncAndCleanPendingMidtransOrder error]', err);

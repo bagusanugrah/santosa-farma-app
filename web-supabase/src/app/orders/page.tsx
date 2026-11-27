@@ -117,40 +117,6 @@ export default function MyOrdersPage() {
     [token]
   );
 
-  // Auto-clean orders when a displayed Midtrans expiry_time passes while page is open
-  useEffect(() => {
-    const activePendingInvoices = new Set(
-      orders.filter((o) => o.status === 'pending').map((o) => o.invoice_no)
-    );
-    const entries = Object.entries(paymentDetailsMap).filter(([inv]) =>
-      activePendingInvoices.has(inv)
-    );
-    if (entries.length === 0) return;
-
-    const parseExpiryMs = (raw?: string | null) => {
-      if (!raw) return null;
-      const trimmed = raw.trim();
-      if (!trimmed) return null;
-      const hasTz = /[zZ]|[+-]\d{2}:?\d{2}$/.test(trimmed);
-      const iso = trimmed.includes('T') ? trimmed : trimmed.replace(' ', 'T');
-      const ms = Date.parse(hasTz ? iso : `${iso}+07:00`);
-      return Number.isNaN(ms) ? null : ms;
-    };
-
-    const interval = setInterval(() => {
-      const now = Date.now();
-      const hasExpired = entries.some(([, detail]) => {
-        const ms = parseExpiryMs(detail?.expiry_time);
-        return ms !== null && ms <= now;
-      });
-      if (hasExpired) {
-        fetchOrders();
-      }
-    }, 15000);
-
-    return () => clearInterval(interval);
-  }, [orders, paymentDetailsMap, fetchOrders]);
-
   useEffect(() => {
     if (authLoading) return;
 
@@ -479,6 +445,8 @@ export default function MyOrdersPage() {
                         <span>
                           {paymentDetailsMap[order.invoice_no]?.bank_name
                             ? `Virtual Account ${paymentDetailsMap[order.invoice_no].bank_name}`
+                            : paymentDetailsMap[order.invoice_no]?.qr_url
+                            ? 'Pembayaran QRIS Midtrans'
                             : 'Pembayaran Online Midtrans'}
                         </span>
                       </div>
@@ -509,6 +477,20 @@ export default function MyOrdersPage() {
                       <div className="bg-white border border-amber-200 rounded-xl p-2.5 text-xs space-y-1">
                         <div><span className="text-slate-400">Kode Perusahaan (Biller): </span><span className="font-mono font-bold text-slate-900">{paymentDetailsMap[order.invoice_no].biller_code}</span></div>
                         <div><span className="text-slate-400">Kode Pembayaran (Bill Key): </span><span className="font-mono font-bold text-slate-900">{paymentDetailsMap[order.invoice_no].bill_key}</span></div>
+                      </div>
+                    ) : paymentDetailsMap[order.invoice_no]?.qr_url ? (
+                      <div className="bg-white border border-amber-200 rounded-xl p-3 flex flex-col sm:flex-row items-center gap-3">
+                        <img
+                          src={paymentDetailsMap[order.invoice_no].qr_url}
+                          alt={`QRIS ${order.invoice_no}`}
+                          className="w-28 h-28 object-contain rounded-lg border border-slate-100 bg-white flex-shrink-0"
+                        />
+                        <div className="text-xs text-amber-900 space-y-1 text-center sm:text-left">
+                          <p className="font-bold">Scan QRIS di atas untuk menyelesaikan pembayaran.</p>
+                          <p className="text-[11px] text-amber-700">
+                            Setelah membayar, klik <strong>Cek Status Bayar</strong> atau buka kembali lewat tombol <strong>Bayar Sekarang</strong>.
+                          </p>
+                        </div>
                       </div>
                     ) : (
                       <div className="flex items-start space-x-2 text-xs text-amber-800">

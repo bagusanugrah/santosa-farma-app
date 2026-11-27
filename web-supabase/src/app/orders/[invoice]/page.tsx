@@ -148,24 +148,6 @@ export default function OrderDetailPage() {
     };
   }, [user, token, authLoading, invoiceNo, router]);
 
-  useEffect(() => {
-    if (!order || order.status !== 'pending' || !paymentDetails?.expiry_time) return;
-    const trimmed = String(paymentDetails.expiry_time).trim();
-    if (!trimmed) return;
-    const hasTz = /[zZ]|[+-]\d{2}:?\d{2}$/.test(trimmed);
-    const iso = trimmed.includes('T') ? trimmed : trimmed.replace(' ', 'T');
-    const expiryMs = Date.parse(hasTz ? iso : `${iso}+07:00`);
-    if (Number.isNaN(expiryMs)) return;
-
-    const interval = setInterval(() => {
-      if (Date.now() >= expiryMs) {
-        fetchOrder();
-      }
-    }, 15000);
-
-    return () => clearInterval(interval);
-  }, [order, paymentDetails]);
-
   const handlePayOnline = async () => {
     if (!token || !order) return;
     setPaying(true);
@@ -374,6 +356,8 @@ export default function OrderDetailPage() {
                   <span>
                     {paymentDetails?.bank_name
                       ? `Virtual Account ${paymentDetails.bank_name}`
+                      : paymentDetails?.qr_url
+                      ? 'Pembayaran QRIS Midtrans'
                       : 'Pembayaran Online Midtrans'}
                   </span>
                 </div>
@@ -404,6 +388,20 @@ export default function OrderDetailPage() {
                 <div className="bg-white border border-amber-200 rounded-xl p-3 text-xs space-y-1">
                   <div><span className="text-slate-400">Kode Perusahaan (Biller): </span><span className="font-mono font-bold text-slate-900">{paymentDetails.biller_code}</span></div>
                   <div><span className="text-slate-400">Kode Pembayaran (Bill Key): </span><span className="font-mono font-bold text-slate-900">{paymentDetails.bill_key}</span></div>
+                </div>
+              ) : paymentDetails?.qr_url ? (
+                <div className="bg-white border border-amber-200 rounded-xl p-3.5 flex flex-col sm:flex-row items-center gap-4">
+                  <img
+                    src={paymentDetails.qr_url}
+                    alt={`QRIS ${order.invoice_no}`}
+                    className="w-32 h-32 object-contain rounded-lg border border-slate-100 bg-white flex-shrink-0"
+                  />
+                  <div className="text-xs text-amber-900 space-y-1 text-center sm:text-left">
+                    <p className="font-bold">Scan QRIS di atas untuk menyelesaikan pembayaran.</p>
+                    <p className="text-[11px] text-amber-700">
+                      Setelah membayar, klik <strong>Cek Status</strong> atau buka popup lewat tombol <strong>Bayar Sekarang</strong>.
+                    </p>
+                  </div>
                 </div>
               ) : (
                 <div className="flex items-start space-x-2 text-xs text-amber-800">
