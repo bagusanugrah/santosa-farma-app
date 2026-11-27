@@ -828,7 +828,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 // Profil & Kontak Apotek Card
                 Card(
                   child: Padding(
-                    padding: const EdgeInsets.all(20),
+                    padding: EdgeInsets.all(isCompact ? 16 : 20),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -900,7 +900,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 // Super Admin Integration Settings Card
                 Card(
                   child: Padding(
-                    padding: const EdgeInsets.all(20),
+                    padding: EdgeInsets.all(isCompact ? 16 : 20),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -962,7 +962,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         Row(
                           children: [
                             Expanded(
-                              flex: 3,
+                              flex: 2,
                               child: _buildConfigField(
                                 controller: _mailHostCtrl,
                                 label: 'SMTP Host',

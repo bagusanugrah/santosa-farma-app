@@ -23,7 +23,8 @@ class AdaptiveScaffold extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
-    final isTablet = screenWidth >= 800;
+    final isTablet = screenWidth >= 600;
+    final isExtendedRail = screenWidth >= 1100;
     final webOrdersProvider = context.watch<WebOrdersProvider>();
     final authProvider = context.watch<AuthProvider>();
     final isSuperAdmin = authProvider.currentUser?.isSuperAdmin == true;
@@ -228,7 +229,8 @@ class AdaptiveScaffold extends StatelessWidget {
             NavigationRail(
               selectedIndex: currentIndex,
               onDestinationSelected: onNavigationChanged,
-              labelType: NavigationRailLabelType.all,
+              extended: isExtendedRail,
+              labelType: isExtendedRail ? NavigationRailLabelType.none : NavigationRailLabelType.all,
               destinations: railDestinations,
             ),
             const VerticalDivider(thickness: 1, width: 1, color: Color(0xFFE2E8F0)),

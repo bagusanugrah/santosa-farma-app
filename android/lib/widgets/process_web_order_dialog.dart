@@ -292,13 +292,17 @@ class _ProcessWebOrderDialogState extends State<ProcessWebOrderDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final mediaSize = MediaQuery.of(context).size;
+    final maxDialogHeight = (mediaSize.height * 0.90).clamp(320.0, 720.0);
+    final isCompact = mediaSize.width < 460 || mediaSize.height < 520;
+
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-      insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+      insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
       child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 620, maxHeight: 720),
+        constraints: BoxConstraints(maxWidth: 620, maxHeight: maxDialogHeight),
         child: Padding(
-          padding: const EdgeInsets.all(20),
+          padding: EdgeInsets.all(isCompact ? 16 : 20),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -375,23 +379,34 @@ class _ProcessWebOrderDialogState extends State<ProcessWebOrderDialog> {
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(color: const Color(0xFFE2E8F0)),
                 ),
-                child: Row(
+                child: Wrap(
+                  spacing: 12,
+                  runSpacing: 4,
+                  crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
-                    const Icon(Icons.person_outline, size: 16, color: Color(0xFF64748B)),
-                    const SizedBox(width: 6),
-                    Expanded(
-                      child: Text(
-                        widget.order.customerName ?? 'Pelanggan Web',
-                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
-                      ),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.person_outline, size: 16, color: Color(0xFF64748B)),
+                        const SizedBox(width: 6),
+                        Flexible(
+                          child: Text(
+                            widget.order.customerName ?? 'Pelanggan Web',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                          ),
+                        ),
+                      ],
                     ),
-                    if (widget.order.customerPhone != null) ...[
+                    if (widget.order.customerPhone != null)
                       InkWell(
                         onTap: () {
                           final phone = widget.order.customerPhone!.replaceAll(RegExp(r'[^0-9]'), '');
                           launchUrl(Uri.parse('https://wa.me/$phone'));
                         },
                         child: Row(
+                          mainAxisSize: MainAxisSize.min,
                           children: [
                             const Icon(Icons.chat, size: 14, color: Color(0xFF16A34A)),
                             const SizedBox(width: 4),
@@ -406,7 +421,6 @@ class _ProcessWebOrderDialogState extends State<ProcessWebOrderDialog> {
                           ],
                         ),
                       ),
-                    ],
                   ],
                 ),
               ),

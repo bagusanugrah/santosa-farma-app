@@ -12,6 +12,45 @@ class ReceiptDialog extends StatelessWidget {
 
   const ReceiptDialog({super.key, required this.transaction});
 
+  Widget _buildSummaryRow(
+    String label,
+    String value, {
+    bool isPrimary = false,
+  }) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Flexible(
+          child: Text(
+            label,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontWeight: isPrimary ? FontWeight.w900 : FontWeight.normal,
+              fontSize: isPrimary ? 13 : 12,
+              color: isPrimary ? const Color(0xFF0F172A) : const Color(0xFF64748B),
+            ),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Flexible(
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerRight,
+            child: Text(
+              value,
+              style: TextStyle(
+                fontWeight: isPrimary ? FontWeight.w900 : FontWeight.bold,
+                fontSize: isPrimary ? 16 : 12,
+                color: isPrimary ? const Color(0xFF0E7490) : const Color(0xFF0F172A),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final currency = NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ', decimalDigits: 0);
@@ -19,8 +58,13 @@ class ReceiptDialog extends StatelessWidget {
     final storeSetting = context.watch<StoreProvider>().setting;
     final storeAddress = storeSetting.storeAddress.trim();
     final storePhone = storeSetting.storePhone.trim();
+    final isCompactDialog = MediaQuery.of(context).size.width < 380;
 
     return AlertDialog(
+      insetPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 20),
+      titlePadding: EdgeInsets.fromLTRB(isCompactDialog ? 16 : 24, 18, isCompactDialog ? 16 : 24, 8),
+      contentPadding: EdgeInsets.fromLTRB(isCompactDialog ? 16 : 24, 8, isCompactDialog ? 16 : 24, 12),
+      actionsPadding: EdgeInsets.fromLTRB(isCompactDialog ? 16 : 24, 4, isCompactDialog ? 16 : 24, 16),
       title: Row(
         children: [
           Container(
@@ -43,9 +87,11 @@ class ReceiptDialog extends StatelessWidget {
           ),
         ],
       ),
-      content: SizedBox(
-        width: 420,
-        child: SingleChildScrollView(
+      content: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 440),
+        child: SizedBox(
+          width: double.maxFinite,
+          child: SingleChildScrollView(
           child: Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
@@ -149,7 +195,15 @@ class ReceiptDialog extends StatelessWidget {
                             ],
                           ),
                         ),
-                        Text(currency.format(item.subtotal), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                        const SizedBox(width: 8),
+                        Flexible(
+                          fit: FlexFit.loose,
+                          child: FittedBox(
+                            fit: BoxFit.scaleDown,
+                            alignment: Alignment.centerRight,
+                            child: Text(currency.format(item.subtotal), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                          ),
+                        ),
                       ],
                     ),
                   );
@@ -157,39 +211,24 @@ class ReceiptDialog extends StatelessWidget {
                 const Divider(height: 24),
 
                 // Total
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text('Total Pembayaran', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 13)),
-                    Text(
-                      currency.format(transaction.total),
-                      style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16, color: Color(0xFF0E7490)),
-                    ),
-                  ],
+                _buildSummaryRow(
+                  'Total Pembayaran',
+                  currency.format(transaction.total),
+                  isPrimary: true,
                 ),
                 if (transaction.amountPaid != null && transaction.amountPaid! > 0) ...[
                   const SizedBox(height: 4),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text('Tunai Diterima', style: TextStyle(fontSize: 12, color: Color(0xFF64748B))),
-                      Text(currency.format(transaction.amountPaid!), style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-                    ],
-                  ),
+                  _buildSummaryRow('Tunai Diterima', currency.format(transaction.amountPaid!)),
                   const SizedBox(height: 4),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text('Kembalian', style: TextStyle(fontSize: 12, color: Color(0xFF64748B))),
-                      Text(currency.format(transaction.changeAmount ?? 0), style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-                    ],
-                  ),
+                  _buildSummaryRow('Kembalian', currency.format(transaction.changeAmount ?? 0)),
                 ],
               ],
             ),
           ),
         ),
+        ),
       ),
+      actionsOverflowButtonSpacing: 8,
       actions: [
         OutlinedButton.icon(
           icon: const Icon(Icons.share, size: 18),

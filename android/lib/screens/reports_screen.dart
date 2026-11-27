@@ -138,57 +138,86 @@ class _ReportsScreenState extends State<ReportsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isWideFilter = MediaQuery.of(context).size.width >= 600;
+    final periodChips = SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: [
+          _buildChip('Hari Ini', 'today'),
+          const SizedBox(width: 6),
+          _buildChip('7 Hari', '7days'),
+          const SizedBox(width: 6),
+          _buildChip('30 Hari', '30days'),
+          const SizedBox(width: 6),
+          _buildChip('Semua Waktu', 'all'),
+        ],
+      ),
+    );
+    final exportBtn = FilledButton.icon(
+      icon: _isExporting
+          ? const SizedBox(
+              width: 13,
+              height: 13,
+              child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+            )
+          : const Icon(Icons.table_view_rounded, size: 16),
+      label: const Text('Export Excel', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+      style: FilledButton.styleFrom(
+        backgroundColor: const Color(0xFF16A34A),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        visualDensity: VisualDensity.compact,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      ),
+      onPressed: (_isLoading || _isExporting) ? null : _exportToExcel,
+    );
+    final refreshBtn = IconButton(
+      tooltip: 'Muat Ulang',
+      icon: const Icon(Icons.refresh, color: Color(0xFF0E7490)),
+      onPressed: _loadReports,
+    );
+
     return Column(
       children: [
         // Range Filter Buttons & Export Action
         Container(
           color: Colors.white,
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-          child: Row(
-            children: [
-              const Text('Periode:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF64748B))),
-              const SizedBox(width: 8),
-              Expanded(
-                child: SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Row(
-                    children: [
-                      _buildChip('Hari Ini', 'today'),
-                      const SizedBox(width: 6),
-                      _buildChip('7 Hari', '7days'),
-                      const SizedBox(width: 6),
-                      _buildChip('30 Hari', '30days'),
-                      const SizedBox(width: 6),
-                      _buildChip('Semua Waktu', 'all'),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              FilledButton.icon(
-                icon: _isExporting
-                    ? const SizedBox(
-                        width: 13,
-                        height: 13,
-                        child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
-                      )
-                    : const Icon(Icons.table_view_rounded, size: 16),
-                label: const Text('Export Excel', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-                style: FilledButton.styleFrom(
-                  backgroundColor: const Color(0xFF16A34A),
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  visualDensity: VisualDensity.compact,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                ),
-                onPressed: (_isLoading || _isExporting) ? null : _exportToExcel,
-              ),
-              const SizedBox(width: 4),
-              IconButton(
-                tooltip: 'Muat Ulang',
-                icon: const Icon(Icons.refresh, color: Color(0xFF0E7490)),
-                onPressed: _loadReports,
-              ),
-            ],
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 900),
+              child: isWideFilter
+                  ? Row(
+                      children: [
+                        const Text('Periode:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF64748B))),
+                        const SizedBox(width: 8),
+                        Expanded(child: periodChips),
+                        const SizedBox(width: 8),
+                        exportBtn,
+                        const SizedBox(width: 4),
+                        refreshBtn,
+                      ],
+                    )
+                  : Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Row(
+                          children: [
+                            const Text('Periode:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF64748B))),
+                            const SizedBox(width: 8),
+                            Expanded(child: periodChips),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Row(
+                          children: [
+                            Expanded(child: exportBtn),
+                            const SizedBox(width: 6),
+                            refreshBtn,
+                          ],
+                        ),
+                      ],
+                    ),
+            ),
           ),
         ),
         const Divider(height: 1, color: Color(0xFFE2E8F0)),

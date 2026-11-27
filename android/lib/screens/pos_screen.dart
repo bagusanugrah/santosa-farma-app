@@ -10,8 +10,12 @@ class PosScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final screenWidth = MediaQuery.of(context).size.width;
-    final isTablet = screenWidth >= 800;
+    final mediaSize = MediaQuery.of(context).size;
+    final screenWidth = mediaSize.width;
+    final screenHeight = mediaSize.height;
+    final isTablet = screenWidth >= 760;
+    final isCompactHeight = screenHeight < 520;
+    final textScale = MediaQuery.textScalerOf(context).scale(1.0).clamp(1.0, 1.35);
     final posProvider = context.watch<PosProvider>();
     final currency = NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ', decimalDigits: 0);
 
@@ -20,7 +24,7 @@ class PosScreen extends StatelessWidget {
         // Search & Category Filter Section
         Container(
           color: Colors.white,
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+          padding: EdgeInsets.fromLTRB(16, isCompactHeight ? 8 : 12, 16, isCompactHeight ? 8 : 12),
           child: Column(
             children: [
               // Search Input
@@ -28,6 +32,7 @@ class PosScreen extends StatelessWidget {
                 decoration: InputDecoration(
                   hintText: 'Cari nama obat (misal: Amoxicillin, Bodrex)...',
                   prefixIcon: const Icon(Icons.search, color: Color(0xFF0891B2)),
+                  isDense: isCompactHeight,
                   suffixIcon: posProvider.searchQuery.isNotEmpty
                       ? IconButton(
                           icon: const Icon(Icons.clear),
@@ -37,11 +42,11 @@ class PosScreen extends StatelessWidget {
                 ),
                 onChanged: (val) => posProvider.setSearchQuery(val),
               ),
-              const SizedBox(height: 10),
+              SizedBox(height: isCompactHeight ? 6 : 10),
 
               // Horizontal Category Chips
               SizedBox(
-                height: 38,
+                height: isCompactHeight ? 34 : 38,
                 child: ListView.separated(
                   scrollDirection: Axis.horizontal,
                   itemCount: posProvider.categories.length,
@@ -102,22 +107,31 @@ class PosScreen extends StatelessWidget {
                   : RefreshIndicator(
                       onRefresh: () => posProvider.loadProducts(),
                       color: const Color(0xFF0891B2),
-                      child: GridView.builder(
-                        padding: const EdgeInsets.all(12),
-                        gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-                          maxCrossAxisExtent: 220,
-                          mainAxisExtent: 255,
-                          crossAxisSpacing: 12,
-                          mainAxisSpacing: 12,
-                        ),
-                        itemCount: posProvider.products.length,
-                        itemBuilder: (context, index) {
-                          final product = posProvider.products[index];
-                          final inCartQty = posProvider.cart[product.id]?.qty ?? 0;
-                          return ProductCard(
-                            product: product,
-                            inCartQty: inCartQty,
-                            onAddToCart: () => posProvider.addToCart(product),
+                      child: LayoutBuilder(
+                        builder: (context, constraints) {
+                          final maxExtent = constraints.maxWidth >= 600 ? 215.0 : 200.0;
+                          final cols = (constraints.maxWidth / maxExtent).ceil().clamp(2, 6);
+                          final cardWidth = ((constraints.maxWidth - 24 - (cols - 1) * 12) / cols).clamp(130.0, 240.0);
+                          final cardHeight = (cardWidth * 1.48).clamp(238.0, 272.0) * textScale;
+
+                          return GridView.builder(
+                            padding: const EdgeInsets.all(12),
+                            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                              crossAxisCount: cols,
+                              mainAxisExtent: cardHeight,
+                              crossAxisSpacing: 12,
+                              mainAxisSpacing: 12,
+                            ),
+                            itemCount: posProvider.products.length,
+                            itemBuilder: (context, index) {
+                              final product = posProvider.products[index];
+                              final inCartQty = posProvider.cart[product.id]?.qty ?? 0;
+                              return ProductCard(
+                                product: product,
+                                inCartQty: inCartQty,
+                                onAddToCart: () => posProvider.addToCart(product),
+                              );
+                            },
                           );
                         },
                       ),
@@ -127,20 +141,21 @@ class PosScreen extends StatelessWidget {
     );
 
     if (isTablet) {
+      final cartWidth = (screenWidth * 0.30).clamp(300.0, 380.0);
       // Tablet Dual-Pane
       return Row(
         children: [
-          Expanded(flex: 6, child: catalogContent),
+          Expanded(child: catalogContent),
           const VerticalDivider(width: 1, thickness: 1, color: Color(0xFFE2E8F0)),
           SizedBox(
-            width: screenWidth >= 1050 ? 360 : 310,
+            width: cartWidth,
             child: const CartView(),
           ),
         ],
       );
     }
 
-    // Smartphone Layout with Bottom Cart Drawer Bar
+    // Smartphone / Narrow Tablet Layout with Bottom Cart Drawer Bar
     return Stack(
       children: [
         Padding(
@@ -152,58 +167,64 @@ class PosScreen extends StatelessWidget {
             left: 16,
             right: 16,
             bottom: 12,
-            child: Material(
-              color: const Color(0xFF0E7490),
-              borderRadius: BorderRadius.circular(20),
-              elevation: 8,
-              shadowColor: const Color(0xFF0891B2).withOpacity(0.4),
-              child: InkWell(
-                borderRadius: BorderRadius.circular(20),
-                onTap: () {
-                  showModalBottomSheet(
-                    context: context,
-                    isScrollControlled: true,
-                    backgroundColor: Colors.transparent,
-                    builder: (_) => SizedBox(
-                      height: MediaQuery.of(context).size.height * 0.8,
-                      child: const CartView(isBottomSheet: true),
-                    ),
-                  );
-                },
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-                  child: Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.2),
-                          borderRadius: BorderRadius.circular(10),
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 560),
+                child: Material(
+                  color: const Color(0xFF0E7490),
+                  borderRadius: BorderRadius.circular(20),
+                  elevation: 8,
+                  shadowColor: const Color(0xFF0891B2).withOpacity(0.4),
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(20),
+                    onTap: () {
+                      showModalBottomSheet(
+                        context: context,
+                        isScrollControlled: true,
+                        backgroundColor: Colors.transparent,
+                        constraints: const BoxConstraints(maxWidth: 560),
+                        builder: (_) => SizedBox(
+                          height: MediaQuery.of(context).size.height * 0.85,
+                          child: const CartView(isBottomSheet: true),
                         ),
-                        child: Text(
-                          '${posProvider.totalItemsInCart} Obat',
-                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: FittedBox(
-                          fit: BoxFit.scaleDown,
-                          alignment: Alignment.centerLeft,
-                          child: Text(
-                            currency.format(posProvider.grandTotal),
-                            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 16),
+                      );
+                    },
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.2),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Text(
+                              '${posProvider.totalItemsInCart} Obat',
+                              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12),
+                            ),
                           ),
-                        ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: FittedBox(
+                              fit: BoxFit.scaleDown,
+                              alignment: Alignment.centerLeft,
+                              child: Text(
+                                currency.format(posProvider.grandTotal),
+                                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 16),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          const Text(
+                            'Keranjang',
+                            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
+                          ),
+                          const SizedBox(width: 4),
+                          const Icon(Icons.arrow_forward_ios, color: Colors.white, size: 14),
+                        ],
                       ),
-                      const SizedBox(width: 8),
-                      const Text(
-                        'Keranjang',
-                        style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
-                      ),
-                      const SizedBox(width: 4),
-                      const Icon(Icons.arrow_forward_ios, color: Colors.white, size: 14),
-                    ],
+                    ),
                   ),
                 ),
               ),

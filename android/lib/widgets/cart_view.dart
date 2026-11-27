@@ -181,9 +181,16 @@ class CartView extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     const Text('Total Pembayaran', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13, color: Color(0xFF64748B))),
-                    Text(
-                      currency.format(posProvider.grandTotal),
-                      style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 18, color: Color(0xFF0E7490)),
+                    const SizedBox(width: 8),
+                    Flexible(
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerRight,
+                        child: Text(
+                          currency.format(posProvider.grandTotal),
+                          style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 18, color: Color(0xFF0E7490)),
+                        ),
+                      ),
                     ),
                   ],
                 ),

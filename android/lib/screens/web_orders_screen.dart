@@ -160,6 +160,75 @@ class _WebOrdersScreenState extends State<WebOrdersScreen> with SingleTickerProv
   @override
   Widget build(BuildContext context) {
     final webOrdersProvider = context.watch<WebOrdersProvider>();
+    final isWideTopBar = MediaQuery.of(context).size.width >= 680;
+
+    final searchField = TextField(
+      controller: _searchController,
+      style: const TextStyle(fontSize: 13),
+      decoration: InputDecoration(
+        hintText: 'Cari no. invoice (INV-...), nama, atau HP...',
+        hintStyle: const TextStyle(fontSize: 12, color: Color(0xFF94A3B8)),
+        prefixIcon: const Icon(Icons.search, size: 20, color: Color(0xFF0891B2)),
+        suffixIcon: _searchQuery.isNotEmpty
+            ? IconButton(
+                icon: const Icon(Icons.clear, size: 18),
+                onPressed: () {
+                  _searchController.clear();
+                  setState(() => _searchQuery = '');
+                },
+              )
+            : null,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        isDense: true,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: const BorderSide(color: Color(0xFF0891B2), width: 1.5),
+        ),
+        filled: true,
+        fillColor: const Color(0xFFF8FAFC),
+      ),
+      onChanged: (val) => setState(() => _searchQuery = val.trim()),
+      onSubmitted: (_) => FocusScope.of(context).unfocus(),
+    );
+
+    final scanQrButton = FilledButton.icon(
+      icon: const Icon(Icons.qr_code_scanner, size: 18),
+      label: const Text(
+        'Scan QR Pengambilan Obat',
+        style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+      ),
+      style: FilledButton.styleFrom(
+        backgroundColor: const Color(0xFF0E7490),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      ),
+      onPressed: () {
+        Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => const QrScannerScreen()),
+        );
+      },
+    );
+
+    final refreshButton = IconButton.outlined(
+      tooltip: 'Muat Ulang Pesanan',
+      icon: const Icon(Icons.refresh, color: Color(0xFF0E7490)),
+      style: IconButton.styleFrom(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10),
+          side: const BorderSide(color: Color(0xFFCBD5E1)),
+        ),
+        padding: const EdgeInsets.all(10),
+      ),
+      onPressed: () => webOrdersProvider.loadOrders(),
+    );
 
     return Column(
       children: [
@@ -167,106 +236,61 @@ class _WebOrdersScreenState extends State<WebOrdersScreen> with SingleTickerProv
         Container(
           color: Colors.white,
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // Search Input
-              TextField(
-                controller: _searchController,
-                style: const TextStyle(fontSize: 13),
-                decoration: InputDecoration(
-                  hintText: 'Cari no. invoice (INV-...), nama, atau HP...',
-                  hintStyle: const TextStyle(fontSize: 12, color: Color(0xFF94A3B8)),
-                  prefixIcon: const Icon(Icons.search, size: 20, color: Color(0xFF0891B2)),
-                  suffixIcon: _searchQuery.isNotEmpty
-                      ? IconButton(
-                          icon: const Icon(Icons.clear, size: 18),
-                          onPressed: () {
-                            _searchController.clear();
-                            setState(() => _searchQuery = '');
-                          },
-                        )
-                      : null,
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                  isDense: true,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10),
-                    borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10),
-                    borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10),
-                    borderSide: const BorderSide(color: Color(0xFF0891B2), width: 1.5),
-                  ),
-                  filled: true,
-                  fillColor: const Color(0xFFF8FAFC),
-                ),
-                onChanged: (val) => setState(() => _searchQuery = val.trim()),
-                onSubmitted: (_) => FocusScope.of(context).unfocus(),
-              ),
-              const SizedBox(height: 10),
-
-              // Action Buttons Row: Scan QR & Refresh
-              Row(
-                children: [
-                  Expanded(
-                    child: FilledButton.icon(
-                      icon: const Icon(Icons.qr_code_scanner, size: 18),
-                      label: const Text(
-                        'Scan QR Pengambilan Obat',
-                        style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
-                      ),
-                      style: FilledButton.styleFrom(
-                        backgroundColor: const Color(0xFF0E7490),
-                        padding: const EdgeInsets.symmetric(vertical: 11),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                      ),
-                      onPressed: () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(builder: (_) => const QrScannerScreen()),
-                        );
-                      },
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 860),
+              child: isWideTopBar
+                  ? Row(
+                      children: [
+                        Expanded(child: searchField),
+                        const SizedBox(width: 10),
+                        scanQrButton,
+                        const SizedBox(width: 8),
+                        refreshButton,
+                      ],
+                    )
+                  : Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        searchField,
+                        const SizedBox(height: 10),
+                        Row(
+                          children: [
+                            Expanded(child: scanQrButton),
+                            const SizedBox(width: 10),
+                            refreshButton,
+                          ],
+                        ),
+                      ],
                     ),
-                  ),
-                  const SizedBox(width: 10),
-                  IconButton.outlined(
-                    tooltip: 'Muat Ulang Pesanan',
-                    icon: const Icon(Icons.refresh, color: Color(0xFF0E7490)),
-                    style: IconButton.styleFrom(
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                        side: const BorderSide(color: Color(0xFFCBD5E1)),
-                      ),
-                      padding: const EdgeInsets.all(10),
-                    ),
-                    onPressed: () => webOrdersProvider.loadOrders(),
-                  ),
-                ],
-              ),
-            ],
+            ),
           ),
         ),
 
         // Filter Tabs
         Container(
           color: Colors.white,
-          child: TabBar(
-            controller: _tabController,
-            isScrollable: true,
-            labelColor: const Color(0xFF0E7490),
-            unselectedLabelColor: const Color(0xFF64748B),
-            indicatorColor: const Color(0xFF0891B2),
-            indicatorWeight: 3,
-            labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-            tabs: [
-              Tab(text: 'Semua (${_filterOrders(webOrdersProvider.orders, 0).length})'),
-              Tab(text: 'Belum Dibayar (${_filterOrders(webOrdersProvider.orders, 1).length})'),
-              Tab(text: 'Siap Diambil (${_filterOrders(webOrdersProvider.orders, 2).length})'),
-              Tab(text: 'Sudah Selesai (${_filterOrders(webOrdersProvider.orders, 3).length})'),
-            ],
+          width: double.infinity,
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 860),
+              child: TabBar(
+                controller: _tabController,
+                isScrollable: true,
+                tabAlignment: TabAlignment.start,
+                labelColor: const Color(0xFF0E7490),
+                unselectedLabelColor: const Color(0xFF64748B),
+                indicatorColor: const Color(0xFF0891B2),
+                indicatorWeight: 3,
+                labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                tabs: [
+                  Tab(text: 'Semua (${_filterOrders(webOrdersProvider.orders, 0).length})'),
+                  Tab(text: 'Belum Dibayar (${_filterOrders(webOrdersProvider.orders, 1).length})'),
+                  Tab(text: 'Siap Diambil (${_filterOrders(webOrdersProvider.orders, 2).length})'),
+                  Tab(text: 'Sudah Selesai (${_filterOrders(webOrdersProvider.orders, 3).length})'),
+                ],
+              ),
+            ),
           ),
         ),
         const Divider(height: 1, color: Color(0xFFE2E8F0)),
@@ -378,26 +402,34 @@ class _WebOrdersScreenState extends State<WebOrdersScreen> with SingleTickerProv
                                   const Divider(height: 20),
 
                                   // Customer Details
-                                  Row(
+                                  Wrap(
+                                    spacing: 12,
+                                    runSpacing: 4,
+                                    crossAxisAlignment: WrapCrossAlignment.center,
                                     children: [
-                                      const Icon(Icons.person, size: 16, color: Color(0xFF64748B)),
-                                      const SizedBox(width: 6),
-                                      Flexible(
-                                        child: Text(
-                                          order.customerName ?? 'Pelanggan Web',
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-                                        ),
+                                      Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          const Icon(Icons.person, size: 16, color: Color(0xFF64748B)),
+                                          const SizedBox(width: 6),
+                                          Flexible(
+                                            child: Text(
+                                              order.customerName ?? 'Pelanggan Web',
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                                            ),
+                                          ),
+                                        ],
                                       ),
-                                      if (order.customerPhone != null) ...[
-                                        const SizedBox(width: 12),
+                                      if (order.customerPhone != null)
                                         InkWell(
                                           onTap: () {
                                             final phone = order.customerPhone!.replaceAll(RegExp(r'[^0-9]'), '');
                                             launchUrl(Uri.parse('https://wa.me/$phone'));
                                           },
                                           child: Row(
+                                            mainAxisSize: MainAxisSize.min,
                                             children: [
                                               const Icon(Icons.chat, size: 14, color: Color(0xFF16A34A)),
                                               const SizedBox(width: 4),
@@ -412,7 +444,6 @@ class _WebOrdersScreenState extends State<WebOrdersScreen> with SingleTickerProv
                                             ],
                                           ),
                                         ),
-                                      ],
                                     ],
                                   ),
                                   const SizedBox(height: 10),
@@ -469,8 +500,10 @@ class _WebOrdersScreenState extends State<WebOrdersScreen> with SingleTickerProv
                                           ),
                                         ],
                                       ),
-                                      Row(
-                                        mainAxisSize: MainAxisSize.min,
+                                      Wrap(
+                                        spacing: 4,
+                                        runSpacing: 6,
+                                        crossAxisAlignment: WrapCrossAlignment.center,
                                         children: [
                                           if (order.status == 'pending') ...[
                                             IconButton(
@@ -478,7 +511,6 @@ class _WebOrdersScreenState extends State<WebOrdersScreen> with SingleTickerProv
                                               icon: const Icon(Icons.delete_outline, color: Colors.red, size: 20),
                                               onPressed: () => _confirmDeleteOrder(context, order, webOrdersProvider),
                                             ),
-                                            const SizedBox(width: 4),
                                             if (order.isPayAtPharmacy)
                                               FilledButton.icon(
                                                 icon: const Icon(Icons.point_of_sale, size: 16),

@@ -132,85 +132,90 @@ class _CashierTransactionsScreenState extends State<CashierTransactionsScreen> {
   }
 
   Widget _buildSummaryBar() {
-    return Container(
-      margin: const EdgeInsets.fromLTRB(16, 10, 16, 6),
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
-        boxShadow: const [
-          BoxShadow(color: Color(0x06000000), blurRadius: 4, offset: Offset(0, 1)),
-        ],
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Text(
-                  'PENJUALAN',
-                  style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: Color(0xFF64748B), letterSpacing: 0.3),
-                ),
-                const SizedBox(height: 2),
-                FittedBox(
-                  fit: BoxFit.scaleDown,
-                  alignment: Alignment.centerLeft,
-                  child: Text(
-                    currency.format(_totalOmset),
-                    style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w900, color: Color(0xFF0E7490)),
-                  ),
-                ),
-              ],
-            ),
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 900),
+        child: Container(
+          margin: const EdgeInsets.fromLTRB(16, 10, 16, 6),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: const Color(0xFFE2E8F0)),
+            boxShadow: const [
+              BoxShadow(color: Color(0x06000000), blurRadius: 4, offset: Offset(0, 1)),
+            ],
           ),
-          Container(width: 1, height: 26, color: const Color(0xFFE2E8F0), margin: const EdgeInsets.symmetric(horizontal: 10)),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Text(
-                  'TUNAI LACI',
-                  style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: Color(0xFF64748B), letterSpacing: 0.3),
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text(
+                      'PENJUALAN',
+                      style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: Color(0xFF64748B), letterSpacing: 0.3),
+                    ),
+                    const SizedBox(height: 2),
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        currency.format(_totalOmset),
+                        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w900, color: Color(0xFF0E7490)),
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 2),
-                FittedBox(
-                  fit: BoxFit.scaleDown,
-                  alignment: Alignment.centerLeft,
-                  child: Text(
-                    currency.format(_totalCash),
-                    style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w900, color: Color(0xFF16A34A)),
-                  ),
+              ),
+              Container(width: 1, height: 26, color: const Color(0xFFE2E8F0), margin: const EdgeInsets.symmetric(horizontal: 10)),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text(
+                      'TUNAI LACI',
+                      style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: Color(0xFF64748B), letterSpacing: 0.3),
+                    ),
+                    const SizedBox(height: 2),
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        currency.format(_totalCash),
+                        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w900, color: Color(0xFF16A34A)),
+                      ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
+              ),
+              Container(width: 1, height: 26, color: const Color(0xFFE2E8F0), margin: const EdgeInsets.symmetric(horizontal: 10)),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text(
+                      'QRIS',
+                      style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: Color(0xFF64748B), letterSpacing: 0.3),
+                    ),
+                    const SizedBox(height: 2),
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        currency.format(_totalQris),
+                        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w900, color: Color(0xFF2563EB)),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
-          Container(width: 1, height: 26, color: const Color(0xFFE2E8F0), margin: const EdgeInsets.symmetric(horizontal: 10)),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Text(
-                  'QRIS',
-                  style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: Color(0xFF64748B), letterSpacing: 0.3),
-                ),
-                const SizedBox(height: 2),
-                FittedBox(
-                  fit: BoxFit.scaleDown,
-                  alignment: Alignment.centerLeft,
-                  child: Text(
-                    currency.format(_totalQris),
-                    style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w900, color: Color(0xFF2563EB)),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -225,9 +230,12 @@ class _CashierTransactionsScreenState extends State<CashierTransactionsScreen> {
         Container(
           color: Colors.white,
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 900),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
               TextField(
                 controller: _searchController,
                 style: const TextStyle(fontSize: 13),
@@ -296,6 +304,8 @@ class _CashierTransactionsScreenState extends State<CashierTransactionsScreen> {
               ),
             ],
           ),
+            ),
+          ),
         ),
         const Divider(height: 1, color: Color(0xFFE2E8F0)),
 
@@ -303,22 +313,27 @@ class _CashierTransactionsScreenState extends State<CashierTransactionsScreen> {
         _buildSummaryBar(),
 
         // 3. Section Header
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Daftar Transaksi (${filtered.length})',
-                style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13, color: Color(0xFF334155)),
+        Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 900),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Daftar Transaksi (${filtered.length})',
+                    style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13, color: Color(0xFF334155)),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.refresh, size: 18, color: Color(0xFF0891B2)),
+                    tooltip: 'Muat Ulang',
+                    visualDensity: VisualDensity.compact,
+                    onPressed: _loadTransactions,
+                  ),
+                ],
               ),
-              IconButton(
-                icon: const Icon(Icons.refresh, size: 18, color: Color(0xFF0891B2)),
-                tooltip: 'Muat Ulang',
-                visualDensity: VisualDensity.compact,
-                onPressed: _loadTransactions,
-              ),
-            ],
+            ),
           ),
         ),
 
@@ -350,7 +365,10 @@ class _CashierTransactionsScreenState extends State<CashierTransactionsScreen> {
                           final trx = filtered[index];
                           final isCash = trx.paymentMethod == 'tunai';
 
-                          return Card(
+                          return Center(
+                            child: ConstrainedBox(
+                              constraints: const BoxConstraints(maxWidth: 900),
+                              child: Card(
                             margin: const EdgeInsets.only(bottom: 10),
                             elevation: 0,
                             shape: RoundedRectangleBorder(
@@ -495,12 +513,11 @@ class _CashierTransactionsScreenState extends State<CashierTransactionsScreen> {
                                       const SizedBox(height: 8),
                                     ],
 
-                                    // Footer Action Button
-                                    SizedBox(
-                                      height: 32,
-                                      child: OutlinedButton.icon(
+                                      // Footer Action Button
+                                      OutlinedButton.icon(
                                         style: OutlinedButton.styleFrom(
-                                          padding: const EdgeInsets.symmetric(horizontal: 10),
+                                          minimumSize: const Size(0, 34),
+                                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                                           side: const BorderSide(color: Color(0xFF0891B2)),
                                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
                                         ),
@@ -516,9 +533,10 @@ class _CashierTransactionsScreenState extends State<CashierTransactionsScreen> {
                                           );
                                         },
                                       ),
-                                    ),
                                   ],
                                 ),
+                              ),
+                            ),
                               ),
                             ),
                           );
