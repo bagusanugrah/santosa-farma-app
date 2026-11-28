@@ -942,7 +942,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         _buildConfigField(
                           controller: _fonnteTokenCtrl,
                           label: 'Fonnte Device Token',
-                          hint: 'Contoh: oNFkn2DLqbqtGUV5TajtLaJK',
+                          hint: 'Masukkan device token dari dashboard Fonnte',
                           isPassword: true,
                           obscure: _obscureFonnte,
                           onToggleObscure: () => setState(() => _obscureFonnte = !_obscureFonnte),

@@ -35,7 +35,7 @@ export async function getIntegrationSettings(forceRefresh = false): Promise<Inte
       fonnteUrl: data?.fonnte_url || process.env.WA_GATEWAY_URL || 'https://api.fonnte.com/send',
       mailHost: data?.mail_host || process.env.MAIL_HOST || 'smtp.gmail.com',
       mailPort: Number(data?.mail_port || process.env.MAIL_PORT || 587),
-      mailUser: data?.mail_username || process.env.MAIL_USERNAME || 'kucitcloud@gmail.com',
+      mailUser: data?.mail_username || process.env.MAIL_USERNAME || '',
       mailPass: data?.mail_password || process.env.MAIL_PASSWORD || '',
       mailFromName: data?.mail_from_name || process.env.MAIL_FROM_NAME || 'Apotek Santosa Farma',
       midtransClientKey:
@@ -60,7 +60,7 @@ export async function getIntegrationSettings(forceRefresh = false): Promise<Inte
       fonnteUrl: process.env.WA_GATEWAY_URL || 'https://api.fonnte.com/send',
       mailHost: process.env.MAIL_HOST || 'smtp.gmail.com',
       mailPort: Number(process.env.MAIL_PORT || 587),
-      mailUser: process.env.MAIL_USERNAME || 'kucitcloud@gmail.com',
+      mailUser: process.env.MAIL_USERNAME || '',
       mailPass: process.env.MAIL_PASSWORD || '',
       mailFromName: process.env.MAIL_FROM_NAME || 'Apotek Santosa Farma',
       midtransClientKey:
